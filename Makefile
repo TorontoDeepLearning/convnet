@@ -30,7 +30,7 @@ DATAHANDLER_SRC := $(wildcard $(SRC)/*_datahandler.cc)
 DATAHANDLER_OBJS := $(OBJ)/datahandler.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(DATAHANDLER_SRC))
 CUDA_OBJS := $(OBJ)/matrix.o $(OBJ)/cudamat.o $(OBJ)/cudamat_kernels.o $(OBJ)/cudamat_conv.o $(OBJ)/cudamat_conv_kernels.o
 COMMONOBJS = $(OBJ)/convnet_config.pb.o $(DATAHANDLER_OBJS) $(OBJ)/layer.o $(OBJ)/util.o $(CUDA_OBJS) $(EDGES_OBJS)
-TARGETS := $(BIN)/datahandler_test $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/compute_mean $(BIN)/run_grad_check $(BIN)/run_hmc $(BIN)/extract_representation
+TARGETS := $(BIN)/datahandler_test $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/compute_mean $(BIN)/run_grad_check $(BIN)/extract_representation
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
 
@@ -44,9 +44,6 @@ $(BIN)/extract_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/extract_rep
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/run_grad_check: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/grad_check.o $(OBJ)/run_grad_check.o
-	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
-
-$(BIN)/run_hmc: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/hmc.o $(OBJ)/run_hmc.o
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/datahandler_test: $(COMMONOBJS) $(OBJ)/datahandler_test.o

@@ -1,7 +1,6 @@
 #include "datahandler.h"
 #include "hdf5_datahandler.h"
 #include "raw_image_datahandler.h"
-#include "mitosis_datahandler.h"
 #include <algorithm>
 #include <iostream>
 
@@ -13,9 +12,6 @@ DataHandler* DataHandler::ChooseDataHandler(const string& config_file) {
   switch(config.dataset_type()) {
     case config::DatasetConfig::DUMMY:
             dh = new DummyDataHandler(config);
-            break;
-    case config::DatasetConfig::IMAGE_POS_NEG_HDF5:
-            dh = new PosNegHDF5DataHandler(config);
             break;
     case config::DatasetConfig::HDF5:
             dh = new SimpleHDF5DataHandler(config);
