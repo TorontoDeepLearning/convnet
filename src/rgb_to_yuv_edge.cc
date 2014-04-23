@@ -1,0 +1,21 @@
+#include "rgb_to_yuv_edge.h"
+#include "cudamat_conv.cuh"
+
+RGBToYUVEdge::RGBToYUVEdge(const config::Edge& edge_config) :
+  Edge(edge_config), image_size_(0) {}
+
+void RGBToYUVEdge::AllocateMemory(int image_size) {
+  image_size_ = image_size;
+}
+
+void RGBToYUVEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+  cudamat* input_mat = input.GetMat();
+  cudamat* output_mat = output.GetMat();
+  RGBToYUV(input_mat, output_mat);
+}
+
+void RGBToYUVEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
+                                 Matrix& output, Matrix& deriv_input, bool overwrite) {
+  cerr << "RGBtoYUV backprop Not implemented." << endl;
+  exit(1);
+}
