@@ -110,7 +110,7 @@ int init_random(rnd_struct* rnd_state, int seed, char* cudamatpath) {
     FILE * pFile;
 
     if (cudamatpath == NULL) {
-      pFile = fopen ("/u/nitish/deepnet/cudamat/rnd_multipliers_32bit.txt","r");
+      pFile = fopen ("rnd_multipliers_32bit.txt","r");
     } else {
       pFile = fopen (cudamatpath,"r");
     }

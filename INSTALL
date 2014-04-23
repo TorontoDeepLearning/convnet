@@ -4,23 +4,34 @@ Dependencies
 - CUDA (>= 4.0)
 
 - HDF5 (>= 1.8.11)
-  To install locally -
   Download the source code http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.12.tar.gz
+  To install locally -
   $ ./configure --prefix=~/local/ --enable-threadsafe --with-pthread=/usr/include
   $ make
   $ make install
 
-- Protocol Buffers
+- Protocol Buffers (>= 2.5.0)
+  Download the source code https://protobuf.googlecode.com/files/protobuf-2.5.0.tar.gz
+  To install locally -
+  $ ./configure --prefix=~/local/
+  $ make
+  $ make install
 
-- CImg
+- CImg (>= 1.5.8)
+  Get source from http://sourceforge.net/projects/cimg
+  or clone the git repo.
   $ git clone http://git.code.sf.net/p/cimg/source CImg
+  No compilaton/installation is required.
 
+---------------------------
+Hardware requirements
+---------------------------
+NVIDIA GPU(s).
+Multi-GPU feature requires Fermi boards.
 
 -------------------
 convnet
 ------------------
 Set the paths to the dependencies in the Makefile.
+Set the compute capability for your GPU.
 $ make
-
-
-

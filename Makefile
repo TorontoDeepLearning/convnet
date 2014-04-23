@@ -19,7 +19,7 @@ NVCC = nvcc
 SRC=src
 OBJ=obj
 BIN=bin
-LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas
+LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl
 CPPFLAGS = -I$(CIMG) -I$(INC) -I$(CUDA_INC) -I$(SRC)
 LIBFLAGS = -L$(LIB) -L$(CUDA_LIB)
 CXXFLAGS = -O2 -std=c++0x -march=native -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
