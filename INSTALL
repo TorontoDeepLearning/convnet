@@ -1,0 +1,26 @@
+------------------
+Dependencies
+-----------------
+- CUDA (>= 4.0)
+
+- HDF5 (>= 1.8.11)
+  To install locally -
+  Download the source code http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.12.tar.gz
+  $ ./configure --prefix=~/local/ --enable-threadsafe --with-pthread=/usr/include
+  $ make
+  $ make install
+
+- Protocol Buffers
+
+- CImg
+  $ git clone http://git.code.sf.net/p/cimg/source CImg
+
+
+-------------------
+convnet
+------------------
+Set the paths to the dependencies in the Makefile.
+$ make
+
+
+
