@@ -1,0 +1,9 @@
+data_dir: "/ais/gobi3/u/nitish/mnist/";
+file_pattern: "mnist.h5";
+dataset_type : IMAGE_HDF5;
+batch_size : 100;
+randomize_cpu: true;
+randomize_gpu: true;
+dataset_name: "train_full";
+dataset_name: "train_full_labels";
+image_size: 28;

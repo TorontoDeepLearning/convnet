@@ -1,6 +1,6 @@
 name: "mnist_net";
 seed: 42;
-max_iter: 2000000;
+max_iter: 100000;
 print_after: 1000;
 save_after: 100000;
 patch_size: 28;

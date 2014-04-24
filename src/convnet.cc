@@ -507,7 +507,7 @@ void ConvNet::TimestampModel() {
   timestamp_ = GetTimeStamp();
   string fname = checkpoint_dir_ + "/" + model_name_ + "_" + timestamp_;
   TimestampModelFile(model_filename_, fname + ".pbtxt", timestamp_);
-  log_file_ = fname + ".log";
+  log_file_ = fname + "_train.log";
   val_log_file_ = fname + "_valid.log";
 }
 
