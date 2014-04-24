@@ -17,8 +17,17 @@ checkpoint directory. This takes 4-5 min (on NVIDIA Titan, may vary depending on
 GPU). Training on train_plus_val_data.pbtxt should get around 1.2% test error by
 then.
 
+--------------------------
+Looking at the performance
+--------------------------
 The *.log files in the checkpoint directory contain the performance metrics for
 the training and validation sets.
 Run
 $ python show_plots.py
+
+--------------------------
+Draw the net.
+--------------------------
+$ python ../../src/pbtxt2dot.py net.pbtxt net.dot
+$ dot -Tpng net.dot -o net.png
 
