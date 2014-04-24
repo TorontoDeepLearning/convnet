@@ -1,0 +1,7 @@
+data_dir: "/ais/gobi3/u/nitish/mnist/";
+file_pattern: "mnist.h5";
+dataset_type : IMAGE_HDF5;
+batch_size : 100;
+dataset_name: "test";
+dataset_name: "test_labels";
+image_size: 28;

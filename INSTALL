@@ -35,3 +35,12 @@ convnet
 Set the paths to the dependencies in the Makefile.
 Set the compute capability for your GPU.
 $ make
+
+Add convnet/bin to your PATH variable (maybe in your .bashrc)
+
+---------------------
+Run test examples
+--------------------
+Go to examples/
+Examples of nets on MNIST and CIFAR10 are included.
+Follow the instructions in the README.txt.
