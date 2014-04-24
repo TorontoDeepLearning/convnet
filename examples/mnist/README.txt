@@ -9,6 +9,9 @@ $ train_convnet <board-id> net.pbtxt train_data.pbtxt val_data.pbtxt
 or
 $ train_convnet <board-id> net.pbtxt train_plus_val_data.pbtxt test_data.pbtxt
 
+Toronto users-
+Make sure the board is locked before running this.
+
 This will train the net for 100,000 updates and write the model out in the
 checkpoint directory. This takes 4-5 min (on NVIDIA Titan, may vary depending on
 GPU). Training on train_plus_val_data.pbtxt should get around 1.2% test error by
@@ -19,5 +22,3 @@ the training and validation sets.
 Run
 $ python show_plots.py
 
-Toronto users-
-Make sure the board is locked before running this.
