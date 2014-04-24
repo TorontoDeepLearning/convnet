@@ -81,7 +81,7 @@ int cublas_shutdown();
 bool cuda_is_fermi(int deviceId);
 int cuda_set_device(int deviceId);
 int cuda_set_P2P(int gpu1, int gpu2);
-int init_random(rnd_struct* rnd_state, int seed, char* cudamatpath);
+int init_random(rnd_struct* rnd_state, int seed, const char* cudamatpath);
 int get_rnd_state(rnd_struct* rnd_state, unsigned long long* host_words_out, int *size_out);
 int init_random_from_state(rnd_struct* rnd_state, unsigned long long* host_words, char* cudamatpath);
 int get_leading_dimension(cudamat* mat);

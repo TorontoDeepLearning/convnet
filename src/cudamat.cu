@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <cublas.h>
 #include <math.h>
+#include "rnd_multipliers_32bit.h"
 #include "cudamat_kernels.cuh"
 
 extern "C" {
@@ -104,26 +105,13 @@ int cuda_set_P2P(int gpu1, int gpu2) {
   }
 }
 
-int init_random(rnd_struct* rnd_state, int seed, char* cudamatpath) {
+int init_random(rnd_struct* rnd_state, int seed, const char* cudamatpath) {
     unsigned int * host_mults;
     host_mults = (unsigned int*)malloc(NUM_RND_STREAMS * sizeof(unsigned int));
-    FILE * pFile;
-
-    if (cudamatpath == NULL) {
-      pFile = fopen ("rnd_multipliers_32bit.txt","r");
-    } else {
-      pFile = fopen (cudamatpath,"r");
-    }
-    if (pFile == NULL) {
-      printf("Error: Missing rnd_multipliers_32bit.txt file\n");
-      return 1;
-    }
 
     for (int i = 0; i < NUM_RND_STREAMS; i++) {
-      int r = fscanf (pFile, "%u", &host_mults[i]);
-      if (r != 1) return ERROR_GENERIC;
+      host_mults[i] = _rand_words[i];
     }
-    fclose (pFile);
 
     cublasAlloc(NUM_RND_STREAMS, sizeof(unsigned int), (void**)&rnd_state->dev_mults);
     cublasAlloc(NUM_RND_STREAMS, sizeof(unsigned long long), (void**)&rnd_state->dev_words);
