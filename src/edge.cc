@@ -59,6 +59,7 @@ Edge::Edge(const config::Edge& edge_config) :
   num_input_channels_(0),
   num_output_channels_(0),
   image_size_(0),
+  num_modules_(1),
   num_shares_(1),
   scale_gradients_(edge_config.scale_gradients()),
   mark_(false),
@@ -88,22 +89,23 @@ void Edge::SetOutputChannels(int a) {
 
 void Edge::SaveParameters(hid_t file) {
   // no op.
-  // Parameter saving implemented in EdgeWithWeight or base classes thereof.
+  // Parameter saving implemented in EdgeWithWeight or derived classes thereof.
 }
 
-void Edge::LoadParameters(hid_t file) {
+void Edge::LoadParameters(hid_t file, bool fprop_only) {
   // no op.
-  // Parameter loading implemented in EdgeWithWeight or base classes thereof.
+  // Parameter loading implemented in EdgeWithWeight or derived classes thereof.
 }
 
 void Edge::Initialize() {
-  // no op. Initialization done in base classes.
+  // no op. Initialization done in derived classes.
 }
 
-void Edge::AllocateMemory(int image_size) {
+void Edge::AllocateMemory(bool fprop_only) {
   Matrix::SetDevice(gpu_id_);
-  image_size_ = image_size;
   Matrix::RegisterTempMemory(num_output_channels_, "Used for computing average length of incoming weight vectors.");
+  // Actual memory allocation will happen in the derived class because memory
+  // requirements differ for different kinds of edges.
 }
 
 void Edge::DisplayWeights() {
@@ -176,7 +178,7 @@ bool Edge::HasNoParameters() const {
 }
 
 int Edge::GetNumModules() const {
-  return 1;
+  return num_modules_;
 }
 
 string Edge::GetTiedEdgeName() {
@@ -189,6 +191,10 @@ bool Edge::RequiresMemoryForDeriv() const {
 
 bool Edge::IsTied() {
   return is_tied_;
+}
+
+void Edge::SetImageSize(int image_size) {
+  image_size_ = image_size;
 }
 
 void Edge::InsertPolyak() {

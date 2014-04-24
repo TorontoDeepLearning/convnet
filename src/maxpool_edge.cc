@@ -7,14 +7,18 @@ MaxPoolEdge::MaxPoolEdge(const config::Edge& edge_config) :
   stride_(edge_config.stride()),
   padding_(edge_config.padding()){}
 
-void MaxPoolEdge::AllocateMemory(int image_size) {
+void MaxPoolEdge::SetImageSize(int image_size) {
+  Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
+}
+
+void MaxPoolEdge::AllocateMemory(bool fprop_only) {
   
   cout << name_ << " ";
   printf("Kernel: %d-%d-%d to %d ", kernel_size_, kernel_size_,
          num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size, image_size, num_input_channels_,
-         image_size * image_size * num_input_channels_);
+  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
+         image_size_ * image_size_ * num_input_channels_);
   cout << " Maxpool." << endl;
  
   // This edge has no memory requirements.

@@ -4,28 +4,30 @@
 FCEdge::FCEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config){}
 
-void FCEdge::AllocateMemory(int image_size) {
-  EdgeWithWeight::AllocateMemory(image_size);
-  cout << name_ << " ";
-  printf("Fully connected : %d-%d-%d (%d) : %d\n", image_size, image_size, num_input_channels_,
-         image_size * image_size * num_input_channels_, num_output_channels_);
+void FCEdge::AllocateMemoryBprop() {
+  int input_size = image_size_ * image_size_ * num_input_channels_;
+  grad_weights_.AllocateGPUMemory(num_output_channels_, input_size, GetName() + "_grad_weight");
+  grad_bias_.AllocateGPUMemory(1, num_output_channels_, GetName() + "_grad_bias");
 
-  int weight_input_size = image_size * image_size * num_input_channels_;
+  weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
+  bias_optimizer_->AllocateMemory(1, num_output_channels_);
+}
 
-  // Weights.
-  weights_.AllocateGPUMemory(num_output_channels_, weight_input_size, GetName() + "_weight");
-
-  // Matrix for storing the current gradient.
-  grad_weights_.AllocateGPUMemory(weights_.GetRows(), weights_.GetCols(), GetName() + "_grad_weight");
-
-  weight_optimizer_->AllocateMemory(weights_.GetRows(), weights_.GetCols());
-  // Matrix for storing gradient history (used for implementing momentum or
-  // other accelerated gradient descent schemes).
-  //grad_history_weights_.AllocateGPUMemory(weights_.GetRows(), weights_.GetCols());
-
+void FCEdge::AllocateMemoryFprop() {
+  int input_size = image_size_ * image_size_ * num_input_channels_;
+  weights_.AllocateGPUMemory(num_output_channels_, input_size, GetName() + "_weight");
   bias_.AllocateGPUMemory(1, num_output_channels_, GetName() + "_bias");
-  grad_bias_.AllocateGPUMemory(bias_.GetRows(), bias_.GetCols(), GetName() + "_grad_bias");
-  bias_optimizer_->AllocateMemory(bias_.GetRows(), bias_.GetCols());
+}
+
+void FCEdge::AllocateMemory(bool fprop_only) {
+  EdgeWithWeight::AllocateMemory(fprop_only);
+  cout << name_ << " ";
+  printf("Fully connected : %d-%d-%d (%d) : %d\n", image_size_, image_size_,
+         num_input_channels_, image_size_ * image_size_ * num_input_channels_,
+         num_output_channels_);
+
+  AllocateMemoryFprop();
+  if (!fprop_only) AllocateMemoryBprop();
 }
 
 void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

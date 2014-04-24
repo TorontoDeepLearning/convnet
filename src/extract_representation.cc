@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
   ConvNet net = ConvNet(model_file);
   net.SetupDataset(data_file);
-  net.Load();
+  net.AllocateMemory(true);
   cout << "Dumping outputs to " << output_file << endl;
   net.DumpOutputs(output_file, layer_names);
   return 0;

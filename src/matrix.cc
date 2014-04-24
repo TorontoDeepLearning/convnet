@@ -394,7 +394,7 @@ void Matrix::InitRandom(int seed){
 void Matrix::RegisterTempMemory(int size, const string& why) {
   if (size > temp_size_[current_gpu_id_]) {
     temp_size_[current_gpu_id_] = size;
-    cout << "Max for " << why << endl;
+    //cout << "Max for " << why << endl;
   }
 }
 

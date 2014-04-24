@@ -12,10 +12,10 @@ class Edge {
   Edge(const config::Edge& edge_config);
   ~Edge();
   
-  virtual void AllocateMemory(int image_size);
+  virtual void AllocateMemory(bool fprop_only);
   virtual void Initialize();
   virtual void SaveParameters(hid_t file);
-  virtual void LoadParameters(hid_t file);
+  virtual void LoadParameters(hid_t file, bool fprop_only);
   virtual void InsertPolyak();
   virtual void BackupCurrent();
   virtual void LoadCurrentOnGPU();
@@ -29,7 +29,7 @@ class Edge {
   virtual void DisplayWeightStats();
   virtual void SetTiedTo(Edge* e);
 
-  // Any base class that implements an edge MUST override these.
+  // Any derived class that implements an edge MUST override these.
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite) = 0;
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input,
@@ -39,6 +39,8 @@ class Edge {
   virtual void UpdateWeights();
 
   virtual bool RequiresMemoryForDeriv() const;
+  virtual void SetImageSize(int image_size);
+
   bool IsBackPropBlocked() const { return block_backprop_; }
 
   void SetSource(Layer* source);
@@ -67,7 +69,7 @@ class Edge {
   Layer *source_, *dest_;
   const string source_node_, dest_node_, name_, tied_edge_name_;
   Edge* tied_edge_;
-  int num_input_channels_, num_output_channels_, image_size_, num_shares_;
+  int num_input_channels_, num_output_channels_, image_size_, num_modules_, num_shares_;
   float scale_gradients_;
   bool mark_;  // Used for topological sorting.
   const bool block_backprop_, is_tied_;

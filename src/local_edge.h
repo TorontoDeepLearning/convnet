@@ -5,7 +5,7 @@
 class LocalEdge : public EdgeWithWeight {
  public:
   LocalEdge(const config::Edge& edge_config);
-  virtual void AllocateMemory(int image_size);
+  virtual void AllocateMemory(bool fprop_only);
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
@@ -15,9 +15,12 @@ class LocalEdge : public EdgeWithWeight {
   virtual void DisplayWeights();
   
   virtual int GetNumModules() const { return num_modules_; }
+  virtual void SetImageSize(int image_size);
  
  private:
+  void AllocateMemoryBprop();
+  void AllocateMemoryFprop();
+
   const int kernel_size_, stride_, padding_;
-  int num_modules_, image_size_;
 };
 #endif

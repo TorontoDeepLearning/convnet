@@ -8,11 +8,15 @@ ConvEdge::ConvEdge(const config::Edge& edge_config) :
   stride_(edge_config.stride()),
   padding_(edge_config.padding()),
   partial_sum_(edge_config.partial_sum()),
-  shared_bias_(edge_config.shared_bias()),
-  num_modules_(0) {}
+  shared_bias_(edge_config.shared_bias()) {}
 
 void ConvEdge::SetTiedTo(Edge* e) {
   EdgeWithWeight::SetTiedTo(e);
+}
+
+void ConvEdge::SetImageSize(int image_size) {
+  Edge::SetImageSize(image_size);
+  num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
 }
 
 void ConvEdge::DisplayWeights() {
@@ -22,30 +26,40 @@ void ConvEdge::DisplayWeights() {
   }
 }
 
-void ConvEdge::AllocateMemory(int image_size) {
-  Edge::AllocateMemory(image_size);
-  
-  num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
+void ConvEdge::AllocateMemory(bool fprop_only) {
+  Edge::AllocateMemory(fprop_only);
 
   cout << name_ << " ";
   printf("Kernel: %d-%d-%d to %d ", kernel_size_, kernel_size_,
          num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size, image_size, num_input_channels_,
-         image_size * image_size * num_input_channels_);
-  
-  int weight_input_size = kernel_size_ * kernel_size_ * num_input_channels_;
+  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
+         image_size_ * image_size_ * num_input_channels_);
+ 
+  AllocateMemoryFprop();
+  if (!fprop_only) AllocateMemoryBprop();
 
-  // Weights for this convolution.
-  weights_.AllocateGPUMemory(num_output_channels_, weight_input_size);
+  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols()
+       << " Convolutional" << endl;
 
+  if (num_input_channels_ == 3) {
+    int num_filters = num_output_channels_;
+    int num_filters_w = int(sqrt(num_filters));
+    int num_filters_h = num_filters / num_filters_w + (((num_filters % num_filters_w) > 0) ? 1 : 0);
+    int width = 250;
+    int height = (width * num_filters_h) / num_filters_w;
+    img_display_ = new ImageDisplayer(width, height, 3, false, "weights");
+  }
+
+}
+
+
+void ConvEdge::AllocateMemoryBprop() {
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
+  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
   // Matrix for storing the current gradient.
-  grad_weights_.AllocateGPUMemory(weights_.GetRows(), weights_.GetCols());
+  grad_weights_.AllocateGPUMemory(num_output_channels_, input_size);
+  weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
 
-  // Matrix for storing gradient history (used for implementing momentum or
-  // other accelerated gradient descent schemes).
-  weight_optimizer_->AllocateMemory(weights_.GetRows(), weights_.GetCols());
-
-  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols();
   if (partial_sum_ > 0) {
     int partial_sums = (num_modules_ * num_modules_) / partial_sum_;
     cout << "Partial sum " << partial_sum_ << " must divide number of modules "
@@ -56,27 +70,26 @@ void ConvEdge::AllocateMemory(int image_size) {
            << "." << endl;
       exit(1);
     }
-    Matrix::RegisterTempMemory(num_output_channels_ * weight_input_size * partial_sums, "partial sums " + GetName());
+    Matrix::RegisterTempMemory(num_output_channels_ * input_size * partial_sums,
+                               "partial sums " + GetName());
     Matrix::RegisterOnes(partial_sums);
   }
-  cout << " Convolutional" << endl;
-  //if (is_sparse_conv_) AllocateGPUMatrix(&w_slice_, 1, weight_input_size);
   
-  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
-  bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
-  grad_bias_.AllocateGPUMemory(bias_.GetRows(), bias_.GetCols());
-  bias_optimizer_->AllocateMemory(bias_.GetRows(), bias_.GetCols());
+  grad_bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
+  bias_optimizer_->AllocateMemory(1, num_output_channels_ * bias_locs);
   if (shared_bias_) {
-    Matrix::RegisterTempMemory(num_output_channels_ * num_modules_ * num_modules_, "shared bias");
+    Matrix::RegisterTempMemory(
+        num_output_channels_ * num_modules_ * num_modules_, "shared bias");
   }
-  if (num_input_channels_ == 3) {
-    int num_filters = num_output_channels_;
-    int num_filters_w = int(sqrt(num_filters));
-    int num_filters_h = num_filters / num_filters_w +  (((num_filters % num_filters_w) > 0) ? 1 : 0);
-    int width = 250;
-    int height = (width * num_filters_h) / num_filters_w;
-    img_display_ = new ImageDisplayer(width, height, 3, false, "weights");
-  }
+}
+
+void ConvEdge::AllocateMemoryFprop() {
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
+  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
+  
+  // Weights for this convolution.
+  weights_.AllocateGPUMemory(num_output_channels_, input_size);
+  bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
 }
 
 void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
@@ -114,7 +127,7 @@ void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
 
   //cout << "Target rows " << deriv_input.GetRows() << " cols " << deriv_input.GetCols() << endl;
   //cout << "NumImgColors " << num_input_channels_ << endl;
-  // cout << "Image size " << image_size_ << endl;
+  // cout << "Image size " << image_size__ << endl;
 
   int scale_targets = overwrite ? 0 : 1;
   convDown(deriv_output_mat, w_mat, deriv_input_mat, image_size_, -padding_,

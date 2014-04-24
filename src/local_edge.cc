@@ -30,39 +30,49 @@ void LocalEdge::DisplayWeights() {
   }
 }
 
-
-void LocalEdge::AllocateMemory(int image_size) {
-  Edge::AllocateMemory(image_size);
-  
+void LocalEdge::SetImageSize(int image_size) {
+  Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
+}
+
+void LocalEdge::AllocateMemoryFprop() {
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_
+                   * num_modules_ * num_modules_;
+  int bias_locs = num_modules_ * num_modules_;
+  weights_.AllocateGPUMemory(num_output_channels_, input_size);
+  bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
+
+}
+
+void LocalEdge::AllocateMemoryBprop() {
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_
+                   * num_modules_ * num_modules_;
+  int bias_locs = num_modules_ * num_modules_;
+  // Matrix for storing the current gradient.
+  grad_weights_.AllocateGPUMemory(num_output_channels_, input_size);
+
+  weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
+
+  grad_bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
+  bias_optimizer_->AllocateMemory(1, num_output_channels_ * bias_locs);
+}
+
+void LocalEdge::AllocateMemory(bool fprop_only) {
+  Edge::AllocateMemory(fprop_only);
+  
+  num_modules_ = (image_size_ + 2 * padding_ - kernel_size_) / stride_ + 1;
 
   cout << name_ << " ";
   printf("Kernel: %d-%d-%d to %d ", kernel_size_, kernel_size_,
          num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size, image_size, num_input_channels_,
-         image_size * image_size * num_input_channels_);
+  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
+         image_size_ * image_size_ * num_input_channels_);
   
-  int weight_input_size = kernel_size_ * kernel_size_ * num_input_channels_
-                          * num_modules_ * num_modules_;
+  AllocateMemoryFprop();
+  if (!fprop_only) AllocateMemoryBprop();
 
-  // Weights for this convolution.
-  weights_.AllocateGPUMemory(num_output_channels_, weight_input_size);
-
-  // Matrix for storing the current gradient.
-  grad_weights_.AllocateGPUMemory(weights_.GetRows(), weights_.GetCols());
-
-  // Matrix for storing gradient history (used for implementing momentum or
-  // other accelerated gradient descent schemes).
-  weight_optimizer_->AllocateMemory(weights_.GetRows(), weights_.GetCols());
-
-  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols();
- 
-  const int bias_locs = num_modules_ * num_modules_;
-  bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
-  grad_bias_.AllocateGPUMemory(bias_.GetRows(), bias_.GetCols());
-  bias_optimizer_->AllocateMemory(bias_.GetRows(), bias_.GetCols());
-  
-  cout << " Locally Connected" << endl;
+  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols()
+       << " Locally Connected" << endl;
   if (num_input_channels_ == 3) {
     int num_filters = num_output_channels_;
     int num_filters_w = int(sqrt(num_filters));

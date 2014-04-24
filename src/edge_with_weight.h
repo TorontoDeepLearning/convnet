@@ -11,7 +11,7 @@ class EdgeWithWeight : public Edge {
 
   virtual void Initialize();
   virtual void SaveParameters(hid_t file);
-  virtual void LoadParameters(hid_t file);
+  virtual void LoadParameters(hid_t file, bool fprop_only);
 
   virtual float GetRMSWeight();
   virtual void ReduceLearningRate(float factor);

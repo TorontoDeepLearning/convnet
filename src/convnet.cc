@@ -91,10 +91,12 @@ void ConvNet::BuildNet() {
   }
 }
 
-// Allocate memory for using mini-batches of size 'batch_size'.
-void ConvNet::AllocateMemory(int batch_size) {
+// Allocate layer memory for using mini-batches of batch_size_.
+void ConvNet::AllocateLayerMemory() {
+  cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
   int image_size;
   for (Layer* l : layers_) {
+    cout << l->GetName() << endl;
     // Find out the spatial size of the layer.
     if (l->IsInput()) {
       image_size = model_->patch_size();
@@ -106,12 +108,24 @@ void ConvNet::AllocateMemory(int batch_size) {
         break;
       }
     }
-    // Allocate memory.
-    l->AllocateMemory(image_size, batch_size);
-    l->AllocateMemoryEdges(image_size);
+    l->AllocateMemory(image_size, batch_size_);
+    for (Edge* e: l->outgoing_edge_) {
+      e->SetImageSize(image_size);
+    }
   }
+  cout << "Done layer " << endl;
+}
 
-  for (Edge* e: edges_) e->Initialize();
+// Allocate memory for edges.
+void ConvNet::AllocateEdgeMemory(bool fprop_only) {
+  for (Edge* e : edges_) e->AllocateMemory(fprop_only);
+
+  // Initialize randomly or from a saved model.
+  if (timestamp_.empty()) {
+    for (Edge* e: edges_) e->Initialize();
+  } else {
+    Load(fprop_only);
+  }
 }
 
 // Topologically sort layers.
@@ -148,44 +162,6 @@ void ConvNet::Sort() {
   // Re-order layers in the instance variable.
   for (int i = 0; i < layers_.size(); i++) layers_[i] = L[i];
 }
-/*
-void ConvNet::Display() {
-  mglGraph gr;
-  const int num_cols = 5;
-  int num_edges = edges_.size();
-  for (int i = 0; i < edges_.size(); i++) {
-    for (int k = 0; k < num_cols; k++) {
-      if (k == 0) {
-        gr.SubPlot(num_cols, num_edges, num_cols * (num_edges - i - 1));
-        gr.Puts(mglPoint(0.5,0.5), edges_[i]->GetName().c_str(), "a", -3);
-      } else {
-        if (edges_[i]->HasNoParameters()) continue;
-        cudamat* mat;
-        if (k == 1) mat = edges_[i]->GetWeights();
-        else if (k == 2) mat = edges_[i]->GetGradWeightsHistory();
-        else if (k == 3) mat = edges_[i]->GetBias();
-        else if (k == 4) mat = edges_[i]->GetGradBiasHistory();
-        copy_to_host(mat);
-        mglData x = mglData(mat->size[0] * mat->size[1], mat->data_host);
-        float min = x.Min("x").a[0], max = x.Max("x").a[0];
-        mglData xx = x.Hist(100, min, max);
-        xx.Norm(0, 1);
-        gr.SubPlot(num_cols, num_edges, num_cols * (num_edges - i - 1) + k);
-        if (k == 1) gr.Title("Weights");
-        else if (k == 2) gr.Title("Grad weights");
-        else if (k == 3) gr.Title("Bias");
-        else if (k == 4) gr.Title("Grad bias");
-        gr.SetRanges(min, max, 0, 1);
-        gr.Box();
-        gr.Bars(xx);
-        gr.Axis();
-      }
-    }
-  }
-  gr.WriteEPS("sample.eps");  // save it
-  //displayer_.DisplayMathGL(gr);
-}
-*/
 
 void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite) {
   edge.ComputeUp(input.GetState(), output.GetState(), overwrite);
@@ -263,11 +239,14 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
   batch_size_ = train_dataset_->GetBatchSize();
   // Tell the layers what mini-batch size to expect so they can allocate
   // the required GPU memory to store the activations.
-  AllocateMemory(batch_size_);
 
   if (!val_data_config_file.empty()) {
     val_dataset_ = DataHandler::ChooseDataHandler(val_data_config_file);
   }
+}
+void ConvNet::AllocateMemory(bool fprop_only) {
+  AllocateLayerMemory();
+  AllocateEdgeMemory(fprop_only);
 }
 
 void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
@@ -277,11 +256,6 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
   int dataset_size = dataset->GetDataSetSize(),
       batch_size = dataset->GetBatchSize(),
       num_batches = dataset_size / batch_size;
-      //left_overs = dataset_size % batch_size;
-  //cout << "Starting validation on dataset of size " << dataset_size << endl;
-  //     << " # batches " << num_batches << endl;
-  // << " # left overs " << left_overs << endl;
-  //if (left_overs > 0) num_batches++;
   for (int k = 0; k < num_batches; k++) {
     dataset->GetBatch(data_layers_);
     Fprop(false);
@@ -290,11 +264,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
     for (int i = 0; i < error.size(); i++) {
       total_error[i] = (total_error[i] * k) / (k+1) + error[i] / (batch_size * (k+1));
     }
-    //cout << "\rBatch " << (k+1) << " accuracy ";
-    //for (const float& err: total_error) cout << " " << err;
-    //cout.flush();
   }
-  //cout << endl;
 }
 
 void ConvNet::DumpOutputs(const string& output_file, const vector<string>& layer_names) {
@@ -409,14 +379,14 @@ string ConvNet::GetCheckpointFilename() {
   return filename;
 }
 
-void ConvNet::Load() {
-  Load(GetCheckpointFilename());
+void ConvNet::Load(bool fprop_only) {
+  Load(GetCheckpointFilename(), fprop_only);
 }
 
-void ConvNet::Load(const string& input_file) {
+void ConvNet::Load(const string& input_file, bool fprop_only) {
   cout << "Loading model from " << input_file << endl;
   hid_t file = H5Fopen(input_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  for (Edge* e : edges_) e->LoadParameters(file);
+  for (Edge* e : edges_) e->LoadParameters(file, fprop_only);
   ReadHDF5IntAttr(file, "__lr_reduce_counter__", &lr_reduce_counter_);
   for (int i = 0; i < lr_reduce_counter_; i++) {
     ReduceLearningRate(model_->reduce_lr_factor());
@@ -434,7 +404,6 @@ void ConvNet::DisplayLayers() {
 void ConvNet::DisplayEdges() {
   for (int i = 0; i < edges_.size(); i++){
     edges_[i]->DisplayWeights();
-    //edges_[i]->DisplayWeightStats();
   }
 }
 
@@ -529,7 +498,7 @@ void ConvNet::Train() {
   }
 
   // If timestamp is present, then initialize model at that timestamp.
-  if (!timestamp_.empty()) Load();
+  //if (!timestamp_.empty()) Load();
 
   // Before starting the training, mark this model with a timestamp.
   TimestampModel();

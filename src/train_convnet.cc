@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
   } else {
     net.SetupDataset(data_file);
   }
+  net.AllocateMemory(false);
   cout << "Calling train" << endl;
   net.Train();
   return 0;

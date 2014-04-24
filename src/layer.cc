@@ -181,9 +181,6 @@ void Layer::AllocateMemory(int image_size, int batch_size) {
 }
 
 void Layer::AllocateMemoryEdges(int image_size) {
-  for (Edge* e: outgoing_edge_) {
-    e->AllocateMemory(image_size);
-  }
 }
 
 void Layer::ApplyDropoutAtTrainTime() {

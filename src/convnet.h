@@ -19,17 +19,19 @@ class ConvNet {
 
   void Save();
   void Save(const string& output_file);
-  void Load();
-  void Load(const string& input_file);
+  void Load(bool fprop_only);
+  void Load(const string& input_file, bool fprop_only);
   string GetCheckpointFilename();
   void Display();
   void DumpOutputs(const string& output_file, const vector<string>& layer_names);
   void DumpOutputs(const string& output_file, DataHandler* dataset, const vector<string>& layer_names);
+  void AllocateMemory(bool fprop_only);
 
  protected:
   void BuildNet();
   void DestroyNet();
-  void AllocateMemory(int batch_size);
+  void AllocateLayerMemory();
+  void AllocateEdgeMemory(bool fprop_only);
   void TimestampModel();
   void Sort();
   void Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite);

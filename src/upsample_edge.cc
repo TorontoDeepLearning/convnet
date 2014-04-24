@@ -3,11 +3,11 @@
 
 UpSampleEdge::UpSampleEdge(const config::Edge& edge_config) :
   Edge(edge_config),
-  sample_factor_(edge_config.sample_factor()),
-  image_size_(0) {}
+  sample_factor_(edge_config.sample_factor()) {}
 
-void UpSampleEdge::AllocateMemory(int image_size) {
-  image_size_ = image_size;
+void UpSampleEdge::SetImageSize(int image_size) {
+  Edge::SetImageSize(image_size);
+  num_modules_ = image_size * sample_factor_;
 }
 
 void UpSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

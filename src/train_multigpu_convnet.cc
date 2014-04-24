@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
   } else {
     net->SetupDataset(data_file);
   }
+  net->AllocateMemory(false);
   net->Train();
   delete net;
   return 0;

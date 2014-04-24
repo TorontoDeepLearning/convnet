@@ -35,18 +35,22 @@ void EdgeWithWeight::SaveParameters(hid_t file) {
   bias_optimizer_->SaveParameters(file, ss.str());
 }
 
-void EdgeWithWeight::LoadParameters(hid_t file) {
+void EdgeWithWeight::LoadParameters(hid_t file, bool fprop_only) {
   if (is_tied_) return;
   stringstream ss;
   ss << source_node_ << ":" << dest_node_ << ":" << "weight";
   cout << "Loading " << ss.str() << endl;
   weights_.ReadHDF5(file, ss.str());
-  weight_optimizer_->LoadParameters(file, ss.str());
+  if (!fprop_only) {
+    weight_optimizer_->LoadParameters(file, ss.str());
+  }
   ss.str("");
   ss << source_node_ << ":" << dest_node_ << ":" << "bias";
   cout << "Loading " << ss.str() << endl;
   bias_.ReadHDF5(file, ss.str());
-  bias_optimizer_->LoadParameters(file, ss.str());
+  if (!fprop_only) {
+    bias_optimizer_->LoadParameters(file, ss.str());
+  }
 }
 
 void EdgeWithWeight::DisplayWeights() {
