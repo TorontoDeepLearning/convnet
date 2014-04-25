@@ -22,7 +22,7 @@ BIN=bin
 LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl
 CPPFLAGS = -I$(CIMG) -I$(INC) -I$(CUDA_INC) -I$(SRC)
 LIBFLAGS = -L$(LIB) -L$(CUDA_LIB)
-CXXFLAGS = -O2 -std=c++0x -march=native -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
+CXXFLAGS = -O2 -std=c++0x -march=native -Wall -Wno-unused-result -Wno-sign-compare
 
 EDGES_SRC := $(wildcard $(SRC)/*_edge.cc)
 EDGES_OBJS := $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(EDGES_SRC)) $(OBJ)/optimizer.o

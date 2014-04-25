@@ -13,6 +13,7 @@ int main(int argc, char** argv) {
 
   GradChecker gcheck = GradChecker(model_file);
   gcheck.SetupDataset(data_file);
+  gcheck.AllocateMemory(false);
   gcheck.Run();
 
   return 0;
