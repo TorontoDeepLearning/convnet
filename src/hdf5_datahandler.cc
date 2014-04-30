@@ -59,9 +59,10 @@ void SimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (Layer* l : data_layers) {
     cudamat data_slice;
     Matrix& m = data_[i];
+    Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     get_slice(m.GetMat(), &data_slice, start_, end);
-    copy_transpose(&data_slice, l->GetData().GetMat());
-    l->GetData().SetReady();
+    copy_transpose(&data_slice, dest.GetMat());
+    dest.SetReady();
     i += 1;
   }
   start_ = end;

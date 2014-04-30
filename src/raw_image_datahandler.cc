@@ -143,6 +143,8 @@ void RawImageDataHandler::LoadMeansFromDisk() {
 
     mean_.Reshape(-1, 1);
     std_.Reshape(-1, 1);
+    mean_.CopyToHost();
+    std_.CopyToHost();
   } else {
     mean_.AllocateAndReadHDF5(file, "mean");
     std_.AllocateAndReadHDF5(file, "std");

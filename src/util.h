@@ -9,6 +9,7 @@
 #endif
 
 #include <string>
+#define cimg_use_jpeg
 #include "CImg.h"
 #include "cudamat.cuh"
 #include <stdio.h>

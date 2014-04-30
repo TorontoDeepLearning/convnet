@@ -96,7 +96,6 @@ void ConvNet::AllocateLayerMemory() {
   cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
   int image_size;
   for (Layer* l : layers_) {
-    cout << l->GetName() << endl;
     // Find out the spatial size of the layer.
     if (l->IsInput()) {
       image_size = model_->patch_size();
@@ -113,7 +112,6 @@ void ConvNet::AllocateLayerMemory() {
       e->SetImageSize(image_size);
     }
   }
-  cout << "Done layer " << endl;
 }
 
 // Allocate memory for edges.
@@ -237,13 +235,11 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
   train_dataset_ = DataHandler::ChooseDataHandler(train_data_config_file);
   batch_size_ = train_dataset_->GetBatchSize();
-  // Tell the layers what mini-batch size to expect so they can allocate
-  // the required GPU memory to store the activations.
-
   if (!val_data_config_file.empty()) {
     val_dataset_ = DataHandler::ChooseDataHandler(val_data_config_file);
   }
 }
+
 void ConvNet::AllocateMemory(bool fprop_only) {
   AllocateLayerMemory();
   AllocateEdgeMemory(fprop_only);
@@ -309,7 +305,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
     new DataWriter(output_file, dataset_size):
     new AveragedDataWriter(output_file, dataset_size, num_positions, batch_size);
     //new SequentialAveragedDataWriter(output_file, dataset_size, num_positions);
-  cout  << "Num positions " << num_positions << endl;
+
   for (Layer* l : layers) {
     int numdims = l->GetState().GetCols();
     data_writer->AddStream(l->GetName(), numdims);
@@ -336,7 +332,6 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
   }
   cout << endl;
   delete data_writer;
-  cout << "Exiting" << endl;
 }
 
 void ConvNet::Save() {

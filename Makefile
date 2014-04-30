@@ -56,7 +56,7 @@ $(OBJ)/matrix.o: $(SRC)/matrix.cc $(SRC)/matrix.h
 	$(NVCC) -c $(CPPFLAGS) --compiler-options="$(CXXFLAGS)" $< -o $@
 
 $(OBJ)/cuda%.o: $(SRC)/cuda%.cu $(SRC)/cuda%.cuh
-	$(NVCC) -c -O2 -gencode=arch=compute_35,code=sm_35 $< -o $@
+	$(NVCC) -c -O2 --use_fast_math -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=sm_30 -gencode=arch=compute_35,code=sm_35 $< -o $@
 
 $(OBJ)/%.o: $(SRC)/%.cc $(SRC)/%.h
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@

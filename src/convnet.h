@@ -12,7 +12,7 @@ class ConvNet {
   ConvNet(const string& model_file);
   ~ConvNet();
   void SetupDataset(const string& train_data_config_file);
-  void SetupDataset(const string& train_data_config_file, const string& val_data_config_file);
+  virtual void SetupDataset(const string& train_data_config_file, const string& val_data_config_file);
   virtual void Train();
   void Validate(DataHandler* dataset, vector<float>& error);
   void Validate(vector<float>& error);
