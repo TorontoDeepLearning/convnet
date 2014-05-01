@@ -16,11 +16,15 @@ class LocalEdge : public EdgeWithWeight {
   
   virtual int GetNumModules() const { return num_modules_; }
   virtual void SetImageSize(int image_size);
+
+  int GetKernelSize() const { return kernel_size_; }
+  int GetStride() const { return stride_; }
+  int GetPadding() const { return padding_; }
  
  private:
   void AllocateMemoryBprop();
   void AllocateMemoryFprop();
 
-  const int kernel_size_, stride_, padding_;
+  int kernel_size_, stride_, padding_;
 };
 #endif

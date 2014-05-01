@@ -51,13 +51,13 @@ void ConvNet::BuildNet() {
   }
 
   // Communicate information about tied edges.
-  map<string, Edge*> tying_id_map;
+  map<string, Edge*> edge_name_map;
   for (Edge* e: edges_) {
-    tying_id_map[e->GetName()] = e;
+    edge_name_map[e->GetName()] = e;
   }
   for (Edge* e: edges_) {
     if (e->IsTied()) {
-      e->SetTiedTo(tying_id_map[e->GetTiedEdgeName()]);  // TODO: Check if not found.
+      e->SetTiedTo(edge_name_map[e->GetTiedEdgeName()]);  // TODO: Check if not found.
     }
   }
 

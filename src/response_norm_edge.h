@@ -5,6 +5,7 @@
 class ResponseNormEdge : public Edge {
  public:
   ResponseNormEdge(const config::Edge& edge_config);
+  virtual void SetTiedTo(Edge* e);
   virtual void AllocateMemory(bool fprop_only);
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
@@ -12,10 +13,15 @@ class ResponseNormEdge : public Edge {
   virtual bool RequiresMemoryForDeriv() const { return true; }
   virtual void SetImageSize(int image_size);
 
+  bool Blocked() const { return blocked_; }
+  float AddScale() const { return add_scale_; }
+  float PowScale() const { return pow_scale_; }
+  float FracOfFilters() const { return frac_of_filters_response_norm_; }
+
  private:
   Matrix denoms_;
   int num_filters_response_norm_;
-  const bool blocked_;
-  const float add_scale_, pow_scale_, frac_of_filters_response_norm_;
+  bool blocked_;
+  float add_scale_, pow_scale_, frac_of_filters_response_norm_;
 };
 #endif

@@ -13,7 +13,9 @@ EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
   init_wt_(edge_config.init_wt()),
   init_bias_(edge_config.init_bias()),
   has_no_bias_(edge_config.has_no_bias()),
-  num_grads_received_(0) {
+  num_grads_received_(0),
+  num_shares_(1),
+  scale_gradients_(edge_config.scale_gradients()) {
     polyak_weights_.resize(polyak_queue_size_);
     polyak_bias_.resize(polyak_queue_size_);
 }
@@ -85,7 +87,10 @@ void EdgeWithWeight::ReduceLearningRate(float factor) {
 }
 
 void EdgeWithWeight::UpdateWeights() {
-  num_grads_received_++;
+  if (is_tied_) {
+    tied_edge_->UpdateWeights();
+    return;
+  }
   if (num_grads_received_ < num_shares_) return;
   num_grads_received_ = 0;
   Matrix::SetDevice(gpu_id_);
@@ -206,4 +211,26 @@ void EdgeWithWeight::LoadPolyakOnGPU() {
   for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] /= max_ind;
   weights_.CopyToDevice();
   bias_.CopyToDevice();
+}
+
+void EdgeWithWeight::SetTiedTo(Edge* e) {
+  tied_edge_ = dynamic_cast<EdgeWithWeight*>(e);
+  if (tied_edge_ == NULL) {
+    cerr << "Error: Edge " << GetName() << " cannot be tied to edge "
+         << e->GetName() << " which is not of the same type." << endl;
+    exit(1);
+  }
+  num_shares_++;
+}
+
+int EdgeWithWeight::GetNumGradsReceived() {
+  return is_tied_ ? tied_edge_->GetNumGradsReceived() : num_grads_received_;
+}
+
+void EdgeWithWeight::IncrementNumGradsReceived() {
+  if (is_tied_) {
+    tied_edge_->IncrementNumGradsReceived();
+  } else {
+    num_grads_received_++;
+  }
 }

@@ -60,8 +60,6 @@ Edge::Edge(const config::Edge& edge_config) :
   num_output_channels_(0),
   image_size_(0),
   num_modules_(1),
-  num_shares_(1),
-  scale_gradients_(edge_config.scale_gradients()),
   mark_(false),
   block_backprop_(edge_config.block_backprop()),
   is_tied_(!tied_edge_name_.empty()),
@@ -76,7 +74,6 @@ Edge::~Edge() {
 
 void Edge::SetTiedTo(Edge* e) {
   tied_edge_ = e;
-  e->IncrementShares();
 }
 
 void Edge::SetInputChannels(int a) {
@@ -158,11 +155,6 @@ const string& Edge::GetDestName() {
 
 const string& Edge::GetName() {
   return name_;
-}
-
-
-void Edge::IncrementShares() {
-  num_shares_++;
 }
 
 void Edge::SetMark() {

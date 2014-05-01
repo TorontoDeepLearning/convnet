@@ -16,12 +16,18 @@ class ConvEdge : public EdgeWithWeight {
   virtual int GetNumModules() const { return num_modules_; }
   virtual void SetImageSize(int image_size);
  
+  int GetKernelSize() const { return kernel_size_; }
+  int GetStride() const { return stride_; }
+  int GetPadding() const { return padding_; }
+  int GetPartialSum() const { return partial_sum_; }
+  bool GetSharedBias() const { return shared_bias_; }
+
  private:
   void AllocateMemoryBprop();
   void AllocateMemoryFprop();
 
   Matrix grad_weights_partial_sum_;
-  const int kernel_size_, stride_, padding_, partial_sum_;
-  const bool shared_bias_;
+  int kernel_size_, stride_, padding_, partial_sum_;
+  bool shared_bias_;
 };
 #endif

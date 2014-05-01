@@ -19,6 +19,7 @@ class EdgeWithWeight : public Edge {
   virtual int GetNumModules() const;
   virtual void DisplayWeights();
   virtual void DisplayWeightStats();
+  virtual void SetTiedTo(Edge* e);
 
   virtual void UpdateWeights();
   Matrix& GetWeight() { return weights_;}
@@ -35,9 +36,14 @@ class EdgeWithWeight : public Edge {
   virtual void LoadPolyakOnGPU();
 
  protected:
+  // Tied edge management.
+  void IncrementNumGradsReceived();
+  int GetNumGradsReceived();
+
   Matrix weights_, grad_weights_, bias_, grad_bias_;
   Optimizer * const weight_optimizer_;
   Optimizer * const bias_optimizer_;
+  EdgeWithWeight* tied_edge_;
 
   vector<Matrix> polyak_weights_, polyak_bias_;
   Matrix weights_backup_, bias_backup_;
@@ -50,6 +56,7 @@ class EdgeWithWeight : public Edge {
   const float init_wt_, init_bias_;
 
   const bool has_no_bias_;
-  int num_grads_received_;
+  int num_grads_received_, num_shares_;
+  const float scale_gradients_;
 };
 #endif

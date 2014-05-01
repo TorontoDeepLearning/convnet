@@ -7,6 +7,15 @@ MaxPoolEdge::MaxPoolEdge(const config::Edge& edge_config) :
   stride_(edge_config.stride()),
   padding_(edge_config.padding()){}
 
+void MaxPoolEdge::SetTiedTo(Edge* e) {
+  Edge::SetTiedTo(e);
+  MaxPoolEdge* ee = dynamic_cast<MaxPoolEdge*> (e);
+  kernel_size_ = ee->GetKernelSize();
+  stride_ = ee->GetStride();
+  padding_ = ee->GetPadding();
+}
+
+
 void MaxPoolEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;

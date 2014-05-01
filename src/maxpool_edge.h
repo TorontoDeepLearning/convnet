@@ -5,6 +5,7 @@
 class MaxPoolEdge : public Edge {
  public:
   MaxPoolEdge(const config::Edge& edge_config);
+  virtual void SetTiedTo(Edge* e);
   virtual void AllocateMemory(bool fprop_only);
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
@@ -14,7 +15,11 @@ class MaxPoolEdge : public Edge {
   virtual bool RequiresMemoryForDeriv() const { return true; }
   virtual void SetImageSize(int image_size);
 
+  int GetKernelSize() const { return kernel_size_; }
+  int GetStride() const { return stride_; }
+  int GetPadding() const { return padding_; }
+
  private:
-  const int kernel_size_, stride_, padding_;
+  int kernel_size_, stride_, padding_;
 };
 #endif

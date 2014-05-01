@@ -9,6 +9,15 @@ ResponseNormEdge::ResponseNormEdge(const config::Edge& edge_config) :
   pow_scale_(edge_config.pow_scale()),
   frac_of_filters_response_norm_(edge_config.frac_of_filters_response_norm()){}
 
+void ResponseNormEdge::SetTiedTo(Edge* e) {
+  Edge::SetTiedTo(e);
+  ResponseNormEdge* ee = dynamic_cast<ResponseNormEdge*> (e);
+  blocked_ = ee->Blocked();
+  add_scale_ = ee->AddScale();
+  pow_scale_ = ee->PowScale();
+  frac_of_filters_response_norm_ = ee->FracOfFilters();
+}
+
 void ResponseNormEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = image_size;

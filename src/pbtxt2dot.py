@@ -24,13 +24,22 @@ def GetSizes(model):
       size = patch_size
     else:
       e = next(e for e in model.edge if e.dest == l.name)
+      source_name = e.source
+      if e.tied_to != "":
+        e = next(ee for ee in model.edge if e.tied_to == '%s:%s' % (ee.source, ee.dest))
       if e.edge_type == convnet_config_pb2.Edge.FC:
         size = 1
       elif e.edge_type == convnet_config_pb2.Edge.RESPONSE_NORM:
-        input_size = size_dict[e.source]
+        input_size = size_dict[source_name]
         size = input_size
+      elif e.edge_type == convnet_config_pb2.Edge.DOWNSAMPLE:
+        input_size = size_dict[source_name]
+        size = input_size / e.sample_factor
+      elif e.edge_type == convnet_config_pb2.Edge.UPSAMPLE:
+        input_size = size_dict[source_name]
+        size = input_size * e.sample_factor
       else:
-        input_size = size_dict[e.source]
+        input_size = size_dict[source_name]
         size = (input_size + 2 * e.padding - e.kernel_size)/ e.stride + 1
     size_dict[l.name] = size
   return size_dict
@@ -41,12 +50,20 @@ def main():
   size_dict = GetSizes(model)
   output.write('digraph G {\n')
 
+  show_gpu = True
   for l in model.layer:
     size = size_dict[l.name]
     txt = "%s\\n %d - %d - %d" % (l.name, size, size, l.num_channels)
+    if show_gpu:
+      txt += " (%d)" % l.gpu_id
     output.write('%s [shape=box, label = "%s"];\n' % (l.name, txt))
   for e in model.edge:
-    output.write('%s -> %s [dir="back"];\n' % (e.dest, e.source))
+    if e.tied_to:
+      color = "blue"
+    else:
+      color = "black"
+    txt = "(%d)" % (e.gpu_id)
+    output.write('%s -> %s [dir="back", color=%s, label="%s"];\n' % (e.dest, e.source, color, txt))
   output.write('}\n')
   output.close()
 

@@ -7,7 +7,7 @@ DownSampleEdge::DownSampleEdge(const config::Edge& edge_config) :
 
 void DownSampleEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
-  num_modules_ = image_size * sample_factor_;
+  num_modules_ = image_size / sample_factor_;
 }
 
 void DownSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

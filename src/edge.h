@@ -52,7 +52,6 @@ class Edge {
   const string& GetName();
   void SetInputChannels(int a);
   void SetOutputChannels(int a);
-  void IncrementShares();
   void SetMark();
   bool HasMark();
   string GetTiedEdgeName();
@@ -69,8 +68,7 @@ class Edge {
   Layer *source_, *dest_;
   const string source_node_, dest_node_, name_, tied_edge_name_;
   Edge* tied_edge_;
-  int num_input_channels_, num_output_channels_, image_size_, num_modules_, num_shares_;
-  float scale_gradients_;
+  int num_input_channels_, num_output_channels_, image_size_, num_modules_;
   bool mark_;  // Used for topological sorting.
   const bool block_backprop_, is_tied_;
   ImageDisplayer *img_display_;
