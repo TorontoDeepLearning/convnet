@@ -880,6 +880,31 @@ int add_col_mult(cudamat* mat, cudamat* vec, cudamat* target, float mult) {
     return 0;
 }
 
+int add_to_each_pixel(cudamat* mat1, cudamat* mat2, cudamat* target, float mult) {
+    unsigned int h = mat1->size[0],
+                 w = mat1->size[1],
+                 num_colors = mat2->size[1];
+
+    if (!mat1->on_device || !mat2->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat1->is_trans || mat2->is_trans)
+        return ERROR_TRANSPOSED;
+
+    if (mat1->size[0] != mat2->size[0] || mat1->size[1] % mat2->size[1] != 0 ||
+        mat1->size[0] != target->size[0] || mat1->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kAddToEachPixel<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat1->data_device, mat2->data_device, target->data_device, mult, w, h, w / num_colors);
+
+    if (checkCUDAError()) {
+        return CUDA_ERROR;
+    }
+
+    return 0;
+}
+
+
 int mult_diagonal_scalar(cudamat* mat, float val, cudamat* target) {
     unsigned int w = mat->size[1];
 
@@ -1857,6 +1882,7 @@ int reciprocal(cudamat* mat, cudamat* target) {
     return 0;
 }
 
+// target = beta * target + alpha * mat * mat2
 int dot(cudamat* mat1, cudamat* mat2, cudamat* target, float beta, float alpha) {
     if (!mat1->on_device || !mat2->on_device || !target->on_device)
         return ERROR_NOT_ON_DEVICE;

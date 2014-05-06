@@ -242,4 +242,5 @@ message DatasetConfig {
   optional int32 stride = 29 [default=1];
 
   optional bool pixelwise_normalize = 30 [default=false];
+  optional float pca_noise_stddev = 31 [default=0];
 }

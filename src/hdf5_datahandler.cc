@@ -73,7 +73,9 @@ HDF5DataHandler::HDF5DataHandler(const config::DatasetConfig& config):
   can_translate_(config.can_translate()),
   can_flip_(config.can_flip()), normalize_(config.normalize_images()),
   pixelwise_normalize_(config.pixelwise_normalize()),
-  image_size_(config.image_size()) {
+  add_pca_noise_(config.pca_noise_stddev() > 0),
+  image_size_(config.image_size()),
+  pca_noise_stddev_(config.pca_noise_stddev()) {
   for (string name : config.dataset_name()) {
     dataset_names_.push_back(name);
   }
@@ -84,6 +86,9 @@ HDF5DataHandler::HDF5DataHandler(const config::DatasetConfig& config):
   LoadMetaDataFromDisk();
   if (!mean_file_.empty()) LoadMeansFromDisk();
   SetupJitter(batch_size_);
+
+  int num_colors = num_dims_ / (image_size_ * image_size_);
+  if (add_pca_noise_) SetupPCANoise(batch_size_, num_colors);
 }
 
 void HDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
@@ -107,6 +112,7 @@ void HDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (Layer* l : data_layers) {
     if (l->IsInput()) {  // Randomly translate and flip image.
       Jitter(data_[i], start_, end, l->GetState());
+      if (add_pca_noise_) AddPCANoise(l->GetState());
       l->GetState().SetReady();
     } else {
       cudamat data_slice;
@@ -123,8 +129,7 @@ void HDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
 void HDF5DataHandler::LoadMetaDataFromDisk() {
   string data_file = base_dir_ + file_pattern_;
   hid_t file = H5Fopen(data_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  int num_dims;
-  ReadHDF5Shape(file, dataset_names_[0], &num_dims, &dataset_size_);
+  ReadHDF5Shape(file, dataset_names_[0], &num_dims_, &dataset_size_);
   H5Fclose(file);
 }
 
@@ -175,6 +180,10 @@ void HDF5DataHandler::LoadMeansFromDisk() {
     mean_.AllocateAndReadHDF5(file, "mean");
     std_.AllocateAndReadHDF5(file, "std");
   }
+  if (add_pca_noise_) {
+    eig_values_.AllocateAndReadHDF5(file, "S");
+    eig_vectors_.AllocateAndReadHDF5(file, "V");
+  }
   H5Fclose(file);
 }
 
@@ -209,6 +218,20 @@ void HDF5DataHandler::SetJitterVariables(int max_offset) {
   cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat();
   mult_by_scalar(wo, max_offset + 1, wo);  // Rounded down.
   mult_by_scalar(ho, max_offset + 1, ho);
+}
+
+void HDF5DataHandler::SetupPCANoise(int batch_size, int num_colors) {
+  pca_noise1_.AllocateGPUMemory(batch_size, num_colors);
+  pca_noise2_.AllocateGPUMemory(batch_size, num_colors);
+}
+
+void HDF5DataHandler::AddPCANoise(Matrix& m) {
+  pca_noise1_.FillWithRandn();
+  cudamat* rand_mat = pca_noise1_.GetMat();
+  cudamat* pca_noise_mat = pca_noise2_.GetMat();
+  mult_by_row_vec(rand_mat, eig_values_.GetMat(), rand_mat);
+  dot(rand_mat, eig_vectors_.GetMat(), pca_noise_mat, 0, 1);
+  add_to_each_pixel(m.GetMat(), pca_noise_mat, m.GetMat(), pca_noise_stddev_);
 }
 
 void HDF5DataHandler::Jitter(Matrix& source, int start, int end, Matrix& dest) {
@@ -360,11 +383,14 @@ void ImageNetCLSDataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (Layer* l : data_layers) {
     if (l->IsInput()) {  // Randomly translate and flip image.
       Jitter(data_[i], start_, end, l->GetState());
+      if (add_pca_noise_) AddPCANoise(l->GetState());
+      l->GetState().SetReady();
     } else {
       cudamat data_slice;
       Matrix& m = data_[i];
       get_slice(m.GetMat(), &data_slice, start_, end);
       copy_transpose(&data_slice, l->GetData().GetMat());
+      l->GetData().SetReady();
     }
     i += 1;
   }

@@ -124,6 +124,7 @@ int dropout(rnd_struct* rnd_state, cudamat* mat, float dropprob, float val, floa
 int gaussian_dropout(rnd_struct* rnd_state, cudamat* mat, float scale);
 int add_col_vec(cudamat* mat, cudamat* vec, cudamat* target);
 int add_col_mult(cudamat* mat, cudamat* vec, cudamat* target, float mult);
+int add_to_each_pixel(cudamat* mat1, cudamat* mat2, cudamat* target, float mult);
 int mult_diagonal_scalar(cudamat* mat, float val, cudamat* target);
 int add_diagonal_scalar(cudamat* mat, float val, cudamat* target);
 int mult_diagonal(cudamat* mat, cudamat* vec, cudamat* target);

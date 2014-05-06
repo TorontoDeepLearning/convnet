@@ -17,8 +17,6 @@ class SimpleHDF5DataHandler : public DataHandler {
   int start_;
 };
 
-
-
 class HDF5DataHandler : public DataHandler {
  public:
   HDF5DataHandler(const config::DatasetConfig& config);
@@ -30,19 +28,20 @@ class HDF5DataHandler : public DataHandler {
   virtual void LoadMeansFromDisk();
   void Shuffle();
   void Jitter(Matrix& source, int start, int end, Matrix& dest);
+  void AddPCANoise(Matrix& m);
+  void SetupPCANoise(int batch_size, int num_colors);
   void SetupJitter(int batch_size);
   virtual void SetJitterVariables(int max_offset);
   vector<Matrix> data_;
-  Matrix mean_, std_, width_offset_, height_offset_, flip_;
+  Matrix mean_, std_, eig_values_, eig_vectors_,
+         width_offset_, height_offset_, flip_, pca_noise1_, pca_noise2_;
   const string file_pattern_;
-  int start_;
+  int start_, num_dims_;
   vector<string> dataset_names_;
-  const bool can_translate_, can_flip_, normalize_, pixelwise_normalize_;
+  const bool can_translate_, can_flip_, normalize_, pixelwise_normalize_, add_pca_noise_;
   const int image_size_;
+  const float pca_noise_stddev_;
 };
-
-
-
 
 class HDF5MultiplePositionDataHandler: public HDF5DataHandler {
  public:
