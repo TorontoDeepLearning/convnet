@@ -365,7 +365,7 @@ void ImageNetCLSDataHandler::GetBatch(vector<Layer*>& data_layers) {
   }
   int num_data_layers = data_layers.size();
   if (num_data_layers > data_.size()) {
-    cout << "Expecting " << data_.size() << " layers. Found " << num_data_layers << endl;
+    //cout << "Expecting " << data_.size() << " layers. Found " << num_data_layers << endl;
   }
   
   int end = start_ + batch_size;
