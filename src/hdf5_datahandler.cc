@@ -347,7 +347,9 @@ void ImageNetCLSDataHandler::LoadFromDisk() {
     data_[i].AllocateGPUMemory(it_->GetDims(i), chunk_size_);
   }
   buf_.push_back(new unsigned char[it_->GetDims(0)]);
-  buf_.push_back(new unsigned int[it_->GetDims(1)]);
+  if (data_.size() > 1) {
+    buf_.push_back(new unsigned int[it_->GetDims(1)]);
+  }
   if (randomize_gpu_) SetupShuffler(chunk_size_);
 }
 
@@ -363,8 +365,7 @@ void ImageNetCLSDataHandler::GetBatch(vector<Layer*>& data_layers) {
   }
   int num_data_layers = data_layers.size();
   if (num_data_layers > data_.size()) {
-    cerr << "Expecting " << data_.size() << " layers. Found " << num_data_layers << endl;
-    exit(1);
+    cout << "Expecting " << data_.size() << " layers. Found " << num_data_layers << endl;
   }
   
   int end = start_ + batch_size;
@@ -381,6 +382,7 @@ void ImageNetCLSDataHandler::GetBatch(vector<Layer*>& data_layers) {
   }
   int i = 0;
   for (Layer* l : data_layers) {
+    if (i >= data_.size()) break;
     if (l->IsInput()) {  // Randomly translate and flip image.
       Jitter(data_[i], start_, end, l->GetState());
       if (add_pca_noise_) AddPCANoise(l->GetState());
@@ -421,14 +423,16 @@ void ImageNetCLSDataHandler::StartPreload() {
 
 // Move chunk_size_ images from the hdf5 file to a matrix in main memory.
 void ImageNetCLSDataHandler::DiskAccess() {
-  float *data_ptr = data_[0].GetHostData(),
-        *label_ptr = data_[1].GetHostData();
+  bool has_label = data_.size() > 1;
+  float *data_ptr = data_[0].GetHostData(), *label_ptr = NULL;
+  if (has_label) label_ptr = data_[1].GetHostData();
+
   const int ndims = it_->GetDims(0),
-            ndims_labels = it_->GetDims(1);
+            ndims_labels = has_label ? it_->GetDims(1) : 0;
 
   // The iterator manages chunks in a cache so it's ok to do serial access.
   unsigned char* data_buf = reinterpret_cast<unsigned char*> (buf_[0]);
-  unsigned int* label_buf = reinterpret_cast<unsigned int*> (buf_[1]);
+  unsigned int* label_buf = has_label ? reinterpret_cast<unsigned int*> (buf_[1]): NULL;
   for (int i = 0; i < chunk_size_; i++) {
     it_->GetNext(buf_);
 

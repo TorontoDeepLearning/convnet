@@ -10,6 +10,7 @@
 
 #include <string>
 #define cimg_use_jpeg
+#define cimg_use_lapack
 #include "CImg.h"
 #include "cudamat.cuh"
 #include <stdio.h>

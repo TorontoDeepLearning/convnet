@@ -2,6 +2,7 @@
 #define RAW_IMAGE_DATAHANDLER_
 #include "datahandler.h"
 
+template<typename T>
 class RawImageFileIterator {
  public:
   RawImageFileIterator(const string& filelist, const int image_size,
@@ -9,8 +10,8 @@ class RawImageFileIterator {
                        const bool translate);
 
   // Memory must already be allocated : num_dims * num_dims * 3.
-  void GetNext(float* data_ptr);
-  void GetNext(float* data_ptr, const int row, const int position);
+  void GetNext(T* data_ptr);
+  void GetNext(T* data_ptr, const int row, const int position);
 
   void Seek(int row) { row_ = row; }
   int GetDatasetSize() const { return dataset_size_;}
@@ -20,13 +21,14 @@ class RawImageFileIterator {
 
   int dataset_size_, row_, image_id_, position_;
   vector<string> filenames_;
-  CImg<float> image_;
+  CImg<T> image_;
   const int image_size_, num_positions_, raw_image_size_;
   CImgDisplay* disp_;
 };
 
 
 // Handles image data.
+template<typename T>
 class RawImageDataHandler : public DataHandler {
  public:
   RawImageDataHandler(const config::DatasetConfig& config);
@@ -37,9 +39,9 @@ class RawImageDataHandler : public DataHandler {
   void LoadMeansFromDisk();
 
   const int image_size_;
-  RawImageFileIterator *it_;
+  RawImageFileIterator<T> *it_;
   Matrix mean_, std_;
-  float* image_buf_;
+  T* image_buf_;
   const bool pixelwise_normalize_;
 };
 

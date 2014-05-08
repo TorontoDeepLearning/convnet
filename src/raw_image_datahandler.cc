@@ -2,7 +2,8 @@
 #include <fstream>
 #include "CImg.h"
 
-RawImageFileIterator::RawImageFileIterator(
+template <typename T>
+RawImageFileIterator<T>::RawImageFileIterator(
     const string& filelist, const int image_size, const int raw_image_size,
     const bool flip, const bool translate) :
     row_(0), image_id_(-1), position_(0), image_size_(image_size),
@@ -16,7 +17,8 @@ RawImageFileIterator::RawImageFileIterator(
   disp_ = new CImgDisplay();
 }
 
-void RawImageFileIterator::GetNext(float* data_ptr) {
+template <typename T>
+void RawImageFileIterator<T>::GetNext(T* data_ptr) {
   GetNext(data_ptr, row_, position_);
   position_++;
   if (position_ == num_positions_) {
@@ -26,7 +28,8 @@ void RawImageFileIterator::GetNext(float* data_ptr) {
   }
 }
 
-void RawImageFileIterator::GetCoordinates(
+template <typename T>
+void RawImageFileIterator<T>::GetCoordinates(
     int width, int height, int position, int* left, int* top, bool* flip) {
   *flip = position >= 5;
   position %= 5;
@@ -56,7 +59,8 @@ void RawImageFileIterator::GetCoordinates(
   }
 }
 
-void RawImageFileIterator::GetNext(float* data_ptr, const int row, const int position) {
+template <typename T>
+void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int position) {
   if (image_id_ != row) {  // Load a new image from disk.
     image_id_ = row;
     string& filename = filenames_[row];
@@ -75,11 +79,11 @@ void RawImageFileIterator::GetNext(float* data_ptr, const int row, const int pos
     image_.resize(new_width, new_height, 1, -100, 3);
   }
   int width = image_.width(), height = image_.height();
-  int left, top;
-  bool flip;
+  int left = 0, top = 0;
+  bool flip = false;
   GetCoordinates(width, height, position, &left, &top, &flip);
 
-  CImg<float> img = image_.get_crop(
+  CImg<T> img = image_.get_crop(
       left, top, left + image_size_ - 1, top + image_size_ - 1, true);
 
   if (flip) img.mirror('x');
@@ -88,18 +92,27 @@ void RawImageFileIterator::GetNext(float* data_ptr, const int row, const int pos
   int num_image_colors = img.spectrum();
   int num_pixels = image_size_ * image_size_;
   if (num_image_colors >= 3) {  // Image has 3 channels.
-    memcpy(data_ptr, img.data(), 3 * num_pixels * sizeof(float));
+    memcpy(data_ptr, img.data(), 3 * num_pixels * sizeof(T));
   } else if (num_image_colors == 1) {  // Image has 1 channel.
     for (int i = 0; i < 3; i++) {
-      memcpy(data_ptr + i * num_pixels, img.data(), num_pixels * sizeof(float));
+      memcpy(data_ptr + i * num_pixels, img.data(), num_pixels * sizeof(T));
     }
   } else {
     cerr << "Image has " << num_image_colors << "colors." << endl;
     exit(1);
   }
+  /*
+  for (int i = 0; i < 10; i++) {
+    cout << data_ptr[i] << " ";
+  }
+  cout << endl;
+  */
 }
+template class RawImageFileIterator<float>;
+template class RawImageFileIterator<unsigned char>;
 
-RawImageDataHandler::RawImageDataHandler(const config::DatasetConfig& config):
+template<typename T>
+RawImageDataHandler<T>::RawImageDataHandler(const config::DatasetConfig& config):
   DataHandler(config),
   image_size_(config.image_size()),
   pixelwise_normalize_(config.pixelwise_normalize()) {
@@ -107,7 +120,7 @@ RawImageDataHandler::RawImageDataHandler(const config::DatasetConfig& config):
   bool flip = config.can_flip();
   bool translate = config.can_translate();
   num_positions_ = ((flip ? 2 : 1) * (translate ? 5 : 1));
-  it_ = new RawImageFileIterator(data_file, image_size_,
+  it_ = new RawImageFileIterator<T>(data_file, image_size_,
                                  config.raw_image_size(), flip, translate);
   dataset_size_ = it_->GetDatasetSize();
   int max_dataset_size = config.max_dataset_size();
@@ -115,16 +128,18 @@ RawImageDataHandler::RawImageDataHandler(const config::DatasetConfig& config):
     dataset_size_ = max_dataset_size;
   }
   int num_dims = image_size_ * image_size_ * 3;
-  image_buf_ = new float[num_dims];
+  image_buf_ = new T[num_dims];
   LoadMeansFromDisk();
 }
 
-RawImageDataHandler::~RawImageDataHandler() {
+template<typename T>
+RawImageDataHandler<T>::~RawImageDataHandler() {
   delete it_;
   delete image_buf_;
 }
 
-void RawImageDataHandler::LoadMeansFromDisk() {
+template<typename T>
+void RawImageDataHandler<T>::LoadMeansFromDisk() {
   string data_file = base_dir_ + mean_file_;
   hid_t file = H5Fopen(data_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   if (pixelwise_normalize_) {
@@ -152,7 +167,8 @@ void RawImageDataHandler::LoadMeansFromDisk() {
   H5Fclose(file);
 }
 
-void RawImageDataHandler::GetBatch(vector<Layer*>& data_layers) {
+template<typename T>
+void RawImageDataHandler<T>::GetBatch(vector<Layer*>& data_layers) {
   Matrix::SyncAllDevices();
   Matrix::SetDevice(gpu_id_);
   Matrix& state = data_layers[0]->GetState();
@@ -164,11 +180,13 @@ void RawImageDataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (int i = 0; i < batch_size; i++) {
     it_->GetNext(image_buf_);
     for (int j = 0; j < num_dims; j++) {
-      data_ptr[j * batch_size + i] = (image_buf_[j] - mean_ptr[j])/std_ptr[j];
+      data_ptr[j * batch_size + i] = (static_cast<float>(image_buf_[j]) - mean_ptr[j])/std_ptr[j];
     }
   }
   state.CopyToDevice();
 }
+template class RawImageDataHandler<float>;
+template class RawImageDataHandler<unsigned char>;
 
 SlidingWindowIterator::SlidingWindowIterator(const int window_size, const int stride):
   window_size_(window_size), stride_(stride), num_windows_(0),

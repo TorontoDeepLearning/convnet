@@ -22,7 +22,7 @@ BIN=bin
 LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl
 CPPFLAGS = -I$(CIMG) -I$(INC) -I$(CUDA_INC) -I$(SRC)
 LIBFLAGS = -L$(LIB) -L$(CUDA_LIB)
-CXXFLAGS = -O2 -std=c++0x -march=native -Wall -Wno-unused-result -Wno-sign-compare
+CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
 
 EDGES_SRC := $(wildcard $(SRC)/*_edge.cc)
 EDGES_OBJS := $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(EDGES_SRC)) $(OBJ)/optimizer.o
@@ -30,7 +30,7 @@ DATAHANDLER_SRC := $(wildcard $(SRC)/*_datahandler.cc)
 DATAHANDLER_OBJS := $(OBJ)/datahandler.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(DATAHANDLER_SRC))
 CUDA_OBJS := $(OBJ)/matrix.o $(OBJ)/cudamat.o $(OBJ)/cudamat_kernels.o $(OBJ)/cudamat_conv.o $(OBJ)/cudamat_conv_kernels.o
 COMMONOBJS = $(OBJ)/convnet_config.pb.o $(DATAHANDLER_OBJS) $(OBJ)/layer.o $(OBJ)/util.o $(CUDA_OBJS) $(EDGES_OBJS)
-TARGETS := $(BIN)/datahandler_test $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/compute_mean $(BIN)/run_grad_check $(BIN)/extract_representation
+TARGETS := $(BIN)/datahandler_test $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/compute_mean $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/jpeg2hdf5
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
 
@@ -50,6 +50,9 @@ $(BIN)/datahandler_test: $(COMMONOBJS) $(OBJ)/datahandler_test.o
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/compute_mean: $(COMMONOBJS) $(OBJ)/compute_mean.o
+	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
+
+$(BIN)/jpeg2hdf5: $(COMMONOBJS) $(OBJ)/jpeg2hdf5.o
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(OBJ)/matrix.o: $(SRC)/matrix.cc $(SRC)/matrix.h

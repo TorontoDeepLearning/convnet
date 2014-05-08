@@ -29,7 +29,7 @@ DataHandler* DataHandler::ChooseDataHandler(const string& config_file) {
             dh = new ImageNetCLSMultiplePosDataHandler(config);
             break;
     case config::DatasetConfig::RAW_IMAGE:
-            dh = new RawImageDataHandler(config);
+            dh = new RawImageDataHandler<unsigned char>(config);
             break;
     case config::DatasetConfig::RAW_IMAGE_SLIDING_WINDOW:
             dh = new SlidingWindowDataHandler(config);

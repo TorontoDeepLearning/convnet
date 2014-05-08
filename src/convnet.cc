@@ -319,6 +319,10 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
     for (int p = 0; p < num_positions; p++) {
       dataset->GetBatch(data_layers_);
       Fprop(false);
+      if (k % model_->display_after() == 0 && model_->display()) {
+        DisplayLayers();
+        DisplayEdges();
+      }
       i = 0;
       for (Layer* l : layers) {
         Matrix& mat = l->GetState();

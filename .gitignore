@@ -19,3 +19,7 @@
 *.exe
 *.out
 *.app
+
+# Compiled protobuffers
+*.pb.cc
+*.pb.h
