@@ -25,6 +25,7 @@ Optimizer::Optimizer(const config::Optimizer& optimizer_config) :
   epsilon_(optimizer_config.epsilon()),
   minimum_epsilon_(optimizer_config.minimum_epsilon()),
   epsilon_decay_timescale_(optimizer_config.epsilon_decay_timescale()),
+  start_optimization_after_(optimizer_config.start_optimization_after()),
   l2_decay_(optimizer_config.l2_decay()),
   weight_norm_limit_(optimizer_config.weight_norm_limit()),  // impose upper limit.
   weight_norm_constraint_(optimizer_config.weight_norm_constraint()),  // impose equality.
@@ -109,24 +110,26 @@ float SGDOptimizer::GetMomentum() const {
 }
 
 void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
-  float epsilon = GetDecayedEpsilon(), momentum = GetMomentum();
+  if (step_ >= start_optimization_after_) {
+    float epsilon = GetDecayedEpsilon(), momentum = GetMomentum();
 
-  cudamat *dw_history = gradient_history_.GetMat(),
-          *w = parameter.GetMat(),
-          *dw = gradient.GetMat();
+    cudamat *dw_history = gradient_history_.GetMat(),
+            *w = parameter.GetMat(),
+            *dw = gradient.GetMat();
 
-  mult_by_scalar(dw_history, momentum, dw_history);
- 
-  // L2 decay.
-  if (l2_decay_ > 0) add_mult(dw_history, w, l2_decay_);
- 
-  // Clip gradients to prevent explosions.
-  if (gradient_clip_ > 0) upper_bound_mod_scalar(dw, gradient_clip_, dw);
+    mult_by_scalar(dw_history, momentum, dw_history);
+   
+    // L2 decay.
+    if (l2_decay_ > 0) add_mult(dw_history, w, l2_decay_);
+   
+    // Clip gradients to prevent explosions.
+    if (gradient_clip_ > 0) upper_bound_mod_scalar(dw, gradient_clip_, dw);
 
-  add_mult(dw_history, dw, 1.0);
-  add_mult(w, dw_history, -epsilon);
+    add_mult(dw_history, dw, 1.0);
+    add_mult(w, dw_history, -epsilon);
 
-  ApplyConstraints(parameter);
+    ApplyConstraints(parameter);
+  }
 
   step_++;
 }

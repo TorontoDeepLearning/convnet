@@ -29,18 +29,18 @@ int main(int argc, char ** argv) {
   dimsf[0] = 1;
   dimsf[1] = num_dims;
   start[1] = 0;
+  hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
   for (int i = 0; i < dataset_size; i++) {
     cout << "\rImage " << i+1 << " / " << dataset_size;
     cout.flush();
     it.GetNext(image_buf);
     start[0] = i;
-    hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
     H5Sselect_none(dataspace_handle);
     H5Sselect_hyperslab(dataspace_handle, H5S_SELECT_SET, start, NULL, dimsf, NULL);
     H5Dwrite(dataset_handle, H5T_NATIVE_UCHAR, mem_dataspace, dataspace_handle, H5P_DEFAULT, image_buf);
-    H5Sclose(mem_dataspace);
   }
   cout << endl;
+  H5Sclose(mem_dataspace);
   H5Fclose(file);
   delete image_buf;
 }

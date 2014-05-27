@@ -10,6 +10,7 @@ class SimpleHDF5DataHandler : public DataHandler {
 
  protected:
   virtual void LoadFromDisk();
+  virtual void LoadMetaFromDisk();
   void Shuffle();
   vector<Matrix> data_;
   vector<string> dataset_names_;
@@ -17,9 +18,33 @@ class SimpleHDF5DataHandler : public DataHandler {
   int start_;
 };
 
+class BigSimpleHDF5DataHandler : public SimpleHDF5DataHandler {
+ public:
+  BigSimpleHDF5DataHandler(const config::DatasetConfig& config);
+  virtual ~BigSimpleHDF5DataHandler();
+  virtual void GetBatch(vector<Layer*>& data_layers);
+  virtual void Seek(int location);
+
+ protected:
+  void GetChunk();
+  virtual void LoadFromDisk();
+  void StartPreload();
+  virtual void DiskAccess();
+  void WaitForPreload();
+
+  HDF5MultiIterator *it_;
+  int chunk_size_, max_reuse_count_;
+  int reuse_counter_;
+  vector<void*> buf_;
+  thread* preload_thread_;
+  bool first_time_;
+  const bool use_multithreading_;
+};
+
 class HDF5DataHandler : public DataHandler {
  public:
   HDF5DataHandler(const config::DatasetConfig& config);
+  virtual ~HDF5DataHandler() {}
   virtual void GetBatch(vector<Layer*>& data_layers);
 
  protected:
@@ -57,9 +82,10 @@ class HDF5MultiplePositionDataHandler: public HDF5DataHandler {
 class ImageNetCLSDataHandler : public HDF5DataHandler {
  public:
   ImageNetCLSDataHandler(const config::DatasetConfig& config);
-  ~ImageNetCLSDataHandler();
+  virtual ~ImageNetCLSDataHandler();
   virtual void GetBatch(vector<Layer*>& data_layers);
   virtual void Seek(int location);
+  virtual void Sync();
 
  protected:
   void GetChunk();

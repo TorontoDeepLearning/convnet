@@ -268,16 +268,18 @@ void Matrix::GetSlice(Matrix& slice, int start, int end) {
 void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
   Matrix& t = Matrix::temp_[current_gpu_id_];
   int size = t.GetNumEls();
-  if (size == 0) {  // Allocate memory on first call to GetTemp.
+  const int length = rows * cols;
+  if (length > size) {  // Allocate memory as required.
     t.AllocateGPUMemory(1, temp_size_[current_gpu_id_]);
     size = temp_size_[current_gpu_id_];
-    //cout << "Allocated " << (temp_size_ >> 18) << " MB for temp." << endl;
+    //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
-  const int length = rows * cols;
+  /*
   if (length > size) {
     cerr << "Temp has only " << size << " elements. Requested was " << length << endl;
     exit(1);
   }
+  */
   get_slice(t.GetMat(), temp.GetMat(), 0, length);
   reshape(temp.GetMat(), rows, cols);
 }
@@ -394,7 +396,7 @@ void Matrix::InitRandom(int seed){
 void Matrix::RegisterTempMemory(int size, const string& why) {
   if (size > temp_size_[current_gpu_id_]) {
     temp_size_[current_gpu_id_] = size;
-    //cout << "Max for " << why << endl;
+    //cout << "Max for " << why << " " << size << endl;
   }
 }
 

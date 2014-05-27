@@ -19,8 +19,8 @@ class ConvNet {
 
   void Save();
   void Save(const string& output_file);
-  void Load(bool fprop_only);
-  void Load(const string& input_file, bool fprop_only);
+  void Load();
+  void Load(const string& input_file);
   string GetCheckpointFilename();
   void Display();
   void DumpOutputs(const string& output_file, const vector<string>& layer_names);

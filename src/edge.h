@@ -15,7 +15,7 @@ class Edge {
   virtual void AllocateMemory(bool fprop_only);
   virtual void Initialize();
   virtual void SaveParameters(hid_t file);
-  virtual void LoadParameters(hid_t file, bool fprop_only);
+  virtual void LoadParameters(hid_t file);
   virtual void InsertPolyak();
   virtual void BackupCurrent();
   virtual void LoadCurrentOnGPU();

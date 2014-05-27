@@ -6,7 +6,13 @@ SimpleHDF5DataHandler::SimpleHDF5DataHandler(const config::DatasetConfig& config
   for (string name : config.dataset_name()) {
     dataset_names_.push_back(name);
   }
-  LoadFromDisk();
+  LoadMetaFromDisk();
+}
+
+void SimpleHDF5DataHandler::LoadMetaFromDisk() {
+  string data_file = base_dir_ + file_pattern_;
+  int cols;
+  ReadHDF5ShapeFromFile(data_file, dataset_names_[0], &cols, &dataset_size_);
 }
 
 void SimpleHDF5DataHandler::LoadFromDisk() {
@@ -67,6 +73,168 @@ void SimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   }
   start_ = end;
 }
+
+BigSimpleHDF5DataHandler::BigSimpleHDF5DataHandler(const config::DatasetConfig& config):
+  SimpleHDF5DataHandler(config), it_(NULL), chunk_size_(config.chunk_size()),
+  max_reuse_count_(config.max_reuse_count()), reuse_counter_(0),
+  preload_thread_(NULL), first_time_(true),
+  use_multithreading_(config.pipeline_loads()) {
+  string data_file = base_dir_ + file_pattern_;
+  it_ = randomize_cpu_ ? 
+          new HDF5RandomMultiAccessor(data_file, dataset_names_,
+              config.random_access_chunk_size()) :
+          new HDF5MultiIterator(data_file, dataset_names_);
+  dataset_size_ = it_->GetDatasetSize();
+  int max_dataset_size = config.max_dataset_size();
+  if (max_dataset_size > 0 && max_dataset_size < dataset_size_) {
+    dataset_size_ = max_dataset_size;
+  }
+  if (chunk_size_ > dataset_size_) {
+    chunk_size_ = dataset_size_;
+  }
+  LoadFromDisk();
+}
+
+BigSimpleHDF5DataHandler::~BigSimpleHDF5DataHandler() {
+  WaitForPreload();
+  delete it_;
+  for (void* ptr : buf_) if (ptr != NULL) delete reinterpret_cast<char*>(ptr);
+  if (preload_thread_ != NULL) delete preload_thread_;
+}
+
+void BigSimpleHDF5DataHandler::LoadFromDisk() {
+  data_.resize(dataset_names_.size());
+  for (int i = 0; i < data_.size(); i++) {
+    data_[i].AllocateGPUMemory(it_->GetDims(i), chunk_size_);
+    buf_.push_back(malloc(it_->GetDims(i) * it_->GetSize(i)));
+  }
+  if (randomize_gpu_) {
+    SetupShuffler(chunk_size_);
+  }
+}
+
+void BigSimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
+  Matrix::SyncAllDevices();
+  Matrix::SetDevice(gpu_id_);
+  int batch_size = data_layers[0]->GetState().GetRows();
+  if (first_time_) {
+    first_time_ = false;
+    if (use_multithreading_) StartPreload();
+    GetChunk();
+    if (randomize_gpu_) Shuffle();
+  }
+  
+  int end = start_ + batch_size;
+  if (end > chunk_size_) {
+    if (reuse_counter_ < max_reuse_count_) {
+      reuse_counter_++;
+    } else {
+      reuse_counter_ = 0;
+      GetChunk();  // Loads the next chunk in data_.
+    }
+    if (randomize_gpu_) Shuffle();
+    start_ = 0;
+    end = batch_size;
+  }
+  int i = 0;
+  for (Layer* l : data_layers) {
+    if (i >= data_.size()) break;
+    cudamat data_slice;
+    Matrix& m = data_[i];
+    Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
+    get_slice(m.GetMat(), &data_slice, start_, end);
+    copy_transpose(&data_slice, dest.GetMat());
+    dest.SetReady();
+    i += 1;
+  }
+  start_ = end;
+}
+
+void BigSimpleHDF5DataHandler::GetChunk() {
+  if (use_multithreading_) {
+    WaitForPreload();
+  } else {
+    DiskAccess();
+  }
+
+  for (int i = 0; i < data_.size(); i++) {
+    data_[i].CopyToDevice();
+  }
+
+  if (use_multithreading_) {  // Start loading the next chunk in a new thread. 
+    StartPreload();
+  }
+}
+
+void BigSimpleHDF5DataHandler::StartPreload() {
+  preload_thread_ = new thread(&BigSimpleHDF5DataHandler::DiskAccess, this);
+}
+
+// Move chunk_size_ images from the hdf5 file to a matrix in main memory.
+void BigSimpleHDF5DataHandler::DiskAccess() {
+
+  // The iterator manages chunks in a cache so it's ok to do serial access.
+  for (int i = 0; i < chunk_size_; i++) {
+    it_->GetNext(buf_);
+
+    for (int k = 0; k < data_.size(); k++) {
+      int ndims = it_->GetDims(k);
+      int atomic_size = it_->GetSize(k);
+      bool is_int_type = it_->IsIntType(k);
+      bool is_signed_type = it_->IsSignedType(k);
+      float *data_ptr = data_[k].GetHostData() + i * ndims;
+      if (atomic_size == 4 && !is_int_type) {
+        float* data_buf = reinterpret_cast<float*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j] = data_buf[j];
+        }
+      } else if (atomic_size == 8 && !is_int_type) {
+        double* data_buf = reinterpret_cast<double*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j]= static_cast<float>(data_buf[j]);
+        }
+      } else if (atomic_size == 8 && is_int_type && is_signed_type) {
+        long* data_buf = reinterpret_cast<long*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j] = static_cast<float>(data_buf[j]);
+        }
+      } else if (atomic_size == 4 && is_int_type && is_signed_type) {
+        int* data_buf = reinterpret_cast<int*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j] = static_cast<float>(data_buf[j]);
+        }
+      } else if (atomic_size == 4 && is_int_type && !is_signed_type) {
+        unsigned int* data_buf = reinterpret_cast<unsigned int*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j] = static_cast<float>(data_buf[j]);
+        }
+      } else if (atomic_size == 1 && is_int_type && !is_signed_type) {
+        unsigned char* data_buf = reinterpret_cast<unsigned char*> (buf_[k]);
+        for (int j = 0; j < ndims; j++) {
+          data_ptr[j] = static_cast<float>(data_buf[j]);
+        }
+      } else {
+        cerr << "Not implemented : size " << atomic_size << " is int " << is_int_type << " signed " << is_signed_type << endl;
+        exit(1);
+      }
+    }
+  }
+}
+
+void BigSimpleHDF5DataHandler::WaitForPreload() {
+  if (preload_thread_ != NULL) {
+    preload_thread_->join();
+    delete preload_thread_;
+    preload_thread_ = NULL;
+  }
+}
+
+void BigSimpleHDF5DataHandler::Seek(int location) {
+  WaitForPreload();
+  it_->Seek(location);
+  start_ = 0; 
+}
+
 
 HDF5DataHandler::HDF5DataHandler(const config::DatasetConfig& config):
   DataHandler(config), file_pattern_(config.file_pattern()), start_(0),
@@ -332,6 +500,10 @@ ImageNetCLSDataHandler::ImageNetCLSDataHandler(const config::DatasetConfig& conf
     dataset_size_ = max_dataset_size;
   }
   LoadFromDisk();
+}
+
+void ImageNetCLSDataHandler::Sync() {
+  if (use_multithreading_) WaitForPreload();
 }
 
 ImageNetCLSDataHandler::~ImageNetCLSDataHandler() {

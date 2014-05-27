@@ -16,6 +16,9 @@ DataHandler* DataHandler::ChooseDataHandler(const string& config_file) {
     case config::DatasetConfig::HDF5:
             dh = new SimpleHDF5DataHandler(config);
             break;
+    case config::DatasetConfig::BIG_HDF5:
+            dh = new BigSimpleHDF5DataHandler(config);
+            break;
     case config::DatasetConfig::IMAGE_HDF5:
             dh = new HDF5DataHandler(config);
             break;
@@ -88,6 +91,12 @@ HDF5Iterator::HDF5Iterator(const string& file_name, const string& dataset_name) 
   dapl_id_ = H5Pcreate(H5P_DATASET_ACCESS);
   H5Pset_chunk_cache(dapl_id_, H5D_CHUNK_CACHE_NSLOTS_DEFAULT, cache_size, H5D_CHUNK_CACHE_W0_DEFAULT);
   dataset_ = H5Dopen(file_, dataset_name.c_str(), dapl_id_);
+
+  hid_t datatype = H5Dget_type(dataset_);
+  atomic_size_ = H5Tget_size(datatype);
+  is_int_type_ = H5Tget_class(datatype) == H5T_INTEGER;
+  is_signed_type_ = is_int_type_ && (H5Tget_sign(datatype) == H5T_SGN_2);
+  H5Tclose(datatype);
 
   hid_t dataspace = H5Dget_space(dataset_);
   hsize_t dims_out[2];

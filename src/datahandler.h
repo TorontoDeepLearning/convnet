@@ -6,7 +6,7 @@
 class DataHandler {
  public:
   DataHandler(const config::DatasetConfig& config);
-  ~DataHandler() {}
+  virtual ~DataHandler() {}
 
   virtual void GetBatch(vector<Layer*>& data_layers) = 0;
 
@@ -18,6 +18,8 @@ class DataHandler {
 
   // Number of positions in same image.
   int GetNumPositions() const { return num_positions_;}
+
+  virtual void Sync() {}
 
  protected:
   void SetupShuffler(int dataset_size);
@@ -53,12 +55,17 @@ class HDF5Iterator {
   void Seek(int row) { row_ = row; }
   int GetDatasetSize() const { return dataset_size_;}
   int GetDims() const { return num_dims_;}
+  int GetSize() const { return atomic_size_; }
+  bool IsIntType() const { return is_int_type_; }
+  bool IsSignedType() const { return is_signed_type_; }
 
  private:
 
   int num_dims_, dataset_size_, row_;
   hid_t file_, dataset_, dapl_id_, m_dataspace_, type_;
   hsize_t start_[2], count_[2];
+  int atomic_size_;
+  bool is_int_type_, is_signed_type_;
 };
 
 // Accesses rows randomly in a dataset in an hdf5 file.
@@ -99,6 +106,9 @@ class HDF5MultiIterator {
   int GetDatasetSize() const { return dataset_size_;}
   int GetDims(int i) const { return it_[i]->GetDims();}
   int GetNumIterators() const { return num_it_;}
+  int GetSize(int i) const { return it_[i]->GetSize(); }
+  bool IsIntType(int i) const { return it_[i]->IsIntType(); }
+  bool IsSignedType(int i) const { return it_[i]->IsSignedType(); }
 
  private:
 

@@ -122,7 +122,7 @@ void ConvNet::AllocateEdgeMemory(bool fprop_only) {
   if (timestamp_.empty()) {
     for (Edge* e: edges_) e->Initialize();
   } else {
-    Load(fprop_only);
+    Load();
   }
 }
 
@@ -167,8 +167,9 @@ void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite) {
 
 void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge, bool overwrite,
                     bool update_weights) {
+  if (edge.IsBackPropBlocked()) return;
   edge.ComputeOuter(input.GetState(), output.GetDeriv());
-  if (!input.IsInput() && !edge.IsBackPropBlocked()) {
+  if (!input.IsInput()) {
     edge.ComputeDown(output.GetDeriv(), input.GetState(), output.GetState(),
                      input.GetDeriv(), overwrite);
   }
@@ -261,6 +262,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       total_error[i] = (total_error[i] * k) / (k+1) + error[i] / (batch_size * (k+1));
     }
   }
+  dataset->Sync();
 }
 
 void ConvNet::DumpOutputs(const string& output_file, const vector<string>& layer_names) {
@@ -378,14 +380,14 @@ string ConvNet::GetCheckpointFilename() {
   return filename;
 }
 
-void ConvNet::Load(bool fprop_only) {
-  Load(GetCheckpointFilename(), fprop_only);
+void ConvNet::Load() {
+  Load(GetCheckpointFilename());
 }
 
-void ConvNet::Load(const string& input_file, bool fprop_only) {
+void ConvNet::Load(const string& input_file) {
   cout << "Loading model from " << input_file << endl;
   hid_t file = H5Fopen(input_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  for (Edge* e : edges_) e->LoadParameters(file, fprop_only);
+  for (Edge* e : edges_) e->LoadParameters(file);
   ReadHDF5IntAttr(file, "__lr_reduce_counter__", &lr_reduce_counter_);
   for (int i = 0; i < lr_reduce_counter_; i++) {
     ReduceLearningRate(model_->reduce_lr_factor());
@@ -561,6 +563,7 @@ void ConvNet::Train() {
 
     if (val_dataset_ != NULL && validate_after > 0 && (i+1) % validate_after == 0) {
       if (polyak_after > 0) LoadPolyakWeights();
+      train_dataset_->Sync();
       Validate(this_val_error);
       if (polyak_after > 0) LoadCurrentWeights();
 
@@ -575,16 +578,21 @@ void ConvNet::Train() {
         if (reduce_learning_rate && lr_reduce_counter_ < lr_max_reduce
             && dont_reduce_lr-- < 0) {
           dont_reduce_lr = model_->reduce_lr_num_steps();
-          cout << "Learning rate reduced " << ++lr_reduce_counter_ << " time(s)."
-               << endl;
+          cout << "Learning rate reduced " << ++lr_reduce_counter_ << " time(s).";
           ReduceLearningRate(learning_rate_reduce_factor);
         }
       }
       newline = true;
     }
     if (newline) cout << endl;
-    if ((i+1) % save_after == 0) Save();
+    if ((i+1) % save_after == 0) {
+      train_dataset_->Sync();
+      Save();
+    }
   }
-  Save();
+  if (model_->max_iter() % save_after != 0) {
+    train_dataset_->Sync();
+    Save();
+  }
   cout << "End of training." << endl;
 }

@@ -89,7 +89,7 @@ void Edge::SaveParameters(hid_t file) {
   // Parameter saving implemented in EdgeWithWeight or derived classes thereof.
 }
 
-void Edge::LoadParameters(hid_t file, bool fprop_only) {
+void Edge::LoadParameters(hid_t file) {
   // no op.
   // Parameter loading implemented in EdgeWithWeight or derived classes thereof.
 }

@@ -57,6 +57,8 @@ message Optimizer {
 
   // Number of steps to remember.
   optional int32 lbfgs_memory = 13 [default=0];
+
+  optional int32 start_optimization_after = 14 [default=0];
 }
 
 message Edge {
@@ -142,6 +144,9 @@ message Edge {
   optional int32 polyak_queue_size = 23 [default = 0];
 
   optional int32 gpu_id = 24 [default = 0];
+
+  optional string pretrained_model = 25;
+  optional string pretrained_edge_name = 26;
 }
 
 message Model {
@@ -192,6 +197,7 @@ message DatasetConfig {
     HDF5 = 6;
     IMAGE_POS_NEG_HDF5 = 7;
     RAW_IMAGE_SLIDING_WINDOW = 8;
+    BIG_HDF5 = 9;
   }
   required DatasetType dataset_type = 2;
   optional int32 batch_size = 3 [default=1]; 
