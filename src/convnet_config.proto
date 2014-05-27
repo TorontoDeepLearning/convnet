@@ -185,6 +185,49 @@ message Model {
   optional int32 polyak_queue_size = 25 [default = 0];
 }
 
+message DataConfig2 {
+  required string file_pattern = 1;
+  required string layer_name = 2;
+  optional string dataset_name = 3;
+  enum DataType {
+    DUMMY = 0;
+    HDF5 = 0;
+    BIG_HDF5 = 1;
+    IMAGE_HDF5 = 2;
+    IMAGE_RAW = 3;
+    TXT = 4;
+  }
+  optional DataType data_type = 4 [default=HDF5];
+
+  // Resize the raw image so that the shorter side is raw_image_size,
+  // then take an image_size patch.
+  optional int32 raw_image_size = 5 [default=0];
+  optional int32 image_size = 6;   // resize to this.
+  optional bool can_translate = 7 [default=false];
+  optional bool can_flip = 8 [default=false];
+
+  optional bool normalize = 9;
+  optional int32 gpu_id = 10 [default = 0];
+
+  // For sliding windows.
+  optional int32 stride = 11 [default=1];
+
+  optional bool pixelwise_normalize = 12 [default=false];
+  optional float pca_noise_stddev = 13 [default=0];
+}
+
+message DatasetConfig3 {
+  repeated DataConfig data_config = 1;
+  optional int32 batch_size = 2 [default=1]; 
+  optional int32 chunk_size = 3 [default=1];
+  optional int32 max_reuse_count = 4 [default = 0];
+  optional bool pipeline_loads = 5 [default = false];
+  optional bool randomize_cpu = 6 [default=false];
+  optional bool randomize_gpu = 7 [default=false];
+  optional int32 random_access_chunk_size = 8 [default=1]; 
+  optional int32 max_dataset_size = 9 [default = 0];
+}
+
 message DatasetConfig {
   required string data_dir = 1;
   enum DatasetType {
