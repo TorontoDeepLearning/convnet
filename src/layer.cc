@@ -427,7 +427,7 @@ float SoftmaxDistLayer::GetLoss() {
 void LogisticLayer::AllocateMemory(int image_size, int batch_size) {
   Layer::AllocateMemory(image_size, batch_size);
   Matrix::RegisterTempMemory(batch_size);
-  if (is_output_) data_.AllocateGPUMemory(batch_size, 1);
+  if (is_output_) data_.AllocateGPUMemory(batch_size, num_channels_);
 }
 
 void LogisticLayer::ApplyActivation(bool train) {

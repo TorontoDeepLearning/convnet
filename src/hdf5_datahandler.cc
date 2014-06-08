@@ -7,6 +7,21 @@ SimpleHDF5DataHandler::SimpleHDF5DataHandler(const config::DatasetConfig& config
     dataset_names_.push_back(name);
   }
   LoadMetaFromDisk();
+  squash_relu_.resize(dataset_names_.size(), false);
+  int i = 0;
+  for (bool squash : config.squash_relu()) {
+    squash_relu_[i] = squash;
+    i++;
+  }
+  if (config.file_patterns_size() > 0) {
+    for (const string& s:config.file_patterns()) {
+      data_files_.push_back(s);
+    }
+  } else {
+    for (int i = 0; i < config.dataset_name_size(); i++) {
+      data_files_.push_back(base_dir_ + file_pattern_);
+    }
+  }
 }
 
 void SimpleHDF5DataHandler::LoadMetaFromDisk() {
@@ -17,21 +32,22 @@ void SimpleHDF5DataHandler::LoadMetaFromDisk() {
 
 void SimpleHDF5DataHandler::LoadFromDisk() {
   string data_file = base_dir_ + file_pattern_;
-  hid_t file = H5Fopen(data_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   data_.resize(dataset_names_.size());
   for (int i = 0; i < dataset_names_.size(); i++) {
+    hid_t file = H5Fopen(data_files_[i].c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
     data_[i].AllocateAndReadHDF5(file, dataset_names_[i]);
+    if (squash_relu_[i]) data_[i].SquashRelu();
     if (i == 0) dataset_size_ = data_[i].GetCols();
     if (i > 0 && dataset_size_ != data_[i].GetCols()) {
       cerr << "Error: All datasets must have the same number of rows." << endl;
       exit(1);
     }
+    H5Fclose(file);
   }
   if (randomize_gpu_) {
     SetupShuffler(dataset_size_);
     Shuffle();
   }
-  H5Fclose(file);
 }
 
 void SimpleHDF5DataHandler::Shuffle() {
@@ -64,7 +80,9 @@ void SimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   int i = 0;
   for (Layer* l : data_layers) {
     cudamat data_slice;
-    Matrix& m = data_[i];
+    int data_id = GetId(l->GetName());
+    if (data_id < 0) data_id = i;
+    Matrix& m = data_[data_id];
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     get_slice(m.GetMat(), &data_slice, start_, end);
     copy_transpose(&data_slice, dest.GetMat());
@@ -79,11 +97,21 @@ BigSimpleHDF5DataHandler::BigSimpleHDF5DataHandler(const config::DatasetConfig& 
   max_reuse_count_(config.max_reuse_count()), reuse_counter_(0),
   preload_thread_(NULL), first_time_(true),
   use_multithreading_(config.pipeline_loads()) {
-  string data_file = base_dir_ + file_pattern_;
-  it_ = randomize_cpu_ ? 
-          new HDF5RandomMultiAccessor(data_file, dataset_names_,
-              config.random_access_chunk_size()) :
-          new HDF5MultiIterator(data_file, dataset_names_);
+  if (config.file_patterns_size() > 0) {
+    vector<string> data_files;
+    for (const string& s:config.file_patterns()) data_files.push_back(s);
+    it_ = randomize_cpu_ ? 
+            new HDF5RandomMultiAccessor(data_files, dataset_names_,
+                config.random_access_chunk_size()) :
+            new HDF5MultiIterator(data_files, dataset_names_);
+
+  } else {
+    string data_file = base_dir_ + file_pattern_;
+    it_ = randomize_cpu_ ? 
+            new HDF5RandomMultiAccessor(data_file, dataset_names_,
+                config.random_access_chunk_size()) :
+            new HDF5MultiIterator(data_file, dataset_names_);
+  }
   dataset_size_ = it_->GetDatasetSize();
   int max_dataset_size = config.max_dataset_size();
   if (max_dataset_size > 0 && max_dataset_size < dataset_size_) {
@@ -100,6 +128,10 @@ BigSimpleHDF5DataHandler::~BigSimpleHDF5DataHandler() {
   delete it_;
   for (void* ptr : buf_) if (ptr != NULL) delete reinterpret_cast<char*>(ptr);
   if (preload_thread_ != NULL) delete preload_thread_;
+}
+
+void BigSimpleHDF5DataHandler::Sync() {
+  if (use_multithreading_) WaitForPreload();
 }
 
 void BigSimpleHDF5DataHandler::LoadFromDisk() {
@@ -119,6 +151,8 @@ void BigSimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   int batch_size = data_layers[0]->GetState().GetRows();
   if (first_time_) {
     first_time_ = false;
+    reuse_counter_ = 0;
+    start_ = 0;
     if (use_multithreading_) StartPreload();
     GetChunk();
     if (randomize_gpu_) Shuffle();
@@ -140,7 +174,9 @@ void BigSimpleHDF5DataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (Layer* l : data_layers) {
     if (i >= data_.size()) break;
     cudamat data_slice;
-    Matrix& m = data_[i];
+    int data_id = GetId(l->GetName());
+    if (data_id < 0) data_id = i;
+    Matrix& m = data_[data_id];
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     get_slice(m.GetMat(), &data_slice, start_, end);
     copy_transpose(&data_slice, dest.GetMat());
@@ -159,6 +195,7 @@ void BigSimpleHDF5DataHandler::GetChunk() {
 
   for (int i = 0; i < data_.size(); i++) {
     data_[i].CopyToDevice();
+    if (squash_relu_[i]) data_[i].SquashRelu();
   }
 
   if (use_multithreading_) {  // Start loading the next chunk in a new thread. 
@@ -230,9 +267,9 @@ void BigSimpleHDF5DataHandler::WaitForPreload() {
 }
 
 void BigSimpleHDF5DataHandler::Seek(int location) {
-  WaitForPreload();
+  Sync();
   it_->Seek(location);
-  start_ = 0; 
+  first_time_ = true; 
 }
 
 
@@ -631,7 +668,7 @@ void ImageNetCLSDataHandler::WaitForPreload() {
 }
 
 void ImageNetCLSDataHandler::Seek(int location) {
-  WaitForPreload();
+  Sync();
   it_->Seek(location);
   start_ = 0; 
 }

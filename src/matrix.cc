@@ -174,7 +174,8 @@ void Matrix::CopyToHostSlice(const int start, const int end) {
 
 void Matrix::Reshape(int rows, int cols) {
   reshape(&mat_, rows, cols);
-  // what about transpose ?
+  mat_t_ = mat_;
+  mat_t_.is_trans = 1;
 }
 
 void Matrix::Print() {
@@ -292,6 +293,10 @@ float Matrix::Norm() {
     exit(1);
   }
   return res;
+}
+
+void Matrix::SquashRelu() {
+  apply_relu_squash(&mat_, &mat_, 2);
 }
 
 void Matrix::SetupCUDADevices(const vector<int>& boards) {

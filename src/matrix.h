@@ -46,6 +46,7 @@ class Matrix {
   int GetNumEls() const {return mat_.size[1] * mat_.size[0]; }
   float Sum();
   void Add(Matrix& m);
+  void SquashRelu();
 
   int GetGPUId() const { return gpu_id_; }
   void SetReady();

@@ -14,6 +14,8 @@ class SimpleHDF5DataHandler : public DataHandler {
   void Shuffle();
   vector<Matrix> data_;
   vector<string> dataset_names_;
+  vector<bool> squash_relu_;
+  vector<string> data_files_;
   const string file_pattern_;
   int start_;
 };
@@ -24,6 +26,7 @@ class BigSimpleHDF5DataHandler : public SimpleHDF5DataHandler {
   virtual ~BigSimpleHDF5DataHandler();
   virtual void GetBatch(vector<Layer*>& data_layers);
   virtual void Seek(int location);
+  virtual void Sync();
 
  protected:
   void GetChunk();

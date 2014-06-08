@@ -493,6 +493,22 @@ int set_row_slice(cudamat* source, cudamat* target, unsigned int start, unsigned
         return 0;
 }
 
+int copy_transpose_big_matrix(cudamat* source, cudamat* target) {
+    unsigned int height = source->size[0];
+    unsigned int width = source->size[1];
+
+    if (source->size[0] != target->size[1] || source->size[1] != target->size[0])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kTransposeBig<<< NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK >>>(target->data_device, source->data_device, height, width);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+    else
+        return 0;
+}
+
+
 int copy_transpose(cudamat* source, cudamat* target) {
     unsigned int height = source->size[0];
     unsigned int width = source->size[1];
@@ -1678,6 +1694,24 @@ int apply_log_1_plus_exp(cudamat* mat, cudamat* target) {
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
     kApplyLog1PlusExp<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, target->data_device, len);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
+// target = 2 / (1 + exp(-mat * lambda)) - 1
+int apply_relu_squash(cudamat* mat, cudamat* target, float lambda) {
+    unsigned int len = mat->size[0] * mat->size[1];
+
+    if (!mat->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kSquashRelu<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, target->data_device, len, lambda);
 
     if (checkCUDAError())
         return CUDA_ERROR;

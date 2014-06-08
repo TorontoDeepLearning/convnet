@@ -54,6 +54,15 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   randomize_gpu_(config.randomize_gpu()),
   num_positions_(1) {
   Matrix::SetDevice(gpu_id_);
+  int i = 0;
+  for (const string& lname : config.layer_name()) {
+    layer_names_[lname] = i++;
+  }
+}
+
+int DataHandler::GetId(const string& layer_name) {
+  if (layer_names_.size() == 0) return -1;
+  return layer_names_[layer_name];
 }
 
 void DataHandler::SetupShuffler(int dataset_size) {
@@ -164,6 +173,23 @@ HDF5MultiIterator::HDF5MultiIterator(const string& file_name,
   }
 }
 
+HDF5MultiIterator::HDF5MultiIterator(const vector<string>& file_names,
+                                     const vector<string>& dataset_names):
+  num_it_(dataset_names.size()), row_(0) {
+  int i = 0;
+  for (const string& dataset_name: dataset_names) {
+    it_.push_back(new HDF5Iterator(file_names[i], dataset_name));
+    i++;
+  }
+  dataset_size_ = it_[0]->GetDatasetSize();
+  for(const HDF5Iterator* it: it_) {
+    if (dataset_size_ != it->GetDatasetSize()) {
+      cerr << "All datasets running in parallel must have same size." << endl;
+      exit(1);
+    }
+  }
+}
+
 HDF5MultiIterator::~HDF5MultiIterator() {
   for (HDF5Iterator* it: it_) delete it;
 }
@@ -208,6 +234,13 @@ HDF5RandomMultiAccessor::HDF5RandomMultiAccessor(
   HDF5MultiIterator(file_name, dataset_names),
   distribution_(new uniform_int_distribution<int>(0, GetDatasetSize() - 1)),
   chunk_size_(chunk_size), ind_(0) {}
+
+HDF5RandomMultiAccessor::HDF5RandomMultiAccessor(
+    const vector<string>& file_names, const vector<string>& dataset_names, int chunk_size):
+  HDF5MultiIterator(file_names, dataset_names),
+  distribution_(new uniform_int_distribution<int>(0, GetDatasetSize() - 1)),
+  chunk_size_(chunk_size), ind_(0) {}
+
 
 HDF5RandomMultiAccessor::~HDF5RandomMultiAccessor() {
   delete distribution_;

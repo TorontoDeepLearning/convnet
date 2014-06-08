@@ -77,6 +77,7 @@ message Edge {
     DOWNSAMPLE = 6;
     RGBTOYUV = 7;
     AVERAGE_POOL = 8;
+    CONV_ONETOONE = 9;
   }
   optional EdgeType edge_type = 3 [default=FC];
 
@@ -249,4 +250,9 @@ message DatasetConfig {
 
   optional bool pixelwise_normalize = 30 [default=false];
   optional float pca_noise_stddev = 31 [default=0];
+
+  repeated bool squash_relu = 32;
+  repeated string layer_name = 33;
+
+  repeated string file_patterns = 34;
 }

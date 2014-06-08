@@ -85,7 +85,7 @@ void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int posi
       new_width = raw_image_size_;
       new_height = (height * raw_image_size_) / width;
     }
-    image_.resize(new_width, new_height, 1, -100, 3);
+    image_.resize(new_width, new_height, 1, -100, 5);
   }
   int width = image_.width(), height = image_.height();
   int left = 0, top = 0;

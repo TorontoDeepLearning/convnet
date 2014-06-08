@@ -330,7 +330,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
         Matrix& mat = l->GetState();
         Matrix mat_t;
         Matrix::GetTemp(mat.GetCols(), mat.GetRows(), mat_t);
-        copy_transpose(mat.GetMat(), mat_t.GetMat());
+        copy_transpose_big_matrix(mat.GetMat(), mat_t.GetMat());
         data_writer->Write(mat_t, i, numcases);
         i++;
       }

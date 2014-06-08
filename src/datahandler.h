@@ -22,6 +22,7 @@ class DataHandler {
   virtual void Sync() {}
 
  protected:
+  int GetId(const string& layer_name);
   void SetupShuffler(int dataset_size);
 
   const int gpu_id_;
@@ -29,7 +30,8 @@ class DataHandler {
   const string base_dir_, mean_file_;
   Matrix rand_perm_indices_;
   const bool randomize_cpu_, randomize_gpu_;
-  int num_positions_; 
+  int num_positions_;
+  map<string, int> layer_names_; 
 };
 
 class DummyDataHandler : public DataHandler {
@@ -52,6 +54,7 @@ class HDF5Iterator {
   // Reads a row using the internal state row_.
   virtual void GetNext(void* data_ptr);
 
+  int GetRow() const { return row_; }
   void Seek(int row) { row_ = row; }
   int GetDatasetSize() const { return dataset_size_;}
   int GetDims() const { return num_dims_;}
@@ -93,11 +96,14 @@ class HDF5RandomAccessor : public HDF5Iterator {
 class HDF5MultiIterator {
  public:
   HDF5MultiIterator(const string& file_name, const vector<string>& dataset_names);
+  HDF5MultiIterator(const vector<string>& file_names, const vector<string>& dataset_names);
   ~HDF5MultiIterator();
   
   // Reads a row from disk into data_ptr.
   // Sufficient memory should already be allocated.
   void GetNext(vector<void*>& data_ptr, const int row);
+
+  int GetRow() const { return row_; }
 
   // Reads a row using the internal state row_.
   virtual void GetNext(vector<void*>& data_ptr);
@@ -120,6 +126,8 @@ class HDF5MultiIterator {
 class HDF5RandomMultiAccessor : public HDF5MultiIterator {
  public:
   HDF5RandomMultiAccessor(const string& file_name,
+                          const vector<string>& dataset_names, int chunk_size);
+  HDF5RandomMultiAccessor(const vector<string>& file_names,
                           const vector<string>& dataset_names, int chunk_size);
   ~HDF5RandomMultiAccessor();
   virtual void GetNext(vector<void*>& data_ptr);
