@@ -4,84 +4,35 @@
 #include <algorithm>
 #include <iostream>
 
-DataHandler* DataHandler::ChooseDataHandler(const string& config_file) {
-  config::DatasetConfig config;
-  ReadDataConfig(config_file, &config);
-
-  DataHandler* dh;
-  switch(config.dataset_type()) {
-    case config::DatasetConfig::DUMMY:
-            dh = new DummyDataHandler(config);
-            break;
-    case config::DatasetConfig::HDF5:
-            dh = new SimpleHDF5DataHandler(config);
-            break;
-    case config::DatasetConfig::BIG_HDF5:
-            dh = new BigSimpleHDF5DataHandler(config);
-            break;
-    case config::DatasetConfig::IMAGE_HDF5:
-            dh = new HDF5DataHandler(config);
-            break;
-    case config::DatasetConfig::IMAGE_HDF5_MULT_POS:
-            dh = new HDF5MultiplePositionDataHandler(config);
-            break;
-    case config::DatasetConfig::IMAGENET_CLS_HDF5:
-            dh = new ImageNetCLSDataHandler(config);
-            break;
-    case config::DatasetConfig::IMAGENET_CLS_HDF5_MULT_POS:
-            dh = new ImageNetCLSMultiplePosDataHandler(config);
-            break;
-    case config::DatasetConfig::RAW_IMAGE:
-            dh = new RawImageDataHandler<unsigned char>(config);
-            break;
-    case config::DatasetConfig::RAW_IMAGE_SLIDING_WINDOW:
-            dh = new SlidingWindowDataHandler(config);
-            break;
-    default:
-            cerr << "Error: Unknown dataset type. " << endl;
-            exit(1);
-  }
-  return dh;
-}
-
 DataHandler::DataHandler(const config::DatasetConfig& config) :
-  gpu_id_(config.gpu_id()),
   batch_size_(config.batch_size()),
+  chunk_size_(config.chunk_size()),
+  max_reuse_count_(config.max_reuse_count()),
+  random_access_chunk_size_(config.random_access_chunk_size()),
+  dataset_size_(0),
   row_(0),
-  base_dir_(config.data_dir()),
-  mean_file_(config.mean_image_file()),
+  pipeline_loads_(config.pipeline_loads()),
   randomize_cpu_(config.randomize_cpu()),
-  randomize_gpu_(config.randomize_gpu()),
-  num_positions_(1) {
-  Matrix::SetDevice(gpu_id_);
+  randomize_gpu_(config.randomize_gpu()) {
+
+  for (const config::DataStreamConfig& dsc:config.data_config()) {
+    it_[dsc.layer_name()] = ChooseDataIterator(dsc);
+  }
+
 }
 
 void DataHandler::SetupShuffler(int dataset_size) {
-  rand_perm_indices_.AllocateGPUMemory(1, dataset_size);
-  float* indices = rand_perm_indices_.GetHostData();
-  for (int i = 0; i < dataset_size; i++) indices[i] = i;
-  rand_perm_indices_.CopyToDevice();
 }
 
-void DummyDataHandler::GetBatch(vector<Layer*>& data_layers) {
-  Matrix::SyncAllDevices();
-  Matrix::SetDevice(gpu_id_);
-  for(Layer* l: data_layers) {
-    Matrix& data = l->IsInput() ? l->GetState() : l->GetData();
-    if (l->IsInput()) {
-      // Put random gaussian noise in data.
-      data.FillWithRandn();
-    } else {
-      // Put random targets [0, 1, ..., n-1].
-      data.FillWithRandn();
-      /*
-      const int n = 10;
-      cudamat* mat = data.GetMat();
-      mult_by_scalar(mat, n, mat);
-      apply_floor(mat, mat);
-      */
-    }
+void DataHandler::GetBatch(vector<Layer*>& data_layers) {
+
+  for (Layer* l : data_layers) {
+    const string& layer_name = l->GetLayerName();
+    DataIterator* it = data_it_[layer_name];
+    it.
+
   }
+
 }
 
 HDF5Iterator::HDF5Iterator(const string& file_name, const string& dataset_name) {

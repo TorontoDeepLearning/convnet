@@ -8,28 +8,20 @@ class DataHandler {
   DataHandler(const config::DatasetConfig& config);
   virtual ~DataHandler() {}
 
-  virtual void GetBatch(vector<Layer*>& data_layers) = 0;
-
-  static DataHandler* ChooseDataHandler(const string& config_file);
-
+  void GetBatch(vector<Layer*>& data_layers);
   int GetBatchSize() const { return batch_size_; }
   int GetDataSetSize() const { return dataset_size_; }
-  virtual void Seek(int row) { row_ = row; }
+  void Seek(int row) { row_ = row; }
 
-  // Number of positions in same image.
-  int GetNumPositions() const { return num_positions_;}
-
-  virtual void Sync() {}
+  void Sync();
 
  protected:
   void SetupShuffler(int dataset_size);
 
-  const int gpu_id_;
-  int batch_size_, dataset_size_, row_;
-  const string base_dir_, mean_file_;
-  Matrix rand_perm_indices_;
-  const bool randomize_cpu_, randomize_gpu_;
-  int num_positions_; 
+  map<string, DataIterator*> data_it_;
+  int batch_size_, chunk_size_, max_reuse_count_,
+      random_access_chunk_size_, dataset_size_, row_;
+  const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
 };
 
 class DummyDataHandler : public DataHandler {
