@@ -122,7 +122,7 @@ void ConvNet::AllocateEdgeMemory(bool fprop_only) {
   if (timestamp_.empty()) {
     for (Edge* e: edges_) e->Initialize();
   } else {
-    Load(fprop_only);
+    Load();
   }
 }
 
@@ -167,8 +167,9 @@ void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite) {
 
 void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge, bool overwrite,
                     bool update_weights) {
+  if (edge.IsBackPropBlocked()) return;
   edge.ComputeOuter(input.GetState(), output.GetDeriv());
-  if (!input.IsInput() && !edge.IsBackPropBlocked()) {
+  if (!input.IsInput()) {
     edge.ComputeDown(output.GetDeriv(), input.GetState(), output.GetState(),
                      input.GetDeriv(), overwrite);
   }
@@ -233,10 +234,19 @@ void ConvNet::SetupDataset(const string& train_data_config_file) {
 
 void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
-  train_dataset_ = DataHandler::ChooseDataHandler(train_data_config_file);
+
+  config::DatasetConfig train_data_config;
+  ReadDataConfig(train_data_config_file, &train_data_config);
+  train_dataset_ = new DataHandler(train_data_config);
   batch_size_ = train_dataset_->GetBatchSize();
+  int dataset_size = train_dataset_->GetDataSetSize();
+  cout << "Training data set size " << dataset_size << endl;
   if (!val_data_config_file.empty()) {
-    val_dataset_ = DataHandler::ChooseDataHandler(val_data_config_file);
+    config::DatasetConfig val_data_config;
+    ReadDataConfig(val_data_config_file, &val_data_config);
+    val_dataset_ = new DataHandler(val_data_config);
+    dataset_size = val_dataset_->GetDataSetSize();
+    cout << "Validation data set size " << dataset_size << endl;
   }
 }
 
@@ -253,6 +263,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       batch_size = dataset->GetBatchSize(),
       num_batches = dataset_size / batch_size;
   for (int k = 0; k < num_batches; k++) {
+
     dataset->GetBatch(data_layers_);
     Fprop(false);
     GetLoss(error);
@@ -261,6 +272,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       total_error[i] = (total_error[i] * k) / (k+1) + error[i] / (batch_size * (k+1));
     }
   }
+  dataset->Sync();
 }
 
 void ConvNet::DumpOutputs(const string& output_file, const vector<string>& layer_names) {
@@ -294,7 +306,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
       left_overs = dataset_size % batch_size;
   int i = 0;
   int max_num_dims = 0;
-  int num_positions = dataset->GetNumPositions();
+  int num_positions = 1; //dataset->GetNumPositions();
  
   cout << "Dumping dataset of size " << dataset_size
        << " # batches " << num_batches
@@ -328,7 +340,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
         Matrix& mat = l->GetState();
         Matrix mat_t;
         Matrix::GetTemp(mat.GetCols(), mat.GetRows(), mat_t);
-        copy_transpose(mat.GetMat(), mat_t.GetMat());
+        copy_transpose_big_matrix(mat.GetMat(), mat_t.GetMat());
         data_writer->Write(mat_t, i, numcases);
         i++;
       }
@@ -378,14 +390,14 @@ string ConvNet::GetCheckpointFilename() {
   return filename;
 }
 
-void ConvNet::Load(bool fprop_only) {
-  Load(GetCheckpointFilename(), fprop_only);
+void ConvNet::Load() {
+  Load(GetCheckpointFilename());
 }
 
-void ConvNet::Load(const string& input_file, bool fprop_only) {
+void ConvNet::Load(const string& input_file) {
   cout << "Loading model from " << input_file << endl;
   hid_t file = H5Fopen(input_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  for (Edge* e : edges_) e->LoadParameters(file, fprop_only);
+  for (Edge* e : edges_) e->LoadParameters(file);
   ReadHDF5IntAttr(file, "__lr_reduce_counter__", &lr_reduce_counter_);
   for (int i = 0; i < lr_reduce_counter_; i++) {
     ReduceLearningRate(model_->reduce_lr_factor());
@@ -561,6 +573,7 @@ void ConvNet::Train() {
 
     if (val_dataset_ != NULL && validate_after > 0 && (i+1) % validate_after == 0) {
       if (polyak_after > 0) LoadPolyakWeights();
+      train_dataset_->Sync();
       Validate(this_val_error);
       if (polyak_after > 0) LoadCurrentWeights();
 
@@ -575,16 +588,21 @@ void ConvNet::Train() {
         if (reduce_learning_rate && lr_reduce_counter_ < lr_max_reduce
             && dont_reduce_lr-- < 0) {
           dont_reduce_lr = model_->reduce_lr_num_steps();
-          cout << "Learning rate reduced " << ++lr_reduce_counter_ << " time(s)."
-               << endl;
+          cout << "Learning rate reduced " << ++lr_reduce_counter_ << " time(s).";
           ReduceLearningRate(learning_rate_reduce_factor);
         }
       }
       newline = true;
     }
     if (newline) cout << endl;
-    if ((i+1) % save_after == 0) Save();
+    if ((i+1) % save_after == 0) {
+      train_dataset_->Sync();
+      Save();
+    }
   }
-  Save();
+  if (model_->max_iter() % save_after != 0) {
+    train_dataset_->Sync();
+    Save();
+  }
   cout << "End of training." << endl;
 }

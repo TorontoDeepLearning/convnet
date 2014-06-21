@@ -1,126 +1,130 @@
 #ifndef DATAHANDLER_H_
 #define DATAHANDLER_H_
 #include "layer.h"
+#include "image_iterators.h"
 #include <random>
-
+#include <thread>
+class DataIterator;
 class DataHandler {
  public:
   DataHandler(const config::DatasetConfig& config);
-  ~DataHandler() {}
+  virtual ~DataHandler();
 
-  virtual void GetBatch(vector<Layer*>& data_layers) = 0;
-
-  static DataHandler* ChooseDataHandler(const string& config_file);
-
+  void GetBatch(vector<Layer*>& data_layers);
   int GetBatchSize() const { return batch_size_; }
   int GetDataSetSize() const { return dataset_size_; }
-  virtual void Seek(int row) { row_ = row; }
-
-  // Number of positions in same image.
-  int GetNumPositions() const { return num_positions_;}
+  void Seek(int row);
+  void Preprocess(Matrix& input, Matrix& output);
+  void Sync();
 
  protected:
-  void SetupShuffler(int dataset_size);
+  void SetupShuffler();
+  void ShuffleIndices();
+  void LoadChunk(DataIterator& it, Matrix& mat);
+  void LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows);
 
-  const int gpu_id_;
-  int batch_size_, dataset_size_, row_;
-  const string base_dir_, mean_file_;
+  void PipelinedDiskAccess();
+  void DiskAccess();
+  void StartPreload();
+  void WaitForPreload();
+
+  default_random_engine generator_;
+  uniform_int_distribution<int> * distribution_;
+  map<string, DataIterator*> data_it_;
+  map<string, Matrix> data_;
+  vector<string> layer_names_;
+  thread* preload_thread_;
   Matrix rand_perm_indices_;
-  const bool randomize_cpu_, randomize_gpu_;
-  int num_positions_; 
+  int batch_size_, chunk_size_, max_reuse_count_, reuse_counter_,
+      random_access_chunk_size_, dataset_size_, start_;
+  bool restart_, nothing_on_gpu_, fits_on_gpu_;
+  const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
 };
 
-class DummyDataHandler : public DataHandler {
+class DataIterator {
  public:
-  DummyDataHandler(const config::DatasetConfig& config) : DataHandler(config) {}
-  void GetBatch(vector<Layer*>& data_layers);
-};
+  DataIterator(const config::DataStreamConfig& config);
+  virtual ~DataIterator() {};
+  virtual void GetNext(float* data_out) = 0;
+  virtual void Seek(int row);
+  void Preprocess(Matrix& m);
+  void AddNoise(Matrix& input, Matrix& output);
+  int GetDims() const;
+  int GetDataSetSize() const;
+  void AddPCANoise(Matrix& m);
+  void SetJitterVariables(int max_offset);
+  void Jitter(Matrix& source, Matrix& dest);
+  static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
 
-// TODO: Make a real STL-like iterator.
-// Iterates over a dataset in an hdf5 file sequentially.
-class HDF5Iterator {
- public:
-  HDF5Iterator(const string& file_name, const string& dataset_name);
-  ~HDF5Iterator();
-
-  // Reads a row from disk into data_ptr.
-  // Sufficient memory should already be allocated.
-  void GetNext(void* data_ptr, const int row);
-
-  // Reads a row using the internal state row_.
-  virtual void GetNext(void* data_ptr);
-
-  void Seek(int row) { row_ = row; }
-  int GetDatasetSize() const { return dataset_size_;}
-  int GetDims() const { return num_dims_;}
-
- private:
+ protected:
+  void LoadMeans(const string& data_file);
 
   int num_dims_, dataset_size_, row_;
+  Matrix mean_, std_, pca_noise1_, pca_noise2_, eig_values_, eig_vectors_,
+         width_offset_, height_offset_, flip_bit_;
+  const string file_pattern_;
+  const int num_colors_, gpu_id_;
+  const bool translate_, flip_, normalize_, pixelwise_normalize_, add_pca_noise_;
+  const float pca_noise_stddev_; 
+};
+
+class DummyDataIterator : public DataIterator {
+ public:
+  DummyDataIterator(const config::DataStreamConfig& config);
+  void GetNext(float* data_out);
+};
+
+template <typename T>
+class HDF5DataIterator : public DataIterator {
+ public:
+  HDF5DataIterator(const config::DataStreamConfig& config);
+  ~HDF5DataIterator();
+  void GetNext(float* data_out);
+  void GetNext(float* data_out, const int row);
+
+ protected:
   hid_t file_, dataset_, dapl_id_, m_dataspace_, type_;
   hsize_t start_[2], count_[2];
+  T* buf_;
 };
 
-// Accesses rows randomly in a dataset in an hdf5 file.
-class HDF5RandomAccessor : public HDF5Iterator {
+class ImageDataIterator : public DataIterator {
  public:
-
-  // chunk_size : Number of rows to read sequentially after a random Seek.
-  // To get a random permutation this must be set to 1. However, this will lead
-  // to a lot of random disk access which will slow things down. So it might be
-  // better to set this to a higher value like 64 or 128.
-  HDF5RandomAccessor(const string& file_name, const string& dataset_name, int chunk_size);
-  ~HDF5RandomAccessor();
-  virtual void GetNext(void* data_ptr);
-
- private:
-  default_random_engine generator_;
-  uniform_int_distribution<int> * distribution_;
-  const int chunk_size_;
-  int ind_;
+  ImageDataIterator(const config::DataStreamConfig& config);
+  ~ImageDataIterator();
+  virtual void GetNext(float* data_out);
+  virtual void Seek(int row);
+ 
+ protected:
+  RawImageFileIterator<unsigned char> *it_;
+  unsigned char* buf_;
+  const int raw_image_size_, image_size_;
 };
 
-
-// Iterates over multiple datasets in an hdf5 file.
-// All datasets must have the same number of rows.
-class HDF5MultiIterator {
+class SlidingWindowDataIterator : public DataIterator {
  public:
-  HDF5MultiIterator(const string& file_name, const vector<string>& dataset_names);
-  ~HDF5MultiIterator();
-  
-  // Reads a row from disk into data_ptr.
-  // Sufficient memory should already be allocated.
-  void GetNext(vector<void*>& data_ptr, const int row);
-
-  // Reads a row using the internal state row_.
-  virtual void GetNext(vector<void*>& data_ptr);
-
-  void Seek(int row) { row_ = row; }
-  int GetDatasetSize() const { return dataset_size_;}
-  int GetDims(int i) const { return it_[i]->GetDims();}
-  int GetNumIterators() const { return num_it_;}
-
- private:
-
-  vector<HDF5Iterator*> it_;
-  const int num_it_;
-  int dataset_size_, row_;
+  SlidingWindowDataIterator(const config::DataStreamConfig& config);
+  ~SlidingWindowDataIterator();
+  virtual void GetNext(float* data_out);
+  virtual void Seek(int row);
+ 
+ protected:
+  SlidingWindowIterator<unsigned char> *it_;
+  unsigned char* buf_;
+  vector<string> file_names_;
+  const int stride_, raw_image_size_, image_size_;
+  int file_id_;
 };
 
-class HDF5RandomMultiAccessor : public HDF5MultiIterator {
+class TextDataIterator : public DataIterator {
  public:
-  HDF5RandomMultiAccessor(const string& file_name,
-                          const vector<string>& dataset_names, int chunk_size);
-  ~HDF5RandomMultiAccessor();
-  virtual void GetNext(vector<void*>& data_ptr);
+  TextDataIterator(const config::DataStreamConfig& config);
+  ~TextDataIterator();
+  virtual void GetNext(float* data_out);
 
- private:
-  default_random_engine generator_;
-  uniform_int_distribution<int> * distribution_;
-  const int chunk_size_;
-  int ind_;
+ protected:
+  float* data_;
 };
-
 
 class DataWriter {
  public:

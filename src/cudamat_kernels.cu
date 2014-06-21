@@ -313,6 +313,17 @@ __global__ void kTranspose(float *odata, float *idata, int width, int height) {
     odata[index_out] = block[threadIdx.x][threadIdx.y];
   }
 }
+__global__ void kTransposeBig(float *odata, float *idata, int height, int width) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  int r, c;
+  for (unsigned int i = idx; i < width * height; i += numThreads) {
+    r = i % width;
+    c = i / width;
+    odata[i] = idata[height * r + c];
+  }
+}
+
 
 /* ------------------------- Mathematical operations ------------------------- */
 
@@ -469,6 +480,13 @@ __global__ void kLog(float* mat, float* target, unsigned int len, float tiny) {
   const unsigned int numThreads = blockDim.x * gridDim.x;
   for (unsigned int i = idx; i < len; i += numThreads) target[i] = __logf(mat[i] + tiny);
 }
+
+__global__ void kSquashRelu(float* mat, float* target, unsigned int len, float lambda) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  for (unsigned int i = idx; i < len; i += numThreads) target[i] = 2 / (1 + __expf(-lambda * mat[i])) - 1;
+}
+
 
 __global__ void kExp(float* mat, float* target, unsigned int len) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;

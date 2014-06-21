@@ -21,6 +21,7 @@
 #
 #define NUM_VECTOR_OP_BLOCKS                4096
 #define NUM_VECTOR_OP_THREADS_PER_BLOCK     512
+#define NUM_VECTOR_OP_LOOPS_PER_THREAD      1
 
 #define PI 3.1415926535897932f
 #ifndef DIVUP
@@ -51,6 +52,7 @@ __global__ void kPerturbEnergy(unsigned int* randMults, unsigned long long* rand
 
 __global__ void kGetRowSlice(float* source, float* target, int start, int end, int width, int height);
 __global__ void kTranspose(float *odata, float *idata, int width, int height);
+__global__ void kTransposeBig(float *odata, float *idata, int height, int width);
 __global__ void kSetRowSlice(float* source, float* target, int start, int end, int width, int height);
 
 __global__ void kLessThan(float* mat1, float* mat2, float* target, unsigned int len);
@@ -82,6 +84,7 @@ __global__ void kApplyTanh(float* mat, float* target, unsigned int len);
 __global__ void kApplyAbs(float* mat, float* target, unsigned int len);
 __global__ void kApplyLog1PlusExp(float* mat, float* target, unsigned int len);
 __global__ void kApplyLog1PlusExpExact(float* mat, float* target, unsigned int len);
+__global__ void kSquashRelu(float* mat, float* target, unsigned int len, float lambda);
 __global__ void kLog(float* mat, float* target, unsigned int len, float tiny);
 __global__ void kExp(float* mat, float* target, unsigned int len);
 __global__ void kCeil(float* mat, float* target, unsigned int len);

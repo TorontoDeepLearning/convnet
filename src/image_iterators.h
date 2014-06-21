@@ -1,6 +1,13 @@
-#ifndef RAW_IMAGE_DATAHANDLER_
-#define RAW_IMAGE_DATAHANDLER_
-#include "datahandler.h"
+#ifndef IMAGE_ITERATORS_
+#define IMAGE_ITERATORS_
+#define cimg_use_jpeg
+#define cimg_use_lapack
+#include <string>
+#include <iostream>
+#include <vector>
+#include "CImg.h"
+using namespace cimg_library;
+using namespace std;
 
 template<typename T>
 class RawImageFileIterator {
@@ -14,7 +21,7 @@ class RawImageFileIterator {
   void GetNext(T* data_ptr, const int row, const int position);
 
   void Seek(int row) { row_ = row; }
-  int GetDatasetSize() const { return dataset_size_;}
+  int GetDataSetSize() const { return dataset_size_;}
 
  private:
   void GetCoordinates(int width, int height, int position, int* left, int* top, bool* flip);
@@ -26,55 +33,23 @@ class RawImageFileIterator {
   CImgDisplay* disp_;
 };
 
-
-// Handles image data.
 template<typename T>
-class RawImageDataHandler : public DataHandler {
- public:
-  RawImageDataHandler(const config::DatasetConfig& config);
-  ~RawImageDataHandler();
-  virtual void GetBatch(vector<Layer*>& data_layers);
-
- private:
-  void LoadMeansFromDisk();
-
-  const int image_size_;
-  RawImageFileIterator<T> *it_;
-  Matrix mean_, std_;
-  T* image_buf_;
-  const bool pixelwise_normalize_;
-};
-
 class SlidingWindowIterator {
  public:
   SlidingWindowIterator(const int window_size, const int stride);
   void SetImage(const string& filename);
   int GetNumWindows() { return num_windows_;}
-  void GetNext(float* data_ptr);
-  void GetNext(float* data_ptr, int left, int top);
+  void GetNext(T* data_ptr);
+  void GetNext(T* data_ptr, int left, int top);
   bool Done();
   void Reset();
 
  private:
   const int window_size_, stride_;
   int num_windows_, center_x_, center_y_;
-  CImg<float> image_;
+  CImg<T> image_;
   bool done_;
-
 };
 
-class SlidingWindowDataHandler : public DataHandler {
- public:
-  SlidingWindowDataHandler(const config::DatasetConfig& config);
-  ~SlidingWindowDataHandler();
-  virtual void GetBatch(vector<Layer*>& data_layers);
 
- private:
-  void LoadMeansFromDisk();
-  SlidingWindowIterator* it_;
-  float* buf_;
-  Matrix mean_, std_;
-  int image_id_;
-  vector<string> image_file_names_;
-};
 #endif

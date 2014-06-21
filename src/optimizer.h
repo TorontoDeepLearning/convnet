@@ -11,6 +11,7 @@ class Optimizer {
 
   // Allocate any memory needed.
   virtual void AllocateMemory(const int rows, const int cols);
+  virtual bool IsAllocated() { return false; }
 
   // Do the optimizaion. This will update parameter.
   virtual void Optimize(Matrix& gradient, Matrix& parameter) = 0;
@@ -29,7 +30,7 @@ class Optimizer {
 
   const config::Optimizer::Decay epsilon_decay_type_;
   float epsilon_, minimum_epsilon_;
-  const int epsilon_decay_timescale_;
+  const int epsilon_decay_timescale_, start_optimization_after_;
   const float l2_decay_, weight_norm_limit_, weight_norm_constraint_;
   int step_;
 };
@@ -41,6 +42,7 @@ class SGDOptimizer : public Optimizer {
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
   virtual void LoadParameters(hid_t file, const string& prefix);
   virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual bool IsAllocated() { return gradient_history_.GetNumEls() > 0; }
 
  protected:
   float GetMomentum() const;
@@ -60,6 +62,7 @@ class LBFGSOptimizer : public Optimizer {
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
   virtual void LoadParameters(hid_t file, const string& prefix);
   virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual bool IsAllocated() { return q_.GetNumEls() > 0; }
 
  protected:
   Matrix q_, last_q_, last_w_;

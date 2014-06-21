@@ -15,7 +15,9 @@ EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
   has_no_bias_(edge_config.has_no_bias()),
   num_grads_received_(0),
   num_shares_(1),
-  scale_gradients_(edge_config.scale_gradients()) {
+  scale_gradients_(edge_config.scale_gradients()),
+  pretrained_model_(edge_config.pretrained_model()),
+  pretrained_edge_name_(edge_config.has_pretrained_edge_name() ? edge_config.pretrained_edge_name() : name_) {
     polyak_weights_.resize(polyak_queue_size_);
     polyak_bias_.resize(polyak_queue_size_);
 }
@@ -37,22 +39,28 @@ void EdgeWithWeight::SaveParameters(hid_t file) {
   bias_optimizer_->SaveParameters(file, ss.str());
 }
 
-void EdgeWithWeight::LoadParameters(hid_t file, bool fprop_only) {
+void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
   if (is_tied_) return;
   stringstream ss;
-  ss << source_node_ << ":" << dest_node_ << ":" << "weight";
+  ss << edge_name << ":" << "weight";
   cout << "Loading " << ss.str() << endl;
   weights_.ReadHDF5(file, ss.str());
-  if (!fprop_only) {
+  if (weight_optimizer_->IsAllocated()) {
     weight_optimizer_->LoadParameters(file, ss.str());
   }
   ss.str("");
-  ss << source_node_ << ":" << dest_node_ << ":" << "bias";
+  ss << edge_name << ":" << "bias";
   cout << "Loading " << ss.str() << endl;
   bias_.ReadHDF5(file, ss.str());
-  if (!fprop_only) {
+  if (bias_optimizer_->IsAllocated()) {
     bias_optimizer_->LoadParameters(file, ss.str());
   }
+}
+
+void EdgeWithWeight::LoadParameters(hid_t file) {
+  stringstream ss;
+  ss << source_node_ << ":" << dest_node_;
+  LoadParameters(file, ss.str());
 }
 
 void EdgeWithWeight::DisplayWeights() {
@@ -124,11 +132,17 @@ void EdgeWithWeight::Initialize() {
     cout << "Initialized weight: Dense Uniform. Initial scale " << GetRMSWeight() << endl;
   } else if (initialization_ == config::Edge::CONSTANT) {
     weights_.Set(init_wt_);
+  } else if (initialization_ == config::Edge::PRETRAINED) {
+    hid_t file = H5Fopen(pretrained_model_.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+    LoadParameters(file, pretrained_edge_name_);
+    H5Fclose(file);
   } else {
     cerr << "Unknown weight initialization type." << endl;
     exit(1);
   }
-  bias_.Set(init_bias_);
+  if (initialization_ != config::Edge::PRETRAINED) {
+    bias_.Set(init_bias_);
+  }
 }
 
 float EdgeWithWeight::GetRMSWeight() {

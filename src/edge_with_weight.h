@@ -11,7 +11,8 @@ class EdgeWithWeight : public Edge {
 
   virtual void Initialize();
   virtual void SaveParameters(hid_t file);
-  virtual void LoadParameters(hid_t file, bool fprop_only);
+  virtual void LoadParameters(hid_t file);
+  virtual void LoadParameters(hid_t file, const string& edge_name);
 
   virtual float GetRMSWeight();
   virtual void ReduceLearningRate(float factor);
@@ -58,5 +59,7 @@ class EdgeWithWeight : public Edge {
   const bool has_no_bias_;
   int num_grads_received_, num_shares_;
   const float scale_gradients_;
+
+  const string pretrained_model_, pretrained_edge_name_;
 };
 #endif

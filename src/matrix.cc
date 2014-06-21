@@ -174,7 +174,8 @@ void Matrix::CopyToHostSlice(const int start, const int end) {
 
 void Matrix::Reshape(int rows, int cols) {
   reshape(&mat_, rows, cols);
-  // what about transpose ?
+  mat_t_ = mat_;
+  mat_t_.is_trans = 1;
 }
 
 void Matrix::Print() {
@@ -268,16 +269,18 @@ void Matrix::GetSlice(Matrix& slice, int start, int end) {
 void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
   Matrix& t = Matrix::temp_[current_gpu_id_];
   int size = t.GetNumEls();
-  if (size == 0) {  // Allocate memory on first call to GetTemp.
+  const int length = rows * cols;
+  if (length > size) {  // Allocate memory as required.
     t.AllocateGPUMemory(1, temp_size_[current_gpu_id_]);
     size = temp_size_[current_gpu_id_];
-    //cout << "Allocated " << (temp_size_ >> 18) << " MB for temp." << endl;
+    //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
-  const int length = rows * cols;
+  /*
   if (length > size) {
     cerr << "Temp has only " << size << " elements. Requested was " << length << endl;
     exit(1);
   }
+  */
   get_slice(t.GetMat(), temp.GetMat(), 0, length);
   reshape(temp.GetMat(), rows, cols);
 }
@@ -290,6 +293,10 @@ float Matrix::Norm() {
     exit(1);
   }
   return res;
+}
+
+void Matrix::SquashRelu() {
+  apply_relu_squash(&mat_, &mat_, 2);
 }
 
 void Matrix::SetupCUDADevices(const vector<int>& boards) {
@@ -394,7 +401,7 @@ void Matrix::InitRandom(int seed){
 void Matrix::RegisterTempMemory(int size, const string& why) {
   if (size > temp_size_[current_gpu_id_]) {
     temp_size_[current_gpu_id_] = size;
-    //cout << "Max for " << why << endl;
+    //cout << "Max for " << why << " " << size << endl;
   }
 }
 

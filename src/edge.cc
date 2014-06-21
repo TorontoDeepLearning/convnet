@@ -13,6 +13,7 @@
 #include "downsample_edge.h"
 #include "response_norm_edge.h"
 #include "rgb_to_yuv_edge.h"
+#include "conv_onetoone_edge.h"
 using namespace std;
 
 Edge* Edge::ChooseEdgeClass(const config::Edge& edge_config) {
@@ -41,6 +42,9 @@ Edge* Edge::ChooseEdgeClass(const config::Edge& edge_config) {
       break;
     case config::Edge::RGBTOYUV :
       e = new RGBToYUVEdge(edge_config);
+      break;
+    case config::Edge::CONV_ONETOONE :
+      e = new ConvOneToOneEdge(edge_config);
       break;
     default:
       cerr << "Error: Undefined edge type." << endl;
@@ -89,7 +93,7 @@ void Edge::SaveParameters(hid_t file) {
   // Parameter saving implemented in EdgeWithWeight or derived classes thereof.
 }
 
-void Edge::LoadParameters(hid_t file, bool fprop_only) {
+void Edge::LoadParameters(hid_t file) {
   // no op.
   // Parameter loading implemented in EdgeWithWeight or derived classes thereof.
 }

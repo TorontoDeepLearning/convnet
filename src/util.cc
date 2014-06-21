@@ -154,9 +154,8 @@ void ReadModel(const string& model_file, config::Model *model) {
 
 void ReadModelText(const string& model_file, config::Model *model) {
   stringstream ss;
-  string line;
   ifstream file(model_file.c_str());
-  while (getline(file, line)) ss << line;
+  ss << file.rdbuf();
   if (!google::protobuf::TextFormat::ParseFromString(ss.str(), model)) {
     cerr << "Could not read text proto buffer : " << model_file << endl;
     exit(1);
@@ -165,9 +164,8 @@ void ReadModelText(const string& model_file, config::Model *model) {
 
 void ReadDataConfig(const string& data_config_file, config::DatasetConfig *data_config) {
   stringstream ss;
-  string line;
   ifstream file(data_config_file.c_str());
-  while (getline(file, line)) ss << line;
+  ss << file.rdbuf();
   if (!google::protobuf::TextFormat::ParseFromString(ss.str(), data_config)) {
     cerr << "Could not read text proto buffer : " << data_config_file << endl;
     exit(1);
@@ -176,9 +174,8 @@ void ReadDataConfig(const string& data_config_file, config::DatasetConfig *data_
 
 void ReadLayerConfig(const string& layer_config_file, config::Layer *layer_config) {
   stringstream ss;
-  string line;
   ifstream file(layer_config_file.c_str());
-  while (getline(file, line)) ss << line;
+  ss << file.rdbuf();
   if (!google::protobuf::TextFormat::ParseFromString(ss.str(), layer_config)) {
     cerr << "Could not read text proto buffer : " << layer_config_file << endl;
     exit(1);
