@@ -121,11 +121,13 @@ template class RawImageFileIterator<float>;
 template class RawImageFileIterator<unsigned char>;
 
 
-SlidingWindowIterator::SlidingWindowIterator(const int window_size, const int stride):
+template <typename T>
+SlidingWindowIterator<T>::SlidingWindowIterator(const int window_size, const int stride):
   window_size_(window_size), stride_(stride), num_windows_(0),
   center_x_(0), center_y_(0), done_(true) {}
 
-void SlidingWindowIterator::SetImage(const string& filename) {
+template <typename T>
+void SlidingWindowIterator<T>::SetImage(const string& filename) {
   image_.assign(filename.c_str());
   center_x_ = 0;
   center_y_ = 0;
@@ -135,11 +137,13 @@ void SlidingWindowIterator::SetImage(const string& filename) {
   done_ = false;
 }
 
-void SlidingWindowIterator::Reset() {
+template <typename T>
+void SlidingWindowIterator<T>::Reset() {
   done_ = true;
 }
 
-void SlidingWindowIterator::GetNext(float* data_ptr) {
+template <typename T>
+void SlidingWindowIterator<T>::GetNext(T* data_ptr) {
   GetNext(data_ptr, center_x_, center_y_);
   center_x_ += stride_;
   if (center_x_  >= image_.width()) {
@@ -152,18 +156,22 @@ void SlidingWindowIterator::GetNext(float* data_ptr) {
   }
 }
 
-bool SlidingWindowIterator::Done() {
+template <typename T>
+bool SlidingWindowIterator<T>::Done() {
   return done_;
 }
 
-void SlidingWindowIterator::GetNext(float* data_ptr, int center_x, int center_y) {
+template <typename T>
+void SlidingWindowIterator<T>::GetNext(T* data_ptr, int center_x, int center_y) {
   int left    = center_x - window_size_ / 2,
       right   = left + window_size_,
       top     = center_y - window_size_ / 2,
       bottom  = top + window_size_;
-  CImg<float> img = image_.get_crop(left, top, right - 1, bottom - 1, true);
+  CImg<T> img = image_.get_crop(left, top, right - 1, bottom - 1, true);
   int num_pixels = window_size_ * window_size_ * 3;
   memcpy(data_ptr, img.data(), num_pixels * sizeof(float));
 }
 
+template class SlidingWindowIterator<float>;
+template class SlidingWindowIterator<unsigned char>;
 

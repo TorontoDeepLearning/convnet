@@ -21,7 +21,7 @@ class RawImageFileIterator {
   void GetNext(T* data_ptr, const int row, const int position);
 
   void Seek(int row) { row_ = row; }
-  int GetDatasetSize() const { return dataset_size_;}
+  int GetDataSetSize() const { return dataset_size_;}
 
  private:
   void GetCoordinates(int width, int height, int position, int* left, int* top, bool* flip);
@@ -33,22 +33,22 @@ class RawImageFileIterator {
   CImgDisplay* disp_;
 };
 
+template<typename T>
 class SlidingWindowIterator {
  public:
   SlidingWindowIterator(const int window_size, const int stride);
   void SetImage(const string& filename);
   int GetNumWindows() { return num_windows_;}
-  void GetNext(float* data_ptr);
-  void GetNext(float* data_ptr, int left, int top);
+  void GetNext(T* data_ptr);
+  void GetNext(T* data_ptr, int left, int top);
   bool Done();
   void Reset();
 
  private:
   const int window_size_, stride_;
   int num_windows_, center_x_, center_y_;
-  CImg<float> image_;
+  CImg<T> image_;
   bool done_;
-
 };
 
 

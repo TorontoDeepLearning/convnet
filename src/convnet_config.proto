@@ -188,19 +188,22 @@ message Model {
 message DataStreamConfig {
   required string file_pattern = 1;
   required string layer_name = 2;
+  
+  // Name of the dataset within in a data collection. For example, within an
+  // hdf5 file.
   optional string dataset_name = 3;
+  
   enum DataType {
     DUMMY = 0;
-    HDF5 = 0;
-    IMAGE_HDF5 = 2;
-    IMAGE_RAW = 3;
-    SLIDING_WINDOW = 4;
-    TXT = 5;
+    HDF5 = 1;
+    IMAGE_RAW = 2;
+    SLIDING_WINDOW = 3;
+    TXT = 4;
   }
   optional DataType data_type = 4 [default=HDF5];
 
-  // Options applicable to image DataTypes (IMAGE_HDF5, IMAGE_RAW) -
-  // Resize the raw image so that the shorter side is raw_image_size,
+  // Options applicable to image data -
+  // Resize the original image so that the shorter side is raw_image_size,
   // then take an image_size patch.
   optional int32 raw_image_size = 5 [default=0];
   optional int32 image_size = 6;   // resize to this.
@@ -218,82 +221,20 @@ message DataStreamConfig {
   // For sliding windows.
   optional int32 stride = 13 [default=1];
 
+  // Mean, stddev, eig values etc.
+  optional string mean_file = 14;
+
+  optional int32 num_colors = 15 [default=3];
 }
 
 message DatasetConfig {
   repeated DataStreamConfig data_config = 1;
   optional int32 batch_size = 2 [default=1]; 
-  optional int32 chunk_size = 3 [default=1];
+  optional int32 chunk_size = 3 [default=0];
   optional int32 max_reuse_count = 4 [default = 0];
   optional bool pipeline_loads = 5 [default = false];
   optional bool randomize_cpu = 6 [default=false];
   optional bool randomize_gpu = 7 [default=false];
   optional int32 random_access_chunk_size = 8 [default=1]; 
   optional int32 max_dataset_size = 9 [default = 0];
-}
-
-message DatasetConfig {
-  required string data_dir = 1;
-  enum DatasetType {
-    DUMMY = 0;
-    IMAGE_HDF5 = 1;
-    IMAGE_HDF5_MULT_POS = 2;
-    IMAGENET_CLS_HDF5 = 3;
-    IMAGENET_CLS_HDF5_MULT_POS = 4;
-    RAW_IMAGE = 5;
-    HDF5 = 6;
-    IMAGE_POS_NEG_HDF5 = 7;
-    RAW_IMAGE_SLIDING_WINDOW = 8;
-    BIG_HDF5 = 9;
-  }
-  required DatasetType dataset_type = 2;
-  optional int32 batch_size = 3 [default=1]; 
-  optional int32 chunk_size = 4 [default=1];
-  repeated int32 labels = 5;
-  optional int32 max_reuse_count = 6 [default = 0];
-  optional bool pipeline_loads = 7 [default = false];
-  optional bool randomize_cpu = 8 [default=false];
-  optional string mean_image_file = 9;
-  optional string std_image_file = 10;
-  optional int32 image_size = 11;   // resize to this.
-  optional bool normalize_images = 12;
-  optional float pos_frac = 13 [default=1.0];
-
-  // If true, resize so that the smaller dimension is image_size, then take
-  // central image_size x image_size patch. Otherwise, resize so that larger
-  // dimension is image_size, then pad with zeros to make it image_size x
-  // image_size (Unless warp is true; in which case warp).
-  optional bool crop = 14 [default=false];
-
-  // The type of a validation set, if it is to be used during training.
-  optional DatasetType dataset_val_type = 15;
-
-  // If true, sample data in the training set when creating minibatches to
-  // match the validation set class distribution. Works for DET only.
-  optional bool use_sampling = 16;
-
-  optional bool randomize_gpu = 17 [default=false];
-  optional bool warp = 18 [default=false]; // warp the image to 'image_size'
-  optional bool has_no_labels = 19 [default=false]; // data has no labels, useful for test sets, other stuff that you want predictions on.
-  optional string predicted_boxes_file = 20;
-
-  optional string file_pattern = 21;
-  repeated string dataset_name = 22;
-
-  optional bool can_translate = 23 [default=false];
-  optional bool can_flip = 24 [default=false];
-  optional int32 random_access_chunk_size = 25 [default=1]; 
-
-  optional int32 gpu_id = 26 [default = 0];
-  optional int32 max_dataset_size = 27 [default = 0];
-
-  // Resize the raw image so that the shorter side is this,
-  // then take an image_size patch.
-  optional int32 raw_image_size = 28 [default=0];
-
-  // For sliding windows.
-  optional int32 stride = 29 [default=1];
-
-  optional bool pixelwise_normalize = 30 [default=false];
-  optional float pca_noise_stddev = 31 [default=0];
 }

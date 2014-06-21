@@ -848,8 +848,9 @@ int add_col_vec(cudamat* mat, cudamat* vec, cudamat* target) {
     if (mat->size[0] != vec->size[0] || vec->size[1] != 1 ||
         mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
-
-    kAddColVector<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
+    unsigned int num_blocks = DIVUP((w * h), (NUM_VECTOR_OP_LOOPS_PER_THREAD * NUM_VECTOR_OP_THREADS_PER_BLOCK));
+    num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+    kAddColVector<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
 
     if (checkCUDAError()) {
         return CUDA_ERROR;
@@ -872,7 +873,9 @@ int add_col_mult(cudamat* mat, cudamat* vec, cudamat* target, float mult) {
         mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kAddColMult<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, mult, w, h);
+    unsigned int num_blocks = DIVUP((w * h), (NUM_VECTOR_OP_LOOPS_PER_THREAD * NUM_VECTOR_OP_THREADS_PER_BLOCK));
+    num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+    kAddColMult<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, mult, w, h);
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -1005,7 +1008,9 @@ int add_row_mult(cudamat* mat, cudamat* vec, cudamat* target, float mult) {
         mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kAddRowMult<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, mult, w, h);
+    unsigned int num_blocks = DIVUP((w * h), (NUM_VECTOR_OP_LOOPS_PER_THREAD * NUM_VECTOR_OP_THREADS_PER_BLOCK));
+    num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+    kAddRowMult<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, mult, w, h);
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -1027,7 +1032,9 @@ int add_row_vec(cudamat* mat, cudamat* vec, cudamat* target) {
         mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kAddRowVector<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
+    unsigned int num_blocks = DIVUP((w * h), (NUM_VECTOR_OP_LOOPS_PER_THREAD * NUM_VECTOR_OP_THREADS_PER_BLOCK));
+    num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+    kAddRowVector<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
 
     if (checkCUDAError())
         return CUDA_ERROR;

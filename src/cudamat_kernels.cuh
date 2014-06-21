@@ -21,6 +21,7 @@
 #
 #define NUM_VECTOR_OP_BLOCKS                4096
 #define NUM_VECTOR_OP_THREADS_PER_BLOCK     512
+#define NUM_VECTOR_OP_LOOPS_PER_THREAD      1
 
 #define PI 3.1415926535897932f
 #ifndef DIVUP
