@@ -234,10 +234,19 @@ void ConvNet::SetupDataset(const string& train_data_config_file) {
 
 void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
-  train_dataset_ = DataHandler::ChooseDataHandler(train_data_config_file);
+
+  config::DatasetConfig train_data_config;
+  ReadDataConfig(train_data_config_file, &train_data_config);
+  train_dataset_ = new DataHandler(train_data_config);
   batch_size_ = train_dataset_->GetBatchSize();
+  int dataset_size = train_dataset_->GetDataSetSize();
+  cout << "Training data set size " << dataset_size << endl;
   if (!val_data_config_file.empty()) {
-    val_dataset_ = DataHandler::ChooseDataHandler(val_data_config_file);
+    config::DatasetConfig val_data_config;
+    ReadDataConfig(val_data_config_file, &val_data_config);
+    val_dataset_ = new DataHandler(val_data_config);
+    dataset_size = val_dataset_->GetDataSetSize();
+    cout << "Validation data set size " << dataset_size << endl;
   }
 }
 
@@ -254,6 +263,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       batch_size = dataset->GetBatchSize(),
       num_batches = dataset_size / batch_size;
   for (int k = 0; k < num_batches; k++) {
+
     dataset->GetBatch(data_layers_);
     Fprop(false);
     GetLoss(error);
@@ -296,7 +306,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
       left_overs = dataset_size % batch_size;
   int i = 0;
   int max_num_dims = 0;
-  int num_positions = dataset->GetNumPositions();
+  int num_positions = 1; //dataset->GetNumPositions();
  
   cout << "Dumping dataset of size " << dataset_size
        << " # batches " << num_batches
