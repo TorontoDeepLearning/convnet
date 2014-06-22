@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.7"/>
-<title>ConvNet: Main Page</title>
+<title>ConvNet: cudamat Struct Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -38,9 +38,9 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </script>
   <div id="navrow1" class="tabs">
     <ul class="tablist">
-      <li class="current"><a href="index.html"><span>Main&#160;Page</span></a></li>
+      <li><a href="index.html"><span>Main&#160;Page</span></a></li>
       <li><a href="namespaces.html"><span>Namespaces</span></a></li>
-      <li><a href="annotated.html"><span>Classes</span></a></li>
+      <li class="current"><a href="annotated.html"><span>Classes</span></a></li>
       <li><a href="files.html"><span>Files</span></a></li>
       <li>
         <div id="MSearchBox" class="MSearchBoxInactive">
@@ -60,7 +60,13 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
       </li>
     </ul>
   </div>
-</div><!-- top -->
+  <div id="navrow2" class="tabs2">
+    <ul class="tablist">
+      <li><a href="annotated.html"><span>Class&#160;List</span></a></li>
+      <li><a href="classes.html"><span>Class&#160;Index</span></a></li>
+      <li><a href="hierarchy.html"><span>Class&#160;Hierarchy</span></a></li>
+    </ul>
+  </div>
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -75,15 +81,47 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </iframe>
 </div>
 
+</div><!-- top -->
 <div class="header">
+  <div class="summary">
+<a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="structcudamat-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">ConvNet Documentation</div>  </div>
+<div class="title">cudamat Struct Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a6ceca64771420dc931c26ae4962f1f97"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6ceca64771420dc931c26ae4962f1f97"></a>
+float *&#160;</td><td class="memItemRight" valign="bottom"><b>data_host</b></td></tr>
+<tr class="separator:a6ceca64771420dc931c26ae4962f1f97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fbab3b02481d9e898c544a6bd61c802"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4fbab3b02481d9e898c544a6bd61c802"></a>
+float *&#160;</td><td class="memItemRight" valign="bottom"><b>data_device</b></td></tr>
+<tr class="separator:a4fbab3b02481d9e898c544a6bd61c802"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72837f10baeadeea956814183182fbc5"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a72837f10baeadeea956814183182fbc5"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>on_device</b></td></tr>
+<tr class="separator:a72837f10baeadeea956814183182fbc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4cd9c27183d2fdc4aeeb981828784249"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4cd9c27183d2fdc4aeeb981828784249"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>on_host</b></td></tr>
+<tr class="separator:a4cd9c27183d2fdc4aeeb981828784249"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac863421bc7a10bdd6fdd82a57b6c9334"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac863421bc7a10bdd6fdd82a57b6c9334"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>size</b> [2]</td></tr>
+<tr class="separator:ac863421bc7a10bdd6fdd82a57b6c9334"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae79a8019c4041327a3234a0a63a9418f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae79a8019c4041327a3234a0a63a9418f"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>is_trans</b></td></tr>
+<tr class="separator:ae79a8019c4041327a3234a0a63a9418f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af51cffd91cba93be61068e2009bb2575"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af51cffd91cba93be61068e2009bb2575"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>owns_data</b></td></tr>
+<tr class="separator:af51cffd91cba93be61068e2009bb2575"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<hr/>The documentation for this struct was generated from the following file:<ul>
+<li>src/cudamat.cuh</li>
+</ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sat Jun 21 2014 23:51:21 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sat Jun 21 2014 23:51:13 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>
