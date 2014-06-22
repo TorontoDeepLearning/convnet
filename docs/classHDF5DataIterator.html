@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -92,13 +92,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">HDF5DataIterator&lt; T &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>An iterator over a dataset in an HDF5 file.  
+ <a href="classHDF5DataIterator.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="datahandler_8h_source.html">datahandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for HDF5DataIterator&lt; T &gt;:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classHDF5DataIterator.png" usemap="#HDF5DataIterator&lt; T &gt;_map" alt=""/>
   <map id="HDF5DataIterator&lt; T &gt;_map" name="HDF5DataIterator&lt; T &gt;_map">
-<area href="classDataIterator.html" alt="DataIterator" shape="rect" coords="0,0,142,24"/>
+<area href="classDataIterator.html" title="Base class for implementing data iterators. " alt="DataIterator" shape="rect" coords="0,0,142,24"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -244,14 +249,20 @@ static <a class="el" href="classDataIterator.html">DataIterator</a> *&#160;</td>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>LoadMeans</b> (const string &amp;data_file)</td></tr>
 <tr class="separator:a1b51e70ca226883b138cabeb654b0352 inherit pro_methods_classDataIterator"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following files:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><h3>template&lt;typename T&gt;<br />
+class HDF5DataIterator&lt; T &gt;</h3>
+
+<p>An iterator over a dataset in an HDF5 file. </p>
+<p>T specifies the type of data being iterated over. </p>
+</div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="datahandler_8h_source.html">datahandler.h</a></li>
 <li>src/datahandler.cc</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:30 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:17 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

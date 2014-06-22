@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -93,41 +93,46 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">Edge Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>This class is intended to be used as a base class for implementing edges.  
+ <a href="classEdge.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="edge_8h_source.html">edge.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for Edge:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classEdge.png" usemap="#Edge_map" alt=""/>
   <map id="Edge_map" name="Edge_map">
-<area href="classDownSampleEdge.html" alt="DownSampleEdge" shape="rect" coords="0,56,133,80"/>
+<area href="classDownSampleEdge.html" title="Implements a downsampling edges. " alt="DownSampleEdge" shape="rect" coords="0,56,133,80"/>
 <area href="classEdgeWithWeight.html" alt="EdgeWithWeight" shape="rect" coords="214,56,347,80"/>
-<area href="classMaxPoolEdge.html" alt="MaxPoolEdge" shape="rect" coords="357,56,490,80"/>
+<area href="classMaxPoolEdge.html" title="Implements a Max-pool edge. " alt="MaxPoolEdge" shape="rect" coords="357,56,490,80"/>
 <area href="classResponseNormEdge.html" alt="ResponseNormEdge" shape="rect" coords="500,56,633,80"/>
-<area href="classRGBToYUVEdge.html" alt="RGBToYUVEdge" shape="rect" coords="643,56,776,80"/>
-<area href="classUpSampleEdge.html" alt="UpSampleEdge" shape="rect" coords="786,56,919,80"/>
-<area href="classConvEdge.html" alt="ConvEdge" shape="rect" coords="0,112,133,136"/>
+<area href="classRGBToYUVEdge.html" title="Implements an edge that maps RGB to YUV. " alt="RGBToYUVEdge" shape="rect" coords="643,56,776,80"/>
+<area href="classUpSampleEdge.html" title="Implements a upsampling edges. " alt="UpSampleEdge" shape="rect" coords="786,56,919,80"/>
+<area href="classConvEdge.html" title="Implements a convolutional edge. " alt="ConvEdge" shape="rect" coords="0,112,133,136"/>
 <area href="classConvOneToOneEdge.html" alt="ConvOneToOneEdge" shape="rect" coords="143,112,276,136"/>
-<area href="classFCEdge.html" alt="FCEdge" shape="rect" coords="286,112,419,136"/>
-<area href="classLocalEdge.html" alt="LocalEdge" shape="rect" coords="429,112,562,136"/>
+<area href="classFCEdge.html" title="Implements a fully-connected edge. " alt="FCEdge" shape="rect" coords="286,112,419,136"/>
+<area href="classLocalEdge.html" title="Implements a locally connected edge. " alt="LocalEdge" shape="rect" coords="429,112,562,136"/>
 </map>
  </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ae5b217b7f35cbe60aa43f5d70a288a7c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae5b217b7f35cbe60aa43f5d70a288a7c"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Edge</b> (const config::Edge &amp;edge_config)</td></tr>
+<tr class="memitem:ae5b217b7f35cbe60aa43f5d70a288a7c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#ae5b217b7f35cbe60aa43f5d70a288a7c">Edge</a> (const config::Edge &amp;edge_config)</td></tr>
+<tr class="memdesc:ae5b217b7f35cbe60aa43f5d70a288a7c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instatntiate an <a class="el" href="classEdge.html" title="This class is intended to be used as a base class for implementing edges. ">Edge</a> from the config.  <a href="#ae5b217b7f35cbe60aa43f5d70a288a7c">More...</a><br /></td></tr>
 <tr class="separator:ae5b217b7f35cbe60aa43f5d70a288a7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbf2c487ac600c9eb03ba84b904d8a83"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abbf2c487ac600c9eb03ba84b904d8a83"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>AllocateMemory</b> (bool fprop_only)</td></tr>
+<tr class="memitem:abbf2c487ac600c9eb03ba84b904d8a83"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#abbf2c487ac600c9eb03ba84b904d8a83">AllocateMemory</a> (bool fprop_only)</td></tr>
+<tr class="memdesc:abbf2c487ac600c9eb03ba84b904d8a83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for the model.  <a href="#abbf2c487ac600c9eb03ba84b904d8a83">More...</a><br /></td></tr>
 <tr class="separator:abbf2c487ac600c9eb03ba84b904d8a83"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a079f9f5ae5ce0ec9b6a27ce9e73399fb"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a079f9f5ae5ce0ec9b6a27ce9e73399fb"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>Initialize</b> ()</td></tr>
+<tr class="memitem:a079f9f5ae5ce0ec9b6a27ce9e73399fb"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a079f9f5ae5ce0ec9b6a27ce9e73399fb">Initialize</a> ()</td></tr>
+<tr class="memdesc:a079f9f5ae5ce0ec9b6a27ce9e73399fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the weights and biases.  <a href="#a079f9f5ae5ce0ec9b6a27ce9e73399fb">More...</a><br /></td></tr>
 <tr class="separator:a079f9f5ae5ce0ec9b6a27ce9e73399fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a31c14de86f7c6bf9c8573cb806fce688"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a31c14de86f7c6bf9c8573cb806fce688"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>SaveParameters</b> (hid_t file)</td></tr>
+<tr class="memitem:a31c14de86f7c6bf9c8573cb806fce688"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a31c14de86f7c6bf9c8573cb806fce688">SaveParameters</a> (hid_t file)</td></tr>
+<tr class="memdesc:a31c14de86f7c6bf9c8573cb806fce688"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the weights and biases in an hdf5 file.  <a href="#a31c14de86f7c6bf9c8573cb806fce688">More...</a><br /></td></tr>
 <tr class="separator:a31c14de86f7c6bf9c8573cb806fce688"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a75a9d1a39adfd79cecee2f25da860296"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a75a9d1a39adfd79cecee2f25da860296"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>LoadParameters</b> (hid_t file)</td></tr>
+<tr class="memitem:a75a9d1a39adfd79cecee2f25da860296"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a75a9d1a39adfd79cecee2f25da860296">LoadParameters</a> (hid_t file)</td></tr>
+<tr class="memdesc:a75a9d1a39adfd79cecee2f25da860296"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the weights and biases from an hdf5 file.  <a href="#a75a9d1a39adfd79cecee2f25da860296">More...</a><br /></td></tr>
 <tr class="separator:a75a9d1a39adfd79cecee2f25da860296"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9d745aa737276a6bf8e593de744e6ed"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac9d745aa737276a6bf8e593de744e6ed"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>InsertPolyak</b> ()</td></tr>
@@ -141,47 +146,44 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>LoadCurrentOn
 <tr class="memitem:aa5af26176fd15dc23416867def8753d9"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa5af26176fd15dc23416867def8753d9"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>LoadPolyakOnGPU</b> ()</td></tr>
 <tr class="separator:aa5af26176fd15dc23416867def8753d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a824bd2a8520aaa529e0398438c0ed8b5"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a824bd2a8520aaa529e0398438c0ed8b5"></a>
-virtual float&#160;</td><td class="memItemRight" valign="bottom"><b>GetRMSWeight</b> ()</td></tr>
+<tr class="memitem:a824bd2a8520aaa529e0398438c0ed8b5"><td class="memItemLeft" align="right" valign="top">virtual float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a824bd2a8520aaa529e0398438c0ed8b5">GetRMSWeight</a> ()</td></tr>
+<tr class="memdesc:a824bd2a8520aaa529e0398438c0ed8b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the root mean square weight value.  <a href="#a824bd2a8520aaa529e0398438c0ed8b5">More...</a><br /></td></tr>
 <tr class="separator:a824bd2a8520aaa529e0398438c0ed8b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ee787379e74afbf8b0fb9f61e625b48"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7ee787379e74afbf8b0fb9f61e625b48"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ReduceLearningRate</b> (float factor)</td></tr>
+<tr class="memitem:a7ee787379e74afbf8b0fb9f61e625b48"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a7ee787379e74afbf8b0fb9f61e625b48">ReduceLearningRate</a> (float factor)</td></tr>
+<tr class="memdesc:a7ee787379e74afbf8b0fb9f61e625b48"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduce the learning rate by factor.  <a href="#a7ee787379e74afbf8b0fb9f61e625b48">More...</a><br /></td></tr>
 <tr class="separator:a7ee787379e74afbf8b0fb9f61e625b48"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac9ffdb893abd6b45b8042d0fcb830960"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac9ffdb893abd6b45b8042d0fcb830960"></a>
-virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>HasNoParameters</b> () const </td></tr>
+<tr class="memitem:ac9ffdb893abd6b45b8042d0fcb830960"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#ac9ffdb893abd6b45b8042d0fcb830960">HasNoParameters</a> () const </td></tr>
+<tr class="memdesc:ac9ffdb893abd6b45b8042d0fcb830960"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns whether the edge has any parameters.  <a href="#ac9ffdb893abd6b45b8042d0fcb830960">More...</a><br /></td></tr>
 <tr class="separator:ac9ffdb893abd6b45b8042d0fcb830960"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51166a9a689fe4178efc3500f770a942"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a51166a9a689fe4178efc3500f770a942"></a>
-virtual int&#160;</td><td class="memItemRight" valign="bottom"><b>GetNumModules</b> () const </td></tr>
+<tr class="memitem:a51166a9a689fe4178efc3500f770a942"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a51166a9a689fe4178efc3500f770a942">GetNumModules</a> () const </td></tr>
+<tr class="memdesc:a51166a9a689fe4178efc3500f770a942"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of modules.  <a href="#a51166a9a689fe4178efc3500f770a942">More...</a><br /></td></tr>
 <tr class="separator:a51166a9a689fe4178efc3500f770a942"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaa7591f153cdfaf3d8aad1f3eac811fc"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aaa7591f153cdfaf3d8aad1f3eac811fc"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>DisplayWeights</b> ()</td></tr>
+<tr class="memitem:aaa7591f153cdfaf3d8aad1f3eac811fc"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#aaa7591f153cdfaf3d8aad1f3eac811fc">DisplayWeights</a> ()</td></tr>
+<tr class="memdesc:aaa7591f153cdfaf3d8aad1f3eac811fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Displays the weights.  <a href="#aaa7591f153cdfaf3d8aad1f3eac811fc">More...</a><br /></td></tr>
 <tr class="separator:aaa7591f153cdfaf3d8aad1f3eac811fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa674662da8a55c69220eae1ad5cd8f70"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa674662da8a55c69220eae1ad5cd8f70"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>DisplayWeightStats</b> ()</td></tr>
+<tr class="memitem:aa674662da8a55c69220eae1ad5cd8f70"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#aa674662da8a55c69220eae1ad5cd8f70">DisplayWeightStats</a> ()</td></tr>
+<tr class="memdesc:aa674662da8a55c69220eae1ad5cd8f70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Displays the statistics of the weights.  <a href="#aa674662da8a55c69220eae1ad5cd8f70">More...</a><br /></td></tr>
 <tr class="separator:aa674662da8a55c69220eae1ad5cd8f70"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac699780c655f2933b205a5baecc445aa"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac699780c655f2933b205a5baecc445aa"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>SetTiedTo</b> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memitem:ac699780c655f2933b205a5baecc445aa"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#ac699780c655f2933b205a5baecc445aa">SetTiedTo</a> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memdesc:ac699780c655f2933b205a5baecc445aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the edge to be tied to another edge.  <a href="#ac699780c655f2933b205a5baecc445aa">More...</a><br /></td></tr>
 <tr class="separator:ac699780c655f2933b205a5baecc445aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6b6e4442c46198ab7d742228cc6b0a94"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6b6e4442c46198ab7d742228cc6b0a94"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ComputeUp</b> (<a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;output, bool overwrite)=0</td></tr>
+<tr class="memitem:a6b6e4442c46198ab7d742228cc6b0a94"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a6b6e4442c46198ab7d742228cc6b0a94">ComputeUp</a> (<a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;output, bool overwrite)=0</td></tr>
+<tr class="memdesc:a6b6e4442c46198ab7d742228cc6b0a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the output layer state given the input.  <a href="#a6b6e4442c46198ab7d742228cc6b0a94">More...</a><br /></td></tr>
 <tr class="separator:a6b6e4442c46198ab7d742228cc6b0a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adf95fe0943ddb86eb72194b0db79904c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adf95fe0943ddb86eb72194b0db79904c"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ComputeDown</b> (<a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_output, <a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;output, <a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_input, bool overwrite)=0</td></tr>
+<tr class="memitem:adf95fe0943ddb86eb72194b0db79904c"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#adf95fe0943ddb86eb72194b0db79904c">ComputeDown</a> (<a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_output, <a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;output, <a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_input, bool overwrite)=0</td></tr>
+<tr class="memdesc:adf95fe0943ddb86eb72194b0db79904c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the derivative w.r.t the inputs of this edge given the derivative w.r.t the outputs of this edge.  <a href="#adf95fe0943ddb86eb72194b0db79904c">More...</a><br /></td></tr>
 <tr class="separator:adf95fe0943ddb86eb72194b0db79904c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c095f35276084a113f5d274b2310308"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2c095f35276084a113f5d274b2310308"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ComputeOuter</b> (<a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_output)</td></tr>
+<tr class="memitem:a2c095f35276084a113f5d274b2310308"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a2c095f35276084a113f5d274b2310308">ComputeOuter</a> (<a class="el" href="classMatrix.html">Matrix</a> &amp;input, <a class="el" href="classMatrix.html">Matrix</a> &amp;deriv_output)</td></tr>
+<tr class="memdesc:a2c095f35276084a113f5d274b2310308"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the gradient for the weights and biases.  <a href="#a2c095f35276084a113f5d274b2310308">More...</a><br /></td></tr>
 <tr class="separator:a2c095f35276084a113f5d274b2310308"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16b42aec5dc223f4b1e128c1be6deeef"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a16b42aec5dc223f4b1e128c1be6deeef"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>UpdateWeights</b> ()</td></tr>
+<tr class="memitem:a16b42aec5dc223f4b1e128c1be6deeef"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a16b42aec5dc223f4b1e128c1be6deeef">UpdateWeights</a> ()</td></tr>
+<tr class="memdesc:a16b42aec5dc223f4b1e128c1be6deeef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Update the weights.  <a href="#a16b42aec5dc223f4b1e128c1be6deeef">More...</a><br /></td></tr>
 <tr class="separator:a16b42aec5dc223f4b1e128c1be6deeef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78fe725e33762c32e02cd056cc51c0ec"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a78fe725e33762c32e02cd056cc51c0ec"></a>
-virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>RequiresMemoryForDeriv</b> () const </td></tr>
-<tr class="separator:a78fe725e33762c32e02cd056cc51c0ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>SetImageSize</b> (int image_size)</td></tr>
+<tr class="memitem:a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a2655f7b7f2e9b4c65f7b8c8f9d30ee2e">SetImageSize</a> (int image_size)</td></tr>
+<tr class="memdesc:a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the spatial size of the input to this edge.  <a href="#a2655f7b7f2e9b4c65f7b8c8f9d30ee2e">More...</a><br /></td></tr>
 <tr class="separator:a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e20c2ce0f06a0b2754150ed96392da8"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7e20c2ce0f06a0b2754150ed96392da8"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>IsBackPropBlocked</b> () const </td></tr>
+<tr class="memitem:a7e20c2ce0f06a0b2754150ed96392da8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a7e20c2ce0f06a0b2754150ed96392da8">IsBackPropBlocked</a> () const </td></tr>
+<tr class="memdesc:a7e20c2ce0f06a0b2754150ed96392da8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns whether back prop is blocked through this edge.  <a href="#a7e20c2ce0f06a0b2754150ed96392da8">More...</a><br /></td></tr>
 <tr class="separator:a7e20c2ce0f06a0b2754150ed96392da8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1332ae0cd82836328156fc0846db1af4"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a1332ae0cd82836328156fc0846db1af4"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetSource</b> (<a class="el" href="classLayer.html">Layer</a> *source)</td></tr>
@@ -204,11 +206,11 @@ const string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetDest
 <tr class="memitem:a5b7ee2e11cf3e252ca14d75f402b11d6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a5b7ee2e11cf3e252ca14d75f402b11d6"></a>
 const string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetName</b> ()</td></tr>
 <tr class="separator:a5b7ee2e11cf3e252ca14d75f402b11d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab30032bea64283b00eb675490d9abc06"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab30032bea64283b00eb675490d9abc06"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>SetInputChannels</b> (int a)</td></tr>
+<tr class="memitem:ab30032bea64283b00eb675490d9abc06"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#ab30032bea64283b00eb675490d9abc06">SetInputChannels</a> (int a)</td></tr>
+<tr class="memdesc:ab30032bea64283b00eb675490d9abc06"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the number of input channels.  <a href="#ab30032bea64283b00eb675490d9abc06">More...</a><br /></td></tr>
 <tr class="separator:ab30032bea64283b00eb675490d9abc06"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f0e1c17d0ab02788c415a8ea955b800"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3f0e1c17d0ab02788c415a8ea955b800"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>SetOutputChannels</b> (int a)</td></tr>
+<tr class="memitem:a3f0e1c17d0ab02788c415a8ea955b800"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a3f0e1c17d0ab02788c415a8ea955b800">SetOutputChannels</a> (int a)</td></tr>
+<tr class="memdesc:a3f0e1c17d0ab02788c415a8ea955b800"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the number of output channels.  <a href="#a3f0e1c17d0ab02788c415a8ea955b800">More...</a><br /></td></tr>
 <tr class="separator:a3f0e1c17d0ab02788c415a8ea955b800"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a30dbb2b27090527f7d04c0b65d1ce2b8"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a30dbb2b27090527f7d04c0b65d1ce2b8"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>SetMark</b> ()</td></tr>
@@ -234,8 +236,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>ComputeEnd</b> (<a cl
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a60fa35b43b27ad76a867c7f54a7c691f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a60fa35b43b27ad76a867c7f54a7c691f"></a>
-static <a class="el" href="classEdge.html">Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>ChooseEdgeClass</b> (const config::Edge &amp;edge_config)</td></tr>
+<tr class="memitem:a60fa35b43b27ad76a867c7f54a7c691f"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classEdge.html">Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a60fa35b43b27ad76a867c7f54a7c691f">ChooseEdgeClass</a> (const config::Edge &amp;edge_config)</td></tr>
+<tr class="memdesc:a60fa35b43b27ad76a867c7f54a7c691f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Selects the appropriate derived class for the edge config.  <a href="#a60fa35b43b27ad76a867c7f54a7c691f">More...</a><br /></td></tr>
 <tr class="separator:a60fa35b43b27ad76a867c7f54a7c691f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
@@ -243,11 +245,11 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:affaaee638981e69d0b6e173b22f3f6fb"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="affaaee638981e69d0b6e173b22f3f6fb"></a>
 <a class="el" href="classLayer.html">Layer</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>source_</b></td></tr>
 <tr class="separator:affaaee638981e69d0b6e173b22f3f6fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af757572721eb84db2ce56e065e03e11e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af757572721eb84db2ce56e065e03e11e"></a>
-<a class="el" href="classLayer.html">Layer</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>dest_</b></td></tr>
-<tr class="separator:af757572721eb84db2ce56e065e03e11e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a193dff5aac6e58efe39bfd599076b27b"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a193dff5aac6e58efe39bfd599076b27b"></a>
-const string&#160;</td><td class="memItemRight" valign="bottom"><b>source_node_</b></td></tr>
+<tr class="memitem:a4aa74e77bebc5a07c651b71425e4f67c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classLayer.html">Layer</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a4aa74e77bebc5a07c651b71425e4f67c">dest_</a></td></tr>
+<tr class="memdesc:a4aa74e77bebc5a07c651b71425e4f67c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The source layer for this edge.  <a href="#a4aa74e77bebc5a07c651b71425e4f67c">More...</a><br /></td></tr>
+<tr class="separator:a4aa74e77bebc5a07c651b71425e4f67c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a193dff5aac6e58efe39bfd599076b27b"><td class="memItemLeft" align="right" valign="top">const string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a193dff5aac6e58efe39bfd599076b27b">source_node_</a></td></tr>
+<tr class="memdesc:a193dff5aac6e58efe39bfd599076b27b"><td class="mdescLeft">&#160;</td><td class="mdescRight">The destination layer for this edge.  <a href="#a193dff5aac6e58efe39bfd599076b27b">More...</a><br /></td></tr>
 <tr class="separator:a193dff5aac6e58efe39bfd599076b27b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6c1e741a0f117ebe1d8a693ab352ea8c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6c1e741a0f117ebe1d8a693ab352ea8c"></a>
 const string&#160;</td><td class="memItemRight" valign="bottom"><b>dest_node_</b></td></tr>
@@ -276,8 +278,8 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>num_modules_</b></td><
 <tr class="memitem:afae0671a830bba3e74bf65f916be1d3e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afae0671a830bba3e74bf65f916be1d3e"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>mark_</b></td></tr>
 <tr class="separator:afae0671a830bba3e74bf65f916be1d3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6c1b5093acf37a539216a1a44e14d59f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6c1b5093acf37a539216a1a44e14d59f"></a>
-const bool&#160;</td><td class="memItemRight" valign="bottom"><b>block_backprop_</b></td></tr>
+<tr class="memitem:a6c1b5093acf37a539216a1a44e14d59f"><td class="memItemLeft" align="right" valign="top">const bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classEdge.html#a6c1b5093acf37a539216a1a44e14d59f">block_backprop_</a></td></tr>
+<tr class="memdesc:a6c1b5093acf37a539216a1a44e14d59f"><td class="mdescLeft">&#160;</td><td class="mdescRight">A marker.  <a href="#a6c1b5093acf37a539216a1a44e14d59f">More...</a><br /></td></tr>
 <tr class="separator:a6c1b5093acf37a539216a1a44e14d59f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2fce006286ac1cd72de349eadd589563"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2fce006286ac1cd72de349eadd589563"></a>
 const bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_tied_</b></td></tr>
@@ -289,6 +291,716 @@ const bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_tied_</b></t
 const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td></tr>
 <tr class="separator:abaa0d4dca9491e00ecf9ed13ec9fec7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>This class is intended to be used as a base class for implementing edges. </p>
+<p>This is an abstract class - ComputeUp and ComputeDown methods must be implemented by derived classes. </p>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a class="anchor" id="ae5b217b7f35cbe60aa43f5d70a288a7c"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Edge::Edge </td>
+          <td>(</td>
+          <td class="paramtype">const config::Edge &amp;&#160;</td>
+          <td class="paramname"><em>edge_config</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Instatntiate an <a class="el" href="classEdge.html" title="This class is intended to be used as a base class for implementing edges. ">Edge</a> from the config. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a class="anchor" id="abbf2c487ac600c9eb03ba84b904d8a83"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::AllocateMemory </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>fprop_only</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Allocate memory for the model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fprop_only</td><td>If true, does not allocate memory needed for optimization. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classMaxPoolEdge.html#aba561876cf1c7aceb6d5baf9596864ab">MaxPoolEdge</a>, <a class="el" href="classConvEdge.html#a2b6249d05ae6c7e4461c18c898e64e0d">ConvEdge</a>, <a class="el" href="classFCEdge.html#afd012f0b9b3475c238836d2a0e382729">FCEdge</a>, <a class="el" href="classLocalEdge.html#a4bc7216e73c228f39695e12cba9f41ba">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#a6c731f8ef216ac8b7c3f3fee97e39366">ResponseNormEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a52610b9e7d35042e646d17ec5b4aa1bd">ConvOneToOneEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a60fa35b43b27ad76a867c7f54a7c691f"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classEdge.html">Edge</a> * Edge::ChooseEdgeClass </td>
+          <td>(</td>
+          <td class="paramtype">const config::Edge &amp;&#160;</td>
+          <td class="paramname"><em>edge_config</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Selects the appropriate derived class for the edge config. </p>
+
+</div>
+</div>
+<a class="anchor" id="adf95fe0943ddb86eb72194b0db79904c"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void Edge::ComputeDown </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>deriv_output</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>input</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>output</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>deriv_input</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>overwrite</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the derivative w.r.t the inputs of this edge given the derivative w.r.t the outputs of this edge. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">deriv_output</td><td>Derivative w.r.t outputs of this edge.(In) </td></tr>
+    <tr><td class="paramname">input</td><td>The input to this edge.(In) </td></tr>
+    <tr><td class="paramname">output</td><td>The output of this edge.(In) </td></tr>
+    <tr><td class="paramname">deriv_input</td><td>Derivative w.r.t inputs of this edge.(Out) </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Implemented in <a class="el" href="classDownSampleEdge.html#a522f4aecc2c19f9799c3f817bd2d95b2">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a6c85084ad1d05b4304a3de79cf990c61">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#a4db7710a572a74867d9e66a167b6859f">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#a4669bd0d61894e99e9fd38f3bf43e672">ConvEdge</a>, <a class="el" href="classFCEdge.html#a7055863ce2322951d0dd960b03907855">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae1d5515d8c514d82113412af21333dfe">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#aa0c11e37bf52808e3b28cfcaf365bf3c">ResponseNormEdge</a>, <a class="el" href="classRGBToYUVEdge.html#a384347a559aea58415a01fb29464efec">RGBToYUVEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a89d95cfdb34b4dc24c67868ac3be4426">ConvOneToOneEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a2c095f35276084a113f5d274b2310308"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::ComputeOuter </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>input</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>deriv_output</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the gradient for the weights and biases. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input</td><td>The input to this edge. </td></tr>
+    <tr><td class="paramname">deriv_output</td><td>The derivative w.r.t the output of this edge. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classConvEdge.html#a2460e763316c3efc3a4c7ac35d2a3a90">ConvEdge</a>, <a class="el" href="classFCEdge.html#ac8f0792a43e83a6f56b9bc22bc3d29e4">FCEdge</a>, <a class="el" href="classLocalEdge.html#a9456067740f5a6a1a58f37f276a2f7d3">LocalEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#ab5660b05445bf0cbf38ba65a834f8dcd">ConvOneToOneEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a6b6e4442c46198ab7d742228cc6b0a94"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void Edge::ComputeUp </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>input</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td>
+          <td class="paramname"><em>output</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>overwrite</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the output layer state given the input. </p>
+<p>Applies the weights and adds bias. </p>
+
+<p>Implemented in <a class="el" href="classDownSampleEdge.html#aafd13df8b70c9f2c031bf14b4af2e164">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a2488652a48ea7e162ca54b4f75c1c63c">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#ad17ce88231ae9dc26ac81700a08793b7">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#ab7f53a9ca0412cf60b45b93980bf9d19">ConvEdge</a>, <a class="el" href="classFCEdge.html#a3f5c76ef541294c6b2ee5f31bf90c878">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae142186c7259f4f38534434e5b06de8a">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#a3d7b688261446597417c3f48a1842fc0">ResponseNormEdge</a>, <a class="el" href="classRGBToYUVEdge.html#a3f5ed55f9c2970ad34e56948838d52af">RGBToYUVEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a926b02fe0e3671cf6150cdeba639ab67">ConvOneToOneEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="aaa7591f153cdfaf3d8aad1f3eac811fc"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::DisplayWeights </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Displays the weights. </p>
+<p>Supportsinput layer weights only. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#adef93adf9d9fd1f661e751f459d80150">EdgeWithWeight</a>, <a class="el" href="classConvEdge.html#abb8111d9a8e6e38f3b4e1a3de7c0c02d">ConvEdge</a>, and <a class="el" href="classLocalEdge.html#a786a8e6a318ed0ba23ff063ddc690366">LocalEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="aa674662da8a55c69220eae1ad5cd8f70"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::DisplayWeightStats </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Displays the statistics of the weights. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a81fa638588ca01755d66bc8259363537">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a51166a9a689fe4178efc3500f770a942"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Edge::GetNumModules </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the number of modules. </p>
+<p>This is relevant for convolution-like edges. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#afe3d07ff2e7e0c09b1022913640898ac">EdgeWithWeight</a>, <a class="el" href="classLocalEdge.html#a2d9c15293b616b42f7bfe1f59a994c14">LocalEdge</a>, <a class="el" href="classConvEdge.html#aec5c0ba8fae7545eb3b4456a7167318c">ConvEdge</a>, <a class="el" href="classMaxPoolEdge.html#ac5f044916169c91d41f9d173c93daefb">MaxPoolEdge</a>, <a class="el" href="classConvOneToOneEdge.html#afd0215ef052240f940e6e40918b4d3f3">ConvOneToOneEdge</a>, and <a class="el" href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">RGBToYUVEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a824bd2a8520aaa529e0398438c0ed8b5"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Edge::GetRMSWeight </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns the root mean square weight value. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a536f488e2b0d7a7a5c554b420a60921f">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="ac9ffdb893abd6b45b8042d0fcb830960"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Edge::HasNoParameters </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns whether the edge has any parameters. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a2c319721a17a6599ab400ba9d6820913">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a079f9f5ae5ce0ec9b6a27ce9e73399fb"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::Initialize </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Initialize the weights and biases. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a00504966eb48cb0b048dd4c7b24a7a08">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a7e20c2ce0f06a0b2754150ed96392da8"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Edge::IsBackPropBlocked </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns whether back prop is blocked through this edge. </p>
+
+</div>
+</div>
+<a class="anchor" id="a75a9d1a39adfd79cecee2f25da860296"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::LoadParameters </td>
+          <td>(</td>
+          <td class="paramtype">hid_t&#160;</td>
+          <td class="paramname"><em>file</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Load the weights and biases from an hdf5 file. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">file</td><td>The file handle. The file has been opened for reading. Do not close it. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a7ae79696534cb06f3cab9400b52e7b14">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a7ee787379e74afbf8b0fb9f61e625b48"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::ReduceLearningRate </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>factor</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reduce the learning rate by factor. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#afae1f971e3a4e7033d363457725e2e84">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a31c14de86f7c6bf9c8573cb806fce688"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::SaveParameters </td>
+          <td>(</td>
+          <td class="paramtype">hid_t&#160;</td>
+          <td class="paramname"><em>file</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Write the weights and biases in an hdf5 file. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">file</td><td>The file handle. The file has been opened for writing. Do not close it. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a570566a9bcaf73e2f1194731b0c8375a">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::SetImageSize </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>image_size</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Set the spatial size of the input to this edge. </p>
+
+<p>Reimplemented in <a class="el" href="classLocalEdge.html#afa369630d74d609668d65ac7f45f6c3f">LocalEdge</a>, <a class="el" href="classConvEdge.html#a4c51293ff717cc70fb587f7ad8337cd4">ConvEdge</a>, <a class="el" href="classMaxPoolEdge.html#a8746573f0b346c84fa21f9c1355493d7">MaxPoolEdge</a>, <a class="el" href="classConvOneToOneEdge.html#af86468d64e9af04bca380d61765130e9">ConvOneToOneEdge</a>, <a class="el" href="classDownSampleEdge.html#a9a0358e1b58c66227170f83859bc6433">DownSampleEdge</a>, <a class="el" href="classResponseNormEdge.html#a7e430b5e3335ce12f36908314b4f46b9">ResponseNormEdge</a>, and <a class="el" href="classUpSampleEdge.html#af83edd6d17454f02386b21fe9ebd3c35">UpSampleEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="ab30032bea64283b00eb675490d9abc06"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::SetInputChannels </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>a</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the number of input channels. </p>
+
+</div>
+</div>
+<a class="anchor" id="a3f0e1c17d0ab02788c415a8ea955b800"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::SetOutputChannels </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>a</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set the number of output channels. </p>
+
+</div>
+</div>
+<a class="anchor" id="ac699780c655f2933b205a5baecc445aa"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::SetTiedTo </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classEdge.html">Edge</a> *&#160;</td>
+          <td class="paramname"><em>e</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sets the edge to be tied to another edge. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a0f03c8aa61aaeb741aeb492b50b21bcf">EdgeWithWeight</a>, <a class="el" href="classConvEdge.html#a708830c43c063490c8097877f231cfe3">ConvEdge</a>, <a class="el" href="classLocalEdge.html#a66bd99ff6160ced6c69bb019b0ba63d8">LocalEdge</a>, <a class="el" href="classMaxPoolEdge.html#aa88882d46b5e52a9171319fc2af23ad7">MaxPoolEdge</a>, and <a class="el" href="classResponseNormEdge.html#a695fbc118e971ad326a2d158a4638c6b">ResponseNormEdge</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a16b42aec5dc223f4b1e128c1be6deeef"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Edge::UpdateWeights </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Update the weights. </p>
+
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#aa471ff9e8d0549c928dafa77872ba77f">EdgeWithWeight</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a class="anchor" id="a6c1b5093acf37a539216a1a44e14d59f"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const bool Edge::block_backprop_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>A marker. </p>
+<p>Used for topological sorting. </p>
+
+</div>
+</div>
+<a class="anchor" id="a4aa74e77bebc5a07c651b71425e4f67c"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classLayer.html">Layer</a>* Edge::dest_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The source layer for this edge. </p>
+
+</div>
+</div>
+<a class="anchor" id="a193dff5aac6e58efe39bfd599076b27b"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const string Edge::source_node_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The destination layer for this edge. </p>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="edge_8h_source.html">edge.h</a></li>
 <li>src/edge.cc</li>
@@ -296,7 +1008,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:16 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -94,17 +94,22 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">DataIterator Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Base class for implementing data iterators.  
+ <a href="classDataIterator.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="datahandler_8h_source.html">datahandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for DataIterator:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classDataIterator.png" usemap="#DataIterator_map" alt=""/>
   <map id="DataIterator_map" name="DataIterator_map">
-<area href="classDummyDataIterator.html" alt="DummyDataIterator" shape="rect" coords="0,56,160,80"/>
-<area href="classHDF5DataIterator.html" alt="HDF5DataIterator&lt; T &gt;" shape="rect" coords="170,56,330,80"/>
-<area href="classImageDataIterator.html" alt="ImageDataIterator" shape="rect" coords="340,56,500,80"/>
-<area href="classSlidingWindowDataIterator.html" alt="SlidingWindowDataIterator" shape="rect" coords="510,56,670,80"/>
-<area href="classTextDataIterator.html" alt="TextDataIterator" shape="rect" coords="680,56,840,80"/>
+<area href="classDummyDataIterator.html" title="A dummy iterator. " alt="DummyDataIterator" shape="rect" coords="0,56,160,80"/>
+<area href="classHDF5DataIterator.html" title="An iterator over a dataset in an HDF5 file. " alt="HDF5DataIterator&lt; T &gt;" shape="rect" coords="170,56,330,80"/>
+<area href="classImageDataIterator.html" title="An iterator over images stored as individual files. " alt="ImageDataIterator" shape="rect" coords="340,56,500,80"/>
+<area href="classSlidingWindowDataIterator.html" title="An iterator over sliding windows of an image dataset. " alt="SlidingWindowDataIterator" shape="rect" coords="510,56,670,80"/>
+<area href="classTextDataIterator.html" title="An iterator over data stored in a text file. " alt="TextDataIterator" shape="rect" coords="680,56,840,80"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -219,14 +224,17 @@ const bool&#160;</td><td class="memItemRight" valign="bottom"><b>add_pca_noise_<
 const float&#160;</td><td class="memItemRight" valign="bottom"><b>pca_noise_stddev_</b></td></tr>
 <tr class="separator:a76f8befe147561b431aa3d5d89f06685"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following files:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Base class for implementing data iterators. </p>
+<p>Each data iterator handles a single stream of data. All derived classes must implement the GetNext() method and override the Seek() method appripriately. </p>
+</div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="datahandler_8h_source.html">datahandler.h</a></li>
 <li>src/datahandler.cc</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:15 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

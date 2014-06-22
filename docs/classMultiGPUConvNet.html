@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -118,41 +118,38 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>SetupDataset</b> (con
 <tr class="memitem:a47c05f5e22beb86b5e9194c111fb3cf0 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a47c05f5e22beb86b5e9194c111fb3cf0"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>SetupDataset</b> (const string &amp;train_data_config_file, const string &amp;val_data_config_file)</td></tr>
 <tr class="separator:a47c05f5e22beb86b5e9194c111fb3cf0 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf4d97bb7264d7cc8e8beeb550468710 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abf4d97bb7264d7cc8e8beeb550468710"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>Train</b> ()</td></tr>
+<tr class="memitem:abf4d97bb7264d7cc8e8beeb550468710 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#abf4d97bb7264d7cc8e8beeb550468710">Train</a> ()</td></tr>
+<tr class="memdesc:abf4d97bb7264d7cc8e8beeb550468710 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start training.  <a href="#abf4d97bb7264d7cc8e8beeb550468710">More...</a><br /></td></tr>
 <tr class="separator:abf4d97bb7264d7cc8e8beeb550468710 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f3f245c4e3c0e4059d0683b0e7b1ef3 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7f3f245c4e3c0e4059d0683b0e7b1ef3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Validate</b> (<a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memitem:a7f3f245c4e3c0e4059d0683b0e7b1ef3 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a7f3f245c4e3c0e4059d0683b0e7b1ef3">Validate</a> (<a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a7f3f245c4e3c0e4059d0683b0e7b1ef3 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate the model on the specfied dataset and return the error.  <a href="#a7f3f245c4e3c0e4059d0683b0e7b1ef3">More...</a><br /></td></tr>
 <tr class="separator:a7f3f245c4e3c0e4059d0683b0e7b1ef3 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a05682abe2a19e80eb7f3bbe7daac9c71 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a05682abe2a19e80eb7f3bbe7daac9c71"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Validate</b> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memitem:a05682abe2a19e80eb7f3bbe7daac9c71 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a05682abe2a19e80eb7f3bbe7daac9c71">Validate</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a05682abe2a19e80eb7f3bbe7daac9c71 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate the model on the validation dataset and return the error.  <a href="#a05682abe2a19e80eb7f3bbe7daac9c71">More...</a><br /></td></tr>
 <tr class="separator:a05682abe2a19e80eb7f3bbe7daac9c71 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7d42402468235019bbbfaadd5f007b0 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae7d42402468235019bbbfaadd5f007b0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Save</b> ()</td></tr>
+<tr class="memitem:ae7d42402468235019bbbfaadd5f007b0 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ae7d42402468235019bbbfaadd5f007b0">Save</a> ()</td></tr>
+<tr class="memdesc:ae7d42402468235019bbbfaadd5f007b0 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the model to disk.  <a href="#ae7d42402468235019bbbfaadd5f007b0">More...</a><br /></td></tr>
 <tr class="separator:ae7d42402468235019bbbfaadd5f007b0 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a854a0d1fb46f4ec62ed5d2c76db2e2fc inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a854a0d1fb46f4ec62ed5d2c76db2e2fc"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Save</b> (const string &amp;output_file)</td></tr>
+<tr class="memitem:a854a0d1fb46f4ec62ed5d2c76db2e2fc inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a854a0d1fb46f4ec62ed5d2c76db2e2fc">Save</a> (const string &amp;output_file)</td></tr>
+<tr class="memdesc:a854a0d1fb46f4ec62ed5d2c76db2e2fc inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the model to disk in the file specified.  <a href="#a854a0d1fb46f4ec62ed5d2c76db2e2fc">More...</a><br /></td></tr>
 <tr class="separator:a854a0d1fb46f4ec62ed5d2c76db2e2fc inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1c3b1d62ac25a423220afa3ccf56184 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac1c3b1d62ac25a423220afa3ccf56184"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Load</b> ()</td></tr>
+<tr class="memitem:ac1c3b1d62ac25a423220afa3ccf56184 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ac1c3b1d62ac25a423220afa3ccf56184">Load</a> ()</td></tr>
+<tr class="memdesc:ac1c3b1d62ac25a423220afa3ccf56184 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the model.  <a href="#ac1c3b1d62ac25a423220afa3ccf56184">More...</a><br /></td></tr>
 <tr class="separator:ac1c3b1d62ac25a423220afa3ccf56184 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb05e61ecca9d5d7cf143f8cb9ff4926 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adb05e61ecca9d5d7cf143f8cb9ff4926"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Load</b> (const string &amp;input_file)</td></tr>
+<tr class="memitem:adb05e61ecca9d5d7cf143f8cb9ff4926 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#adb05e61ecca9d5d7cf143f8cb9ff4926">Load</a> (const string &amp;input_file)</td></tr>
+<tr class="memdesc:adb05e61ecca9d5d7cf143f8cb9ff4926 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the model from the file specified.  <a href="#adb05e61ecca9d5d7cf143f8cb9ff4926">More...</a><br /></td></tr>
 <tr class="separator:adb05e61ecca9d5d7cf143f8cb9ff4926 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac27b7bf5eb98eb24e9cef6e3fe3ebba4 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac27b7bf5eb98eb24e9cef6e3fe3ebba4"></a>
-string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCheckpointFilename</b> ()</td></tr>
-<tr class="separator:ac27b7bf5eb98eb24e9cef6e3fe3ebba4 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8649a90884e40f29a371d5b16bb00bd5 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8649a90884e40f29a371d5b16bb00bd5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Display</b> ()</td></tr>
+<tr class="memitem:a8649a90884e40f29a371d5b16bb00bd5 inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a8649a90884e40f29a371d5b16bb00bd5">Display</a> ()</td></tr>
+<tr class="memdesc:a8649a90884e40f29a371d5b16bb00bd5 inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Display the state of the model.  <a href="#a8649a90884e40f29a371d5b16bb00bd5">More...</a><br /></td></tr>
 <tr class="separator:a8649a90884e40f29a371d5b16bb00bd5 inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef302bf04015a17b6b2c2751aea5be3a inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aef302bf04015a17b6b2c2751aea5be3a"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, const vector&lt; string &gt; &amp;layer_names)</td></tr>
-<tr class="separator:aef302bf04015a17b6b2c2751aea5be3a inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a808a47dee4a28dd122ae6983b5c79bea inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a808a47dee4a28dd122ae6983b5c79bea"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memitem:a808a47dee4a28dd122ae6983b5c79bea inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a808a47dee4a28dd122ae6983b5c79bea">DumpOutputs</a> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memdesc:a808a47dee4a28dd122ae6983b5c79bea inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#a808a47dee4a28dd122ae6983b5c79bea">More...</a><br /></td></tr>
 <tr class="separator:a808a47dee4a28dd122ae6983b5c79bea inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa6efa305063df66a9363baa9aa80806c inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa6efa305063df66a9363baa9aa80806c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>AllocateMemory</b> (bool fprop_only)</td></tr>
+<tr class="memitem:aef302bf04015a17b6b2c2751aea5be3a inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aef302bf04015a17b6b2c2751aea5be3a">DumpOutputs</a> (const string &amp;output_file, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memdesc:aef302bf04015a17b6b2c2751aea5be3a inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#aef302bf04015a17b6b2c2751aea5be3a">More...</a><br /></td></tr>
+<tr class="separator:aef302bf04015a17b6b2c2751aea5be3a inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6efa305063df66a9363baa9aa80806c inherit pub_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa6efa305063df66a9363baa9aa80806c">AllocateMemory</a> (bool fprop_only)</td></tr>
+<tr class="memdesc:aa6efa305063df66a9363baa9aa80806c inherit pub_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for the model.  <a href="#aa6efa305063df66a9363baa9aa80806c">More...</a><br /></td></tr>
 <tr class="separator:aa6efa305063df66a9363baa9aa80806c inherit pub_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
@@ -160,32 +157,30 @@ Protected Member Functions</h2></td></tr>
 <tr class="memitem:a2253a207a11a88a0eb376d1eb35e3cc1"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMultiGPUConvNet.html#a2253a207a11a88a0eb376d1eb35e3cc1">Fprop</a> (bool train)</td></tr>
 <tr class="memdesc:a2253a207a11a88a0eb376d1eb35e3cc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forward propagate through the network.  <a href="#a2253a207a11a88a0eb376d1eb35e3cc1">More...</a><br /></td></tr>
 <tr class="separator:a2253a207a11a88a0eb376d1eb35e3cc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a211af934cd9e5ec5da7c97933b6e8d5a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a211af934cd9e5ec5da7c97933b6e8d5a"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMultiGPUConvNet.html#a211af934cd9e5ec5da7c97933b6e8d5a">Bprop</a> (bool update_weights)</td></tr>
-<tr class="memdesc:a211af934cd9e5ec5da7c97933b6e8d5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Backpropagate through the network and update weights. <br /></td></tr>
+<tr class="memitem:a211af934cd9e5ec5da7c97933b6e8d5a"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMultiGPUConvNet.html#a211af934cd9e5ec5da7c97933b6e8d5a">Bprop</a> (bool update_weights)</td></tr>
+<tr class="memdesc:a211af934cd9e5ec5da7c97933b6e8d5a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Backpropagate through the network and update weights.  <a href="#a211af934cd9e5ec5da7c97933b6e8d5a">More...</a><br /></td></tr>
 <tr class="separator:a211af934cd9e5ec5da7c97933b6e8d5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_methods_classConvNet"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classConvNet')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classConvNet.html">ConvNet</a></td></tr>
-<tr class="memitem:af1c2008d83336afc373bee99347551bb inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af1c2008d83336afc373bee99347551bb"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildNet</b> ()</td></tr>
+<tr class="memitem:af1c2008d83336afc373bee99347551bb inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af1c2008d83336afc373bee99347551bb">BuildNet</a> ()</td></tr>
+<tr class="memdesc:af1c2008d83336afc373bee99347551bb inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates layers and edges.  <a href="#af1c2008d83336afc373bee99347551bb">More...</a><br /></td></tr>
 <tr class="separator:af1c2008d83336afc373bee99347551bb inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a452ecae43e29e3e500f61f2e1033fc9c inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a452ecae43e29e3e500f61f2e1033fc9c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a452ecae43e29e3e500f61f2e1033fc9c">DestroyNet</a> ()</td></tr>
-<tr class="memdesc:a452ecae43e29e3e500f61f2e1033fc9c inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release all memory held by the model. <br /></td></tr>
+<tr class="memitem:a452ecae43e29e3e500f61f2e1033fc9c inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a452ecae43e29e3e500f61f2e1033fc9c">DestroyNet</a> ()</td></tr>
+<tr class="memdesc:a452ecae43e29e3e500f61f2e1033fc9c inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release all memory held by the model.  <a href="#a452ecae43e29e3e500f61f2e1033fc9c">More...</a><br /></td></tr>
 <tr class="separator:a452ecae43e29e3e500f61f2e1033fc9c inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a11262b0b65822295d06523fecfba7deb inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a11262b0b65822295d06523fecfba7deb"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a11262b0b65822295d06523fecfba7deb">AllocateLayerMemory</a> ()</td></tr>
-<tr class="memdesc:a11262b0b65822295d06523fecfba7deb inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate layer memory for using mini-batches of batch_size_. <br /></td></tr>
+<tr class="memitem:a11262b0b65822295d06523fecfba7deb inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a11262b0b65822295d06523fecfba7deb">AllocateLayerMemory</a> ()</td></tr>
+<tr class="memdesc:a11262b0b65822295d06523fecfba7deb inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate layer memory for using mini-batches of batch_size_.  <a href="#a11262b0b65822295d06523fecfba7deb">More...</a><br /></td></tr>
 <tr class="separator:a11262b0b65822295d06523fecfba7deb inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a25353d323e9bd9e62e058b27dbc0d6e0 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a25353d323e9bd9e62e058b27dbc0d6e0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a25353d323e9bd9e62e058b27dbc0d6e0">AllocateEdgeMemory</a> (bool fprop_only)</td></tr>
-<tr class="memdesc:a25353d323e9bd9e62e058b27dbc0d6e0 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for edges. <br /></td></tr>
+<tr class="memitem:a25353d323e9bd9e62e058b27dbc0d6e0 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a25353d323e9bd9e62e058b27dbc0d6e0">AllocateEdgeMemory</a> (bool fprop_only)</td></tr>
+<tr class="memdesc:a25353d323e9bd9e62e058b27dbc0d6e0 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for edges.  <a href="#a25353d323e9bd9e62e058b27dbc0d6e0">More...</a><br /></td></tr>
 <tr class="separator:a25353d323e9bd9e62e058b27dbc0d6e0 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac27b7bf5eb98eb24e9cef6e3fe3ebba4 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac27b7bf5eb98eb24e9cef6e3fe3ebba4"></a>
+string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCheckpointFilename</b> ()</td></tr>
+<tr class="separator:ac27b7bf5eb98eb24e9cef6e3fe3ebba4 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a037aedae65125de91d123be0c4dc4451 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a037aedae65125de91d123be0c4dc4451"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>TimestampModel</b> ()</td></tr>
 <tr class="separator:a037aedae65125de91d123be0c4dc4451 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ac3cd73d89861e145b95003bdcf0fd6 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2ac3cd73d89861e145b95003bdcf0fd6"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2ac3cd73d89861e145b95003bdcf0fd6">Sort</a> ()</td></tr>
-<tr class="memdesc:a2ac3cd73d89861e145b95003bdcf0fd6 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Topologically sort layers. <br /></td></tr>
+<tr class="memitem:a2ac3cd73d89861e145b95003bdcf0fd6 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2ac3cd73d89861e145b95003bdcf0fd6">Sort</a> ()</td></tr>
+<tr class="memdesc:a2ac3cd73d89861e145b95003bdcf0fd6 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Topologically sort layers.  <a href="#a2ac3cd73d89861e145b95003bdcf0fd6">More...</a><br /></td></tr>
 <tr class="separator:a2ac3cd73d89861e145b95003bdcf0fd6 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af97edc144ff6ba2482b69d40a9a22419 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af97edc144ff6ba2482b69d40a9a22419">Fprop</a> (<a class="el" href="classLayer.html">Layer</a> &amp;input, <a class="el" href="classLayer.html">Layer</a> &amp;output, <a class="el" href="classEdge.html">Edge</a> &amp;edge, bool overwrite)</td></tr>
 <tr class="memdesc:af97edc144ff6ba2482b69d40a9a22419 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forward propagate one layer.  <a href="#af97edc144ff6ba2482b69d40a9a22419">More...</a><br /></td></tr>
@@ -193,17 +188,17 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:adf84ba29173bdaf76811e53b30371059 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#adf84ba29173bdaf76811e53b30371059">Bprop</a> (<a class="el" href="classLayer.html">Layer</a> &amp;output, <a class="el" href="classLayer.html">Layer</a> &amp;input, <a class="el" href="classEdge.html">Edge</a> &amp;edge, bool overwrite, bool update_weights)</td></tr>
 <tr class="memdesc:adf84ba29173bdaf76811e53b30371059 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Back propagate through one layer.  <a href="#adf84ba29173bdaf76811e53b30371059">More...</a><br /></td></tr>
 <tr class="separator:adf84ba29173bdaf76811e53b30371059 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4afb5f6eec7ca48bbcdec8db49e18dce inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4afb5f6eec7ca48bbcdec8db49e18dce"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a4afb5f6eec7ca48bbcdec8db49e18dce">ComputeDeriv</a> ()</td></tr>
-<tr class="memdesc:a4afb5f6eec7ca48bbcdec8db49e18dce inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the derivative of the loss function. <br /></td></tr>
+<tr class="memitem:a4afb5f6eec7ca48bbcdec8db49e18dce inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a4afb5f6eec7ca48bbcdec8db49e18dce">ComputeDeriv</a> ()</td></tr>
+<tr class="memdesc:a4afb5f6eec7ca48bbcdec8db49e18dce inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the derivative of the loss function.  <a href="#a4afb5f6eec7ca48bbcdec8db49e18dce">More...</a><br /></td></tr>
 <tr class="separator:a4afb5f6eec7ca48bbcdec8db49e18dce inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a156eeaa43a09a35188b3052d5bef75 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9a156eeaa43a09a35188b3052d5bef75"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a9a156eeaa43a09a35188b3052d5bef75">GetLoss</a> (vector&lt; float &gt; &amp;error)</td></tr>
-<tr class="memdesc:a9a156eeaa43a09a35188b3052d5bef75 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the loss function. <br /></td></tr>
+<tr class="memitem:a9a156eeaa43a09a35188b3052d5bef75 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a9a156eeaa43a09a35188b3052d5bef75">GetLoss</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a9a156eeaa43a09a35188b3052d5bef75 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the loss function (to be displayed).  <a href="#a9a156eeaa43a09a35188b3052d5bef75">More...</a><br /></td></tr>
 <tr class="separator:a9a156eeaa43a09a35188b3052d5bef75 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8c13d7d61f1f9b7b051485c1c70d933 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa8c13d7d61f1f9b7b051485c1c70d933"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa8c13d7d61f1f9b7b051485c1c70d933">TrainOneBatch</a> (vector&lt; float &gt; &amp;error)</td></tr>
-<tr class="memdesc:aa8c13d7d61f1f9b7b051485c1c70d933 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes one optimization step. <br /></td></tr>
+<tr class="memitem:a59518a533d30641e5bdfcdda9066d2d5 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a59518a533d30641e5bdfcdda9066d2d5">DumpOutputs</a> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt; &amp;layers)</td></tr>
+<tr class="memdesc:a59518a533d30641e5bdfcdda9066d2d5 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#a59518a533d30641e5bdfcdda9066d2d5">More...</a><br /></td></tr>
+<tr class="separator:a59518a533d30641e5bdfcdda9066d2d5 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8c13d7d61f1f9b7b051485c1c70d933 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa8c13d7d61f1f9b7b051485c1c70d933">TrainOneBatch</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:aa8c13d7d61f1f9b7b051485c1c70d933 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes one optimization step.  <a href="#aa8c13d7d61f1f9b7b051485c1c70d933">More...</a><br /></td></tr>
 <tr class="separator:aa8c13d7d61f1f9b7b051485c1c70d933 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc889e38678c99a90cd52c311f214c98 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adc889e38678c99a90cd52c311f214c98"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>DisplayLayers</b> ()</td></tr>
@@ -232,14 +227,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>WriteValLog</b> (int 
 <tr class="memitem:a039cfeca7e676c02cdeffaf9c067483d inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a039cfeca7e676c02cdeffaf9c067483d"></a>
 <a class="el" href="classLayer.html">Layer</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>GetLayerByName</b> (const string &amp;name)</td></tr>
 <tr class="separator:a039cfeca7e676c02cdeffaf9c067483d inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a59518a533d30641e5bdfcdda9066d2d5 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a59518a533d30641e5bdfcdda9066d2d5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt; &amp;layers)</td></tr>
-<tr class="separator:a59518a533d30641e5bdfcdda9066d2d5 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a18034a69678ee220a5192a58a3df38f6 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a18034a69678ee220a5192a58a3df38f6"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>CheckReduceLearningRate</b> (const vector&lt; float &gt; &amp;val_error)</td></tr>
+<tr class="memitem:a18034a69678ee220a5192a58a3df38f6 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a18034a69678ee220a5192a58a3df38f6">CheckReduceLearningRate</a> (const vector&lt; float &gt; &amp;val_error)</td></tr>
+<tr class="memdesc:a18034a69678ee220a5192a58a3df38f6 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decides if learning rate should be reduced.  <a href="#a18034a69678ee220a5192a58a3df38f6">More...</a><br /></td></tr>
 <tr class="separator:a18034a69678ee220a5192a58a3df38f6 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abacd8e3636287e19ca5bbbdf36cef1c7 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abacd8e3636287e19ca5bbbdf36cef1c7"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ReduceLearningRate</b> (const float factor)</td></tr>
+<tr class="memitem:abacd8e3636287e19ca5bbbdf36cef1c7 inherit pro_methods_classConvNet"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#abacd8e3636287e19ca5bbbdf36cef1c7">ReduceLearningRate</a> (const float factor)</td></tr>
+<tr class="memdesc:abacd8e3636287e19ca5bbbdf36cef1c7 inherit pro_methods_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply learning rate by factor.  <a href="#abacd8e3636287e19ca5bbbdf36cef1c7">More...</a><br /></td></tr>
 <tr class="separator:abacd8e3636287e19ca5bbbdf36cef1c7 inherit pro_methods_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
@@ -252,23 +244,23 @@ static void&#160;</td><td class="memItemRight" valign="bottom"><b>AddVectors</b>
 <tr class="memitem:aba50a31a3871d85ead557e67e23c0954 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aba50a31a3871d85ead557e67e23c0954"></a>
 config::Model&#160;</td><td class="memItemRight" valign="bottom"><b>model_</b></td></tr>
 <tr class="separator:aba50a31a3871d85ead557e67e23c0954 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af1ea3f2fe80b149b09eddd66766609f2 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af1ea3f2fe80b149b09eddd66766609f2"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>layers_</b></td></tr>
+<tr class="memitem:af1ea3f2fe80b149b09eddd66766609f2 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af1ea3f2fe80b149b09eddd66766609f2">layers_</a></td></tr>
+<tr class="memdesc:af1ea3f2fe80b149b09eddd66766609f2 inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">The model protobuf config.  <a href="#af1ea3f2fe80b149b09eddd66766609f2">More...</a><br /></td></tr>
 <tr class="separator:af1ea3f2fe80b149b09eddd66766609f2 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2fc4c53f5b52737615299772867a1baf inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2fc4c53f5b52737615299772867a1baf"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>data_layers_</b></td></tr>
+<tr class="memitem:a2fc4c53f5b52737615299772867a1baf inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2fc4c53f5b52737615299772867a1baf">data_layers_</a></td></tr>
+<tr class="memdesc:a2fc4c53f5b52737615299772867a1baf inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">The layers in the network.  <a href="#a2fc4c53f5b52737615299772867a1baf">More...</a><br /></td></tr>
 <tr class="separator:a2fc4c53f5b52737615299772867a1baf inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2078e81e46a2878f199e438e10cb0ee1 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2078e81e46a2878f199e438e10cb0ee1"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>input_layers_</b></td></tr>
+<tr class="memitem:a2078e81e46a2878f199e438e10cb0ee1 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2078e81e46a2878f199e438e10cb0ee1">input_layers_</a></td></tr>
+<tr class="memdesc:a2078e81e46a2878f199e438e10cb0ee1 inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Layers which have data associated with them.  <a href="#a2078e81e46a2878f199e438e10cb0ee1">More...</a><br /></td></tr>
 <tr class="separator:a2078e81e46a2878f199e438e10cb0ee1 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acbda19a7b0bd4ebc7f8910637129d566 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acbda19a7b0bd4ebc7f8910637129d566"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>output_layers_</b></td></tr>
+<tr class="memitem:acbda19a7b0bd4ebc7f8910637129d566 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#acbda19a7b0bd4ebc7f8910637129d566">output_layers_</a></td></tr>
+<tr class="memdesc:acbda19a7b0bd4ebc7f8910637129d566 inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Input layers.  <a href="#acbda19a7b0bd4ebc7f8910637129d566">More...</a><br /></td></tr>
 <tr class="separator:acbda19a7b0bd4ebc7f8910637129d566 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ada1772d829698d3b51803b20b879d0b6 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ada1772d829698d3b51803b20b879d0b6"></a>
-vector&lt; <a class="el" href="classEdge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>edges_</b></td></tr>
+<tr class="memitem:ada1772d829698d3b51803b20b879d0b6 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classEdge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ada1772d829698d3b51803b20b879d0b6">edges_</a></td></tr>
+<tr class="memdesc:ada1772d829698d3b51803b20b879d0b6 inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output layers.  <a href="#ada1772d829698d3b51803b20b879d0b6">More...</a><br /></td></tr>
 <tr class="separator:ada1772d829698d3b51803b20b879d0b6 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f28a5e2b59eb986ee99b94f09f78a06 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2f28a5e2b59eb986ee99b94f09f78a06"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>max_iter_</b></td></tr>
+<tr class="memitem:a2f28a5e2b59eb986ee99b94f09f78a06 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2f28a5e2b59eb986ee99b94f09f78a06">max_iter_</a></td></tr>
+<tr class="memdesc:a2f28a5e2b59eb986ee99b94f09f78a06 inherit pro_attribs_classConvNet"><td class="mdescLeft">&#160;</td><td class="mdescRight">The edges in the network.  <a href="#a2f28a5e2b59eb986ee99b94f09f78a06">More...</a><br /></td></tr>
 <tr class="separator:a2f28a5e2b59eb986ee99b94f09f78a06 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a69a93febac1bf21ae4d005ba59a37fd7 inherit pro_attribs_classConvNet"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a69a93febac1bf21ae4d005ba59a37fd7"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>batch_size_</b></td></tr>
@@ -311,6 +303,34 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
 <tr class="separator:a9d6d8245bd43c790ceb0e14552ba2b17 inherit pro_attribs_classConvNet"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a class="anchor" id="a211af934cd9e5ec5da7c97933b6e8d5a"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MultiGPUConvNet::Bprop </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>update_weights</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Backpropagate through the network and update weights. </p>
+
+<p>Reimplemented from <a class="el" href="classConvNet.html#a78379554e7923d7949c7c111fa007097">ConvNet</a>.</p>
+
+</div>
+</div>
 <a class="anchor" id="a2253a207a11a88a0eb376d1eb35e3cc1"></a>
 <div class="memitem">
 <div class="memproto">
@@ -352,7 +372,7 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:30 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:19 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

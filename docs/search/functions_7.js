@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['trainonebatch',['TrainOneBatch',['../classConvNet.html#aa8c13d7d61f1f9b7b051485c1c70d933',1,'ConvNet']]]
+  ['hasnoparameters',['HasNoParameters',['../classEdge.html#ac9ffdb893abd6b45b8042d0fcb830960',1,'Edge::HasNoParameters()'],['../classEdgeWithWeight.html#a2c319721a17a6599ab400ba9d6820913',1,'EdgeWithWeight::HasNoParameters()']]]
 ];

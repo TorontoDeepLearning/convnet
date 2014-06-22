@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -91,14 +91,19 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">DataWriter Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Writes data into an HDF5 file.  
+ <a href="classDataWriter.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="datahandler_8h_source.html">datahandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for DataWriter:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classDataWriter.png" usemap="#DataWriter_map" alt=""/>
   <map id="DataWriter_map" name="DataWriter_map">
-<area href="classAveragedDataWriter.html" alt="AveragedDataWriter" shape="rect" coords="0,56,186,80"/>
-<area href="classSequentialAveragedDataWriter.html" alt="SequentialAveragedDataWriter" shape="rect" coords="196,56,382,80"/>
+<area href="classAveragedDataWriter.html" title="Buffers a specified number of batches, averages them and then writes the average into an HDF5 file..." alt="AveragedDataWriter" shape="rect" coords="0,56,186,80"/>
+<area href="classSequentialAveragedDataWriter.html" title="Averages a specified number of consecutive entries and writes the average into an HDF5 file..." alt="SequentialAveragedDataWriter" shape="rect" coords="196,56,382,80"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -114,14 +119,17 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>AddStream</b>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>Write</b> (<a class="el" href="classMatrix.html">Matrix</a> &amp;mat, const int data_id, const int rows)</td></tr>
 <tr class="separator:af06124a18dcc863b7db41dd7a7f3c509"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following files:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Writes data into an HDF5 file. </p>
+<p>Handles multiple output streams. </p>
+</div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="datahandler_8h_source.html">datahandler.h</a></li>
 <li>src/datahandler.cc</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:15 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

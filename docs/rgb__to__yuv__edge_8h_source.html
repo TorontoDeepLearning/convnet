@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -93,26 +93,29 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define RGB_TO_YUV_EDGE_H_</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &quot;edge.h&quot;</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;</div>
-<div class="line"><a name="l00005"></a><span class="lineno"><a class="line" href="classRGBToYUVEdge.html">    5</a></span>&#160;<span class="keyword">class </span><a class="code" href="classRGBToYUVEdge.html">RGBToYUVEdge</a> : <span class="keyword">public</span> <a class="code" href="classEdge.html">Edge</a> {</div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160; <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;  <a class="code" href="classRGBToYUVEdge.html">RGBToYUVEdge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> AllocateMemory(<span class="keywordtype">int</span> image_size);</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeUp(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite);</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeDown(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input, <span class="keywordtype">bool</span> overwrite);</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">int</span> GetNumModules()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> image_size_; }</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;  <span class="keywordtype">int</span> image_size_;</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;};</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdef"><b>Definition:</b> edge.h:10</div></div>
+<div class="line"><a name="l00006"></a><span class="lineno"><a class="line" href="classRGBToYUVEdge.html">    6</a></span>&#160;<span class="keyword">class </span><a class="code" href="classRGBToYUVEdge.html">RGBToYUVEdge</a> : <span class="keyword">public</span> <a class="code" href="classEdge.html">Edge</a> {</div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160; <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;  <a class="code" href="classRGBToYUVEdge.html">RGBToYUVEdge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> AllocateMemory(<span class="keywordtype">int</span> image_size);</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classRGBToYUVEdge.html#a3f5ed55f9c2970ad34e56948838d52af">ComputeUp</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite);</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classRGBToYUVEdge.html#a384347a559aea58415a01fb29464efec">ComputeDown</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input, <span class="keywordtype">bool</span> overwrite);</div>
+<div class="line"><a name="l00013"></a><span class="lineno"><a class="line" href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">   13</a></span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">GetNumModules</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> image_size_; }</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;  <span class="keywordtype">int</span> image_size_;</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;};</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdoc">This class is intended to be used as a base class for implementing edges. </div><div class="ttdef"><b>Definition:</b> edge.h:13</div></div>
+<div class="ttc" id="classRGBToYUVEdge_html_a3f5ed55f9c2970ad34e56948838d52af"><div class="ttname"><a href="classRGBToYUVEdge.html#a3f5ed55f9c2970ad34e56948838d52af">RGBToYUVEdge::ComputeUp</a></div><div class="ttdeci">virtual void ComputeUp(Matrix &amp;input, Matrix &amp;output, bool overwrite)</div><div class="ttdoc">Computes the output layer state given the input. </div><div class="ttdef"><b>Definition:</b> rgb_to_yuv_edge.cc:11</div></div>
+<div class="ttc" id="classRGBToYUVEdge_html_a384347a559aea58415a01fb29464efec"><div class="ttname"><a href="classRGBToYUVEdge.html#a384347a559aea58415a01fb29464efec">RGBToYUVEdge::ComputeDown</a></div><div class="ttdeci">virtual void ComputeDown(Matrix &amp;deriv_output, Matrix &amp;input, Matrix &amp;output, Matrix &amp;deriv_input, bool overwrite)</div><div class="ttdoc">Computes the derivative w.r.t the inputs of this edge given the derivative w.r.t the outputs of this ...</div><div class="ttdef"><b>Definition:</b> rgb_to_yuv_edge.cc:17</div></div>
+<div class="ttc" id="classRGBToYUVEdge_html_aca02b25b765ecfb1ad265afddbfb5d32"><div class="ttname"><a href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">RGBToYUVEdge::GetNumModules</a></div><div class="ttdeci">virtual int GetNumModules() const </div><div class="ttdoc">Returns the number of modules. </div><div class="ttdef"><b>Definition:</b> rgb_to_yuv_edge.h:13</div></div>
 <div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:10</div></div>
-<div class="ttc" id="classRGBToYUVEdge_html"><div class="ttname"><a href="classRGBToYUVEdge.html">RGBToYUVEdge</a></div><div class="ttdef"><b>Definition:</b> rgb_to_yuv_edge.h:5</div></div>
+<div class="ttc" id="classRGBToYUVEdge_html"><div class="ttname"><a href="classRGBToYUVEdge.html">RGBToYUVEdge</a></div><div class="ttdoc">Implements an edge that maps RGB to YUV. </div><div class="ttdef"><b>Definition:</b> rgb_to_yuv_edge.h:6</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:28 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:13 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

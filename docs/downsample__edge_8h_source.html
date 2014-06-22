@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -93,25 +93,28 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define DOWNSAMPLE_EDGE_H_</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &quot;edge.h&quot;</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;</div>
-<div class="line"><a name="l00005"></a><span class="lineno"><a class="line" href="classDownSampleEdge.html">    5</a></span>&#160;<span class="keyword">class </span><a class="code" href="classDownSampleEdge.html">DownSampleEdge</a> : <span class="keyword">public</span> <a class="code" href="classEdge.html">Edge</a> {</div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160; <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;  <a class="code" href="classDownSampleEdge.html">DownSampleEdge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeUp(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite);</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeDown(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input, <span class="keywordtype">bool</span> overwrite);</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> SetImageSize(<span class="keywordtype">int</span> image_size);</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">int</span> sample_factor_;</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;};</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdef"><b>Definition:</b> edge.h:10</div></div>
+<div class="line"><a name="l00008"></a><span class="lineno"><a class="line" href="classDownSampleEdge.html">    8</a></span>&#160;<span class="keyword">class </span><a class="code" href="classDownSampleEdge.html">DownSampleEdge</a> : <span class="keyword">public</span> <a class="code" href="classEdge.html">Edge</a> {</div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160; <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <a class="code" href="classDownSampleEdge.html">DownSampleEdge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classDownSampleEdge.html#aafd13df8b70c9f2c031bf14b4af2e164">ComputeUp</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite);</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classDownSampleEdge.html#a522f4aecc2c19f9799c3f817bd2d95b2">ComputeDown</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input, <span class="keywordtype">bool</span> overwrite);</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classDownSampleEdge.html#a9a0358e1b58c66227170f83859bc6433">SetImageSize</a>(<span class="keywordtype">int</span> image_size);</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">int</span> sample_factor_;</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;};</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="classDownSampleEdge_html_a522f4aecc2c19f9799c3f817bd2d95b2"><div class="ttname"><a href="classDownSampleEdge.html#a522f4aecc2c19f9799c3f817bd2d95b2">DownSampleEdge::ComputeDown</a></div><div class="ttdeci">virtual void ComputeDown(Matrix &amp;deriv_output, Matrix &amp;input, Matrix &amp;output, Matrix &amp;deriv_input, bool overwrite)</div><div class="ttdoc">Computes the derivative w.r.t the inputs of this edge given the derivative w.r.t the outputs of this ...</div><div class="ttdef"><b>Definition:</b> downsample_edge.cc:21</div></div>
+<div class="ttc" id="classDownSampleEdge_html_a9a0358e1b58c66227170f83859bc6433"><div class="ttname"><a href="classDownSampleEdge.html#a9a0358e1b58c66227170f83859bc6433">DownSampleEdge::SetImageSize</a></div><div class="ttdeci">virtual void SetImageSize(int image_size)</div><div class="ttdoc">Set the spatial size of the input to this edge. </div><div class="ttdef"><b>Definition:</b> downsample_edge.cc:8</div></div>
+<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdoc">This class is intended to be used as a base class for implementing edges. </div><div class="ttdef"><b>Definition:</b> edge.h:13</div></div>
+<div class="ttc" id="classDownSampleEdge_html_aafd13df8b70c9f2c031bf14b4af2e164"><div class="ttname"><a href="classDownSampleEdge.html#aafd13df8b70c9f2c031bf14b4af2e164">DownSampleEdge::ComputeUp</a></div><div class="ttdeci">virtual void ComputeUp(Matrix &amp;input, Matrix &amp;output, bool overwrite)</div><div class="ttdoc">Computes the output layer state given the input. </div><div class="ttdef"><b>Definition:</b> downsample_edge.cc:13</div></div>
 <div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:10</div></div>
-<div class="ttc" id="classDownSampleEdge_html"><div class="ttname"><a href="classDownSampleEdge.html">DownSampleEdge</a></div><div class="ttdef"><b>Definition:</b> downsample_edge.h:5</div></div>
+<div class="ttc" id="classDownSampleEdge_html"><div class="ttname"><a href="classDownSampleEdge.html">DownSampleEdge</a></div><div class="ttdoc">Implements a downsampling edges. </div><div class="ttdef"><b>Definition:</b> downsample_edge.h:8</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:28 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:13 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

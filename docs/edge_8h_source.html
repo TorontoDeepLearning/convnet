@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -89,91 +89,129 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">edge.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">/* This class is intended to be used as a base class for implementing edges.*/</span></div>
-<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;</div>
-<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#ifndef EDGE_H_</span></div>
-<div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#define EDGE_H_</span></div>
-<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &quot;util.h&quot;</span></div>
-<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &quot;matrix.h&quot;</span></div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="preprocessor">#ifndef EDGE_H_</span></div>
+<div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="preprocessor">#define EDGE_H_</span></div>
+<div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="preprocessor">#include &quot;util.h&quot;</span></div>
+<div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &quot;matrix.h&quot;</span></div>
+<div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160;<span class="preprocessor">#include &lt;iostream&gt;</span></div>
+<div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;</div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="keyword">class </span><a class="code" href="classLayer.html">Layer</a>;</div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="keyword">class </span><a class="code" href="classLayer.html">Layer</a>;</div>
-<div class="line"><a name="l00010"></a><span class="lineno"><a class="line" href="classEdge.html">   10</a></span>&#160;<span class="keyword">class </span><a class="code" href="classEdge.html">Edge</a> {</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;  <a class="code" href="classEdge.html">Edge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;  ~<a class="code" href="classEdge.html">Edge</a>();</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;  </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> AllocateMemory(<span class="keywordtype">bool</span> fprop_only);</div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> Initialize();</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> SaveParameters(hid_t file);</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> LoadParameters(hid_t file);</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> InsertPolyak();</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> BackupCurrent();</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> LoadCurrentOnGPU();</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> LoadPolyakOnGPU();</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">float</span> GetRMSWeight();</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ReduceLearningRate(<span class="keywordtype">float</span> factor);</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">bool</span> HasNoParameters() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">int</span> GetNumModules() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> DisplayWeights();</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> DisplayWeightStats();</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> SetTiedTo(<a class="code" href="classEdge.html">Edge</a>* e);</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="comment">// Any derived class that implements an edge MUST override these.</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeUp(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite) = 0;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeDown(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input,</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;                           <span class="keywordtype">bool</span> overwrite) = 0;</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> ComputeOuter(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output);</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> UpdateWeights();</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">bool</span> RequiresMemoryForDeriv() <span class="keyword">const</span>;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> SetImageSize(<span class="keywordtype">int</span> image_size);</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keywordtype">bool</span> IsBackPropBlocked()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> block_backprop_; }</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordtype">void</span> SetSource(<a class="code" href="classLayer.html">Layer</a>* source);</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="keywordtype">void</span> SetDest(<a class="code" href="classLayer.html">Layer</a>* dest);</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  <a class="code" href="classLayer.html">Layer</a>* GetSource();</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <a class="code" href="classLayer.html">Layer</a>* GetDest();</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetSourceName();</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetDestName();</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetName();</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <span class="keywordtype">void</span> SetInputChannels(<span class="keywordtype">int</span> a);</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  <span class="keywordtype">void</span> SetOutputChannels(<span class="keywordtype">int</span> a);</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  <span class="keywordtype">void</span> SetMark();</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  <span class="keywordtype">bool</span> HasMark();</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <span class="keywordtype">string</span> GetTiedEdgeName();</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keywordtype">bool</span> IsTied();</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keywordtype">int</span> GetGPUId()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gpu_id_; }</div>
+<div class="line"><a name="l00013"></a><span class="lineno"><a class="line" href="classEdge.html">   13</a></span>&#160;<span class="keyword">class </span><a class="code" href="classEdge.html">Edge</a> {</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;  <a class="code" href="classEdge.html#ae5b217b7f35cbe60aa43f5d70a288a7c">Edge</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  ~<a class="code" href="classEdge.html">Edge</a>();</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;  </div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#abbf2c487ac600c9eb03ba84b904d8a83">AllocateMemory</a>(<span class="keywordtype">bool</span> fprop_only);</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;  </div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a079f9f5ae5ce0ec9b6a27ce9e73399fb">Initialize</a>();</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a31c14de86f7c6bf9c8573cb806fce688">SaveParameters</a>(hid_t file);</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  </div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a75a9d1a39adfd79cecee2f25da860296">LoadParameters</a>(hid_t file);</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> InsertPolyak();</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> BackupCurrent();</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> LoadCurrentOnGPU();</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> LoadPolyakOnGPU();</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">float</span> <a class="code" href="classEdge.html#a824bd2a8520aaa529e0398438c0ed8b5">GetRMSWeight</a>();</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a7ee787379e74afbf8b0fb9f61e625b48">ReduceLearningRate</a>(<span class="keywordtype">float</span> factor);</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">bool</span> <a class="code" href="classEdge.html#ac9ffdb893abd6b45b8042d0fcb830960">HasNoParameters</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">int</span> <a class="code" href="classEdge.html#a51166a9a689fe4178efc3500f770a942">GetNumModules</a>() <span class="keyword">const</span>;</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#aaa7591f153cdfaf3d8aad1f3eac811fc">DisplayWeights</a>();</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="comment">// Multi-gpu.</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keywordtype">void</span> ComputeStart(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="keywordtype">void</span> ComputeEnd(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">static</span> <a class="code" href="classEdge.html">Edge</a>* ChooseEdgeClass(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; <span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  <a class="code" href="classLayer.html">Layer</a> *source_, *dest_;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span> source_node_, dest_node_, name_, tied_edge_name_;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <a class="code" href="classEdge.html">Edge</a>* tied_edge_;</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <span class="keywordtype">int</span> num_input_channels_, num_output_channels_, image_size_, num_modules_;</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <span class="keywordtype">bool</span> mark_;  <span class="comment">// Used for topological sorting.</span></div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">bool</span> block_backprop_, is_tied_;</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a> *img_display_;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">int</span> gpu_id_;</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;};</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="classLayer_html"><div class="ttname"><a href="classLayer.html">Layer</a></div><div class="ttdef"><b>Definition:</b> layer.h:6</div></div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#aa674662da8a55c69220eae1ad5cd8f70">DisplayWeightStats</a>();</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#ac699780c655f2933b205a5baecc445aa">SetTiedTo</a>(<a class="code" href="classEdge.html">Edge</a>* e);</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a6b6e4442c46198ab7d742228cc6b0a94">ComputeUp</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <span class="keywordtype">bool</span> overwrite) = 0;</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  </div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#adf95fe0943ddb86eb72194b0db79904c">ComputeDown</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output, <a class="code" href="classMatrix.html">Matrix</a>&amp; input,</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;                           <a class="code" href="classMatrix.html">Matrix</a>&amp; output, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_input,</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;                           <span class="keywordtype">bool</span> overwrite) = 0;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a2c095f35276084a113f5d274b2310308">ComputeOuter</a>(<a class="code" href="classMatrix.html">Matrix</a>&amp; input, <a class="code" href="classMatrix.html">Matrix</a>&amp; deriv_output);</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  </div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a16b42aec5dc223f4b1e128c1be6deeef">UpdateWeights</a>();</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  <span class="comment">//virtual bool RequiresMemoryForDeriv() const;</span></div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;  </div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a2655f7b7f2e9b4c65f7b8c8f9d30ee2e">SetImageSize</a>(<span class="keywordtype">int</span> image_size);</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;</div>
+<div class="line"><a name="l00098"></a><span class="lineno"><a class="line" href="classEdge.html#a7e20c2ce0f06a0b2754150ed96392da8">   98</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classEdge.html#a7e20c2ce0f06a0b2754150ed96392da8">IsBackPropBlocked</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <a class="code" href="classEdge.html#a6c1b5093acf37a539216a1a44e14d59f">block_backprop_</a>; }</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  <span class="keywordtype">void</span> SetSource(<a class="code" href="classLayer.html">Layer</a>* source);</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  <span class="keywordtype">void</span> SetDest(<a class="code" href="classLayer.html">Layer</a>* dest);</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  <a class="code" href="classLayer.html">Layer</a>* GetSource();</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  <a class="code" href="classLayer.html">Layer</a>* GetDest();</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetSourceName();</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetDestName();</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; GetName();</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classEdge.html#ab30032bea64283b00eb675490d9abc06">SetInputChannels</a>(<span class="keywordtype">int</span> a);</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classEdge.html#a3f0e1c17d0ab02788c415a8ea955b800">SetOutputChannels</a>(<span class="keywordtype">int</span> a);</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;  <span class="keywordtype">void</span> SetMark();</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;  <span class="keywordtype">bool</span> HasMark();</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;  <span class="keywordtype">string</span> GetTiedEdgeName();</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;  <span class="keywordtype">bool</span> IsTied();</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;  <span class="keywordtype">int</span> GetGPUId()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gpu_id_; }</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;  <span class="comment">// Multi-gpu.</span></div>
+<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;  <span class="keywordtype">void</span> ComputeStart(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
+<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;  <span class="keywordtype">void</span> ComputeEnd(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;</div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;  <span class="keyword">static</span> <a class="code" href="classEdge.html">Edge</a>* <a class="code" href="classEdge.html#a60fa35b43b27ad76a867c7f54a7c691f">ChooseEdgeClass</a>(<span class="keyword">const</span> config::Edge&amp; edge_config);</div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;  </div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160; <span class="keyword">protected</span>:</div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;  <a class="code" href="classLayer.html">Layer</a> *source_;  </div>
+<div class="line"><a name="l00128"></a><span class="lineno"><a class="line" href="classEdge.html#a4aa74e77bebc5a07c651b71425e4f67c">  128</a></span>&#160;  <a class="code" href="classLayer.html">Layer</a> *<a class="code" href="classEdge.html#a4aa74e77bebc5a07c651b71425e4f67c">dest_</a>;  </div>
+<div class="line"><a name="l00129"></a><span class="lineno"><a class="line" href="classEdge.html#a193dff5aac6e58efe39bfd599076b27b">  129</a></span>&#160;  <span class="keyword">const</span> <span class="keywordtype">string</span> <a class="code" href="classEdge.html#a193dff5aac6e58efe39bfd599076b27b">source_node_</a>, dest_node_, name_, tied_edge_name_;</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;  <a class="code" href="classEdge.html">Edge</a>* tied_edge_;  <span class="comment">/* The edge to which this edge is tied.*/</span></div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;  <span class="keywordtype">int</span> num_input_channels_, num_output_channels_, image_size_, num_modules_;</div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;  <span class="keywordtype">bool</span> mark_;  </div>
+<div class="line"><a name="l00133"></a><span class="lineno"><a class="line" href="classEdge.html#a6c1b5093acf37a539216a1a44e14d59f">  133</a></span>&#160;  <span class="keyword">const</span> <span class="keywordtype">bool</span> <a class="code" href="classEdge.html#a6c1b5093acf37a539216a1a44e14d59f">block_backprop_</a>, is_tied_;</div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a> *img_display_;</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  <span class="keyword">const</span> <span class="keywordtype">int</span> gpu_id_;  </div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;};</div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="classEdge_html_a6c1b5093acf37a539216a1a44e14d59f"><div class="ttname"><a href="classEdge.html#a6c1b5093acf37a539216a1a44e14d59f">Edge::block_backprop_</a></div><div class="ttdeci">const bool block_backprop_</div><div class="ttdoc">A marker. </div><div class="ttdef"><b>Definition:</b> edge.h:133</div></div>
+<div class="ttc" id="classEdge_html_a4aa74e77bebc5a07c651b71425e4f67c"><div class="ttname"><a href="classEdge.html#a4aa74e77bebc5a07c651b71425e4f67c">Edge::dest_</a></div><div class="ttdeci">Layer * dest_</div><div class="ttdoc">The source layer for this edge. </div><div class="ttdef"><b>Definition:</b> edge.h:128</div></div>
+<div class="ttc" id="classLayer_html"><div class="ttname"><a href="classLayer.html">Layer</a></div><div class="ttdoc">The base class for all layers. </div><div class="ttdef"><b>Definition:</b> layer.h:9</div></div>
+<div class="ttc" id="classEdge_html_aaa7591f153cdfaf3d8aad1f3eac811fc"><div class="ttname"><a href="classEdge.html#aaa7591f153cdfaf3d8aad1f3eac811fc">Edge::DisplayWeights</a></div><div class="ttdeci">virtual void DisplayWeights()</div><div class="ttdoc">Displays the weights. </div><div class="ttdef"><b>Definition:</b> edge.cc:110</div></div>
 <div class="ttc" id="classImageDisplayer_html"><div class="ttname"><a href="classImageDisplayer.html">ImageDisplayer</a></div><div class="ttdef"><b>Definition:</b> util.h:59</div></div>
-<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdef"><b>Definition:</b> edge.h:10</div></div>
+<div class="ttc" id="classEdge_html_a079f9f5ae5ce0ec9b6a27ce9e73399fb"><div class="ttname"><a href="classEdge.html#a079f9f5ae5ce0ec9b6a27ce9e73399fb">Edge::Initialize</a></div><div class="ttdeci">virtual void Initialize()</div><div class="ttdoc">Initialize the weights and biases. </div><div class="ttdef"><b>Definition:</b> edge.cc:99</div></div>
+<div class="ttc" id="classEdge_html_ab30032bea64283b00eb675490d9abc06"><div class="ttname"><a href="classEdge.html#ab30032bea64283b00eb675490d9abc06">Edge::SetInputChannels</a></div><div class="ttdeci">void SetInputChannels(int a)</div><div class="ttdoc">Set the number of input channels. </div><div class="ttdef"><b>Definition:</b> edge.cc:81</div></div>
+<div class="ttc" id="classEdge_html_a60fa35b43b27ad76a867c7f54a7c691f"><div class="ttname"><a href="classEdge.html#a60fa35b43b27ad76a867c7f54a7c691f">Edge::ChooseEdgeClass</a></div><div class="ttdeci">static Edge * ChooseEdgeClass(const config::Edge &amp;edge_config)</div><div class="ttdoc">Selects the appropriate derived class for the edge config. </div><div class="ttdef"><b>Definition:</b> edge.cc:17</div></div>
+<div class="ttc" id="classEdge_html_a7ee787379e74afbf8b0fb9f61e625b48"><div class="ttname"><a href="classEdge.html#a7ee787379e74afbf8b0fb9f61e625b48">Edge::ReduceLearningRate</a></div><div class="ttdeci">virtual void ReduceLearningRate(float factor)</div><div class="ttdoc">Reduce the learning rate by factor. </div><div class="ttdef"><b>Definition:</b> edge.cc:118</div></div>
+<div class="ttc" id="classEdge_html_a2655f7b7f2e9b4c65f7b8c8f9d30ee2e"><div class="ttname"><a href="classEdge.html#a2655f7b7f2e9b4c65f7b8c8f9d30ee2e">Edge::SetImageSize</a></div><div class="ttdeci">virtual void SetImageSize(int image_size)</div><div class="ttdoc">Set the spatial size of the input to this edge. </div><div class="ttdef"><b>Definition:</b> edge.cc:191</div></div>
+<div class="ttc" id="classEdge_html"><div class="ttname"><a href="classEdge.html">Edge</a></div><div class="ttdoc">This class is intended to be used as a base class for implementing edges. </div><div class="ttdef"><b>Definition:</b> edge.h:13</div></div>
+<div class="ttc" id="classEdge_html_a3f0e1c17d0ab02788c415a8ea955b800"><div class="ttname"><a href="classEdge.html#a3f0e1c17d0ab02788c415a8ea955b800">Edge::SetOutputChannels</a></div><div class="ttdeci">void SetOutputChannels(int a)</div><div class="ttdoc">Set the number of output channels. </div><div class="ttdef"><b>Definition:</b> edge.cc:85</div></div>
+<div class="ttc" id="classEdge_html_a193dff5aac6e58efe39bfd599076b27b"><div class="ttname"><a href="classEdge.html#a193dff5aac6e58efe39bfd599076b27b">Edge::source_node_</a></div><div class="ttdeci">const string source_node_</div><div class="ttdoc">The destination layer for this edge. </div><div class="ttdef"><b>Definition:</b> edge.h:129</div></div>
+<div class="ttc" id="classEdge_html_a16b42aec5dc223f4b1e128c1be6deeef"><div class="ttname"><a href="classEdge.html#a16b42aec5dc223f4b1e128c1be6deeef">Edge::UpdateWeights</a></div><div class="ttdeci">virtual void UpdateWeights()</div><div class="ttdoc">Update the weights. </div><div class="ttdef"><b>Definition:</b> edge.cc:126</div></div>
+<div class="ttc" id="classEdge_html_a75a9d1a39adfd79cecee2f25da860296"><div class="ttname"><a href="classEdge.html#a75a9d1a39adfd79cecee2f25da860296">Edge::LoadParameters</a></div><div class="ttdeci">virtual void LoadParameters(hid_t file)</div><div class="ttdoc">Load the weights and biases from an hdf5 file. </div><div class="ttdef"><b>Definition:</b> edge.cc:94</div></div>
+<div class="ttc" id="classEdge_html_a51166a9a689fe4178efc3500f770a942"><div class="ttname"><a href="classEdge.html#a51166a9a689fe4178efc3500f770a942">Edge::GetNumModules</a></div><div class="ttdeci">virtual int GetNumModules() const </div><div class="ttdoc">Returns the number of modules. </div><div class="ttdef"><b>Definition:</b> edge.cc:174</div></div>
+<div class="ttc" id="classEdge_html_a824bd2a8520aaa529e0398438c0ed8b5"><div class="ttname"><a href="classEdge.html#a824bd2a8520aaa529e0398438c0ed8b5">Edge::GetRMSWeight</a></div><div class="ttdeci">virtual float GetRMSWeight()</div><div class="ttdoc">Returns the root mean square weight value. </div><div class="ttdef"><b>Definition:</b> edge.cc:130</div></div>
+<div class="ttc" id="classEdge_html_abbf2c487ac600c9eb03ba84b904d8a83"><div class="ttname"><a href="classEdge.html#abbf2c487ac600c9eb03ba84b904d8a83">Edge::AllocateMemory</a></div><div class="ttdeci">virtual void AllocateMemory(bool fprop_only)</div><div class="ttdoc">Allocate memory for the model. </div><div class="ttdef"><b>Definition:</b> edge.cc:103</div></div>
 <div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:10</div></div>
+<div class="ttc" id="classEdge_html_a7e20c2ce0f06a0b2754150ed96392da8"><div class="ttname"><a href="classEdge.html#a7e20c2ce0f06a0b2754150ed96392da8">Edge::IsBackPropBlocked</a></div><div class="ttdeci">bool IsBackPropBlocked() const </div><div class="ttdoc">Returns whether back prop is blocked through this edge. </div><div class="ttdef"><b>Definition:</b> edge.h:98</div></div>
+<div class="ttc" id="classEdge_html_a31c14de86f7c6bf9c8573cb806fce688"><div class="ttname"><a href="classEdge.html#a31c14de86f7c6bf9c8573cb806fce688">Edge::SaveParameters</a></div><div class="ttdeci">virtual void SaveParameters(hid_t file)</div><div class="ttdoc">Write the weights and biases in an hdf5 file. </div><div class="ttdef"><b>Definition:</b> edge.cc:89</div></div>
+<div class="ttc" id="classEdge_html_ae5b217b7f35cbe60aa43f5d70a288a7c"><div class="ttname"><a href="classEdge.html#ae5b217b7f35cbe60aa43f5d70a288a7c">Edge::Edge</a></div><div class="ttdeci">Edge(const config::Edge &amp;edge_config)</div><div class="ttdoc">Instatntiate an Edge from the config. </div><div class="ttdef"><b>Definition:</b> edge.cc:54</div></div>
+<div class="ttc" id="classEdge_html_adf95fe0943ddb86eb72194b0db79904c"><div class="ttname"><a href="classEdge.html#adf95fe0943ddb86eb72194b0db79904c">Edge::ComputeDown</a></div><div class="ttdeci">virtual void ComputeDown(Matrix &amp;deriv_output, Matrix &amp;input, Matrix &amp;output, Matrix &amp;deriv_input, bool overwrite)=0</div><div class="ttdoc">Computes the derivative w.r.t the inputs of this edge given the derivative w.r.t the outputs of this ...</div></div>
+<div class="ttc" id="classEdge_html_a6b6e4442c46198ab7d742228cc6b0a94"><div class="ttname"><a href="classEdge.html#a6b6e4442c46198ab7d742228cc6b0a94">Edge::ComputeUp</a></div><div class="ttdeci">virtual void ComputeUp(Matrix &amp;input, Matrix &amp;output, bool overwrite)=0</div><div class="ttdoc">Computes the output layer state given the input. </div></div>
+<div class="ttc" id="classEdge_html_ac9ffdb893abd6b45b8042d0fcb830960"><div class="ttname"><a href="classEdge.html#ac9ffdb893abd6b45b8042d0fcb830960">Edge::HasNoParameters</a></div><div class="ttdeci">virtual bool HasNoParameters() const </div><div class="ttdoc">Returns whether the edge has any parameters. </div><div class="ttdef"><b>Definition:</b> edge.cc:170</div></div>
+<div class="ttc" id="classEdge_html_ac699780c655f2933b205a5baecc445aa"><div class="ttname"><a href="classEdge.html#ac699780c655f2933b205a5baecc445aa">Edge::SetTiedTo</a></div><div class="ttdeci">virtual void SetTiedTo(Edge *e)</div><div class="ttdoc">Sets the edge to be tied to another edge. </div><div class="ttdef"><b>Definition:</b> edge.cc:77</div></div>
+<div class="ttc" id="classEdge_html_a2c095f35276084a113f5d274b2310308"><div class="ttname"><a href="classEdge.html#a2c095f35276084a113f5d274b2310308">Edge::ComputeOuter</a></div><div class="ttdeci">virtual void ComputeOuter(Matrix &amp;input, Matrix &amp;deriv_output)</div><div class="ttdoc">Computes the gradient for the weights and biases. </div><div class="ttdef"><b>Definition:</b> edge.cc:122</div></div>
+<div class="ttc" id="classEdge_html_aa674662da8a55c69220eae1ad5cd8f70"><div class="ttname"><a href="classEdge.html#aa674662da8a55c69220eae1ad5cd8f70">Edge::DisplayWeightStats</a></div><div class="ttdeci">virtual void DisplayWeightStats()</div><div class="ttdoc">Displays the statistics of the weights. </div><div class="ttdef"><b>Definition:</b> edge.cc:114</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:28 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:13 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

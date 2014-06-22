@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -122,66 +122,62 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>SetupDataset</b> (con
 <tr class="memitem:a47c05f5e22beb86b5e9194c111fb3cf0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a47c05f5e22beb86b5e9194c111fb3cf0"></a>
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>SetupDataset</b> (const string &amp;train_data_config_file, const string &amp;val_data_config_file)</td></tr>
 <tr class="separator:a47c05f5e22beb86b5e9194c111fb3cf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf4d97bb7264d7cc8e8beeb550468710"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abf4d97bb7264d7cc8e8beeb550468710"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>Train</b> ()</td></tr>
+<tr class="memitem:abf4d97bb7264d7cc8e8beeb550468710"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#abf4d97bb7264d7cc8e8beeb550468710">Train</a> ()</td></tr>
+<tr class="memdesc:abf4d97bb7264d7cc8e8beeb550468710"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start training.  <a href="#abf4d97bb7264d7cc8e8beeb550468710">More...</a><br /></td></tr>
 <tr class="separator:abf4d97bb7264d7cc8e8beeb550468710"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f3f245c4e3c0e4059d0683b0e7b1ef3"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7f3f245c4e3c0e4059d0683b0e7b1ef3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Validate</b> (<a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memitem:a7f3f245c4e3c0e4059d0683b0e7b1ef3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a7f3f245c4e3c0e4059d0683b0e7b1ef3">Validate</a> (<a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a7f3f245c4e3c0e4059d0683b0e7b1ef3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate the model on the specfied dataset and return the error.  <a href="#a7f3f245c4e3c0e4059d0683b0e7b1ef3">More...</a><br /></td></tr>
 <tr class="separator:a7f3f245c4e3c0e4059d0683b0e7b1ef3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a05682abe2a19e80eb7f3bbe7daac9c71"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a05682abe2a19e80eb7f3bbe7daac9c71"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Validate</b> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memitem:a05682abe2a19e80eb7f3bbe7daac9c71"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a05682abe2a19e80eb7f3bbe7daac9c71">Validate</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a05682abe2a19e80eb7f3bbe7daac9c71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate the model on the validation dataset and return the error.  <a href="#a05682abe2a19e80eb7f3bbe7daac9c71">More...</a><br /></td></tr>
 <tr class="separator:a05682abe2a19e80eb7f3bbe7daac9c71"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7d42402468235019bbbfaadd5f007b0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae7d42402468235019bbbfaadd5f007b0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Save</b> ()</td></tr>
+<tr class="memitem:ae7d42402468235019bbbfaadd5f007b0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ae7d42402468235019bbbfaadd5f007b0">Save</a> ()</td></tr>
+<tr class="memdesc:ae7d42402468235019bbbfaadd5f007b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the model to disk.  <a href="#ae7d42402468235019bbbfaadd5f007b0">More...</a><br /></td></tr>
 <tr class="separator:ae7d42402468235019bbbfaadd5f007b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a854a0d1fb46f4ec62ed5d2c76db2e2fc"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a854a0d1fb46f4ec62ed5d2c76db2e2fc"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Save</b> (const string &amp;output_file)</td></tr>
+<tr class="memitem:a854a0d1fb46f4ec62ed5d2c76db2e2fc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a854a0d1fb46f4ec62ed5d2c76db2e2fc">Save</a> (const string &amp;output_file)</td></tr>
+<tr class="memdesc:a854a0d1fb46f4ec62ed5d2c76db2e2fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the model to disk in the file specified.  <a href="#a854a0d1fb46f4ec62ed5d2c76db2e2fc">More...</a><br /></td></tr>
 <tr class="separator:a854a0d1fb46f4ec62ed5d2c76db2e2fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1c3b1d62ac25a423220afa3ccf56184"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac1c3b1d62ac25a423220afa3ccf56184"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Load</b> ()</td></tr>
+<tr class="memitem:ac1c3b1d62ac25a423220afa3ccf56184"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ac1c3b1d62ac25a423220afa3ccf56184">Load</a> ()</td></tr>
+<tr class="memdesc:ac1c3b1d62ac25a423220afa3ccf56184"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the model.  <a href="#ac1c3b1d62ac25a423220afa3ccf56184">More...</a><br /></td></tr>
 <tr class="separator:ac1c3b1d62ac25a423220afa3ccf56184"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb05e61ecca9d5d7cf143f8cb9ff4926"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adb05e61ecca9d5d7cf143f8cb9ff4926"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Load</b> (const string &amp;input_file)</td></tr>
+<tr class="memitem:adb05e61ecca9d5d7cf143f8cb9ff4926"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#adb05e61ecca9d5d7cf143f8cb9ff4926">Load</a> (const string &amp;input_file)</td></tr>
+<tr class="memdesc:adb05e61ecca9d5d7cf143f8cb9ff4926"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load the model from the file specified.  <a href="#adb05e61ecca9d5d7cf143f8cb9ff4926">More...</a><br /></td></tr>
 <tr class="separator:adb05e61ecca9d5d7cf143f8cb9ff4926"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac27b7bf5eb98eb24e9cef6e3fe3ebba4"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac27b7bf5eb98eb24e9cef6e3fe3ebba4"></a>
-string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCheckpointFilename</b> ()</td></tr>
-<tr class="separator:ac27b7bf5eb98eb24e9cef6e3fe3ebba4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8649a90884e40f29a371d5b16bb00bd5"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8649a90884e40f29a371d5b16bb00bd5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>Display</b> ()</td></tr>
+<tr class="memitem:a8649a90884e40f29a371d5b16bb00bd5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a8649a90884e40f29a371d5b16bb00bd5">Display</a> ()</td></tr>
+<tr class="memdesc:a8649a90884e40f29a371d5b16bb00bd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Display the state of the model.  <a href="#a8649a90884e40f29a371d5b16bb00bd5">More...</a><br /></td></tr>
 <tr class="separator:a8649a90884e40f29a371d5b16bb00bd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef302bf04015a17b6b2c2751aea5be3a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aef302bf04015a17b6b2c2751aea5be3a"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, const vector&lt; string &gt; &amp;layer_names)</td></tr>
-<tr class="separator:aef302bf04015a17b6b2c2751aea5be3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a808a47dee4a28dd122ae6983b5c79bea"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a808a47dee4a28dd122ae6983b5c79bea"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memitem:a808a47dee4a28dd122ae6983b5c79bea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a808a47dee4a28dd122ae6983b5c79bea">DumpOutputs</a> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memdesc:a808a47dee4a28dd122ae6983b5c79bea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#a808a47dee4a28dd122ae6983b5c79bea">More...</a><br /></td></tr>
 <tr class="separator:a808a47dee4a28dd122ae6983b5c79bea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa6efa305063df66a9363baa9aa80806c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa6efa305063df66a9363baa9aa80806c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>AllocateMemory</b> (bool fprop_only)</td></tr>
+<tr class="memitem:aef302bf04015a17b6b2c2751aea5be3a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aef302bf04015a17b6b2c2751aea5be3a">DumpOutputs</a> (const string &amp;output_file, const vector&lt; string &gt; &amp;layer_names)</td></tr>
+<tr class="memdesc:aef302bf04015a17b6b2c2751aea5be3a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#aef302bf04015a17b6b2c2751aea5be3a">More...</a><br /></td></tr>
+<tr class="separator:aef302bf04015a17b6b2c2751aea5be3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6efa305063df66a9363baa9aa80806c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa6efa305063df66a9363baa9aa80806c">AllocateMemory</a> (bool fprop_only)</td></tr>
+<tr class="memdesc:aa6efa305063df66a9363baa9aa80806c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for the model.  <a href="#aa6efa305063df66a9363baa9aa80806c">More...</a><br /></td></tr>
 <tr class="separator:aa6efa305063df66a9363baa9aa80806c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:af1c2008d83336afc373bee99347551bb"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af1c2008d83336afc373bee99347551bb"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>BuildNet</b> ()</td></tr>
+<tr class="memitem:af1c2008d83336afc373bee99347551bb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af1c2008d83336afc373bee99347551bb">BuildNet</a> ()</td></tr>
+<tr class="memdesc:af1c2008d83336afc373bee99347551bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates layers and edges.  <a href="#af1c2008d83336afc373bee99347551bb">More...</a><br /></td></tr>
 <tr class="separator:af1c2008d83336afc373bee99347551bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a452ecae43e29e3e500f61f2e1033fc9c"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a452ecae43e29e3e500f61f2e1033fc9c"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a452ecae43e29e3e500f61f2e1033fc9c">DestroyNet</a> ()</td></tr>
-<tr class="memdesc:a452ecae43e29e3e500f61f2e1033fc9c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release all memory held by the model. <br /></td></tr>
+<tr class="memitem:a452ecae43e29e3e500f61f2e1033fc9c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a452ecae43e29e3e500f61f2e1033fc9c">DestroyNet</a> ()</td></tr>
+<tr class="memdesc:a452ecae43e29e3e500f61f2e1033fc9c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Release all memory held by the model.  <a href="#a452ecae43e29e3e500f61f2e1033fc9c">More...</a><br /></td></tr>
 <tr class="separator:a452ecae43e29e3e500f61f2e1033fc9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a11262b0b65822295d06523fecfba7deb"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a11262b0b65822295d06523fecfba7deb"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a11262b0b65822295d06523fecfba7deb">AllocateLayerMemory</a> ()</td></tr>
-<tr class="memdesc:a11262b0b65822295d06523fecfba7deb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate layer memory for using mini-batches of batch_size_. <br /></td></tr>
+<tr class="memitem:a11262b0b65822295d06523fecfba7deb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a11262b0b65822295d06523fecfba7deb">AllocateLayerMemory</a> ()</td></tr>
+<tr class="memdesc:a11262b0b65822295d06523fecfba7deb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate layer memory for using mini-batches of batch_size_.  <a href="#a11262b0b65822295d06523fecfba7deb">More...</a><br /></td></tr>
 <tr class="separator:a11262b0b65822295d06523fecfba7deb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a25353d323e9bd9e62e058b27dbc0d6e0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a25353d323e9bd9e62e058b27dbc0d6e0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a25353d323e9bd9e62e058b27dbc0d6e0">AllocateEdgeMemory</a> (bool fprop_only)</td></tr>
-<tr class="memdesc:a25353d323e9bd9e62e058b27dbc0d6e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for edges. <br /></td></tr>
+<tr class="memitem:a25353d323e9bd9e62e058b27dbc0d6e0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a25353d323e9bd9e62e058b27dbc0d6e0">AllocateEdgeMemory</a> (bool fprop_only)</td></tr>
+<tr class="memdesc:a25353d323e9bd9e62e058b27dbc0d6e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for edges.  <a href="#a25353d323e9bd9e62e058b27dbc0d6e0">More...</a><br /></td></tr>
 <tr class="separator:a25353d323e9bd9e62e058b27dbc0d6e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac27b7bf5eb98eb24e9cef6e3fe3ebba4"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac27b7bf5eb98eb24e9cef6e3fe3ebba4"></a>
+string&#160;</td><td class="memItemRight" valign="bottom"><b>GetCheckpointFilename</b> ()</td></tr>
+<tr class="separator:ac27b7bf5eb98eb24e9cef6e3fe3ebba4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a037aedae65125de91d123be0c4dc4451"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a037aedae65125de91d123be0c4dc4451"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>TimestampModel</b> ()</td></tr>
 <tr class="separator:a037aedae65125de91d123be0c4dc4451"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ac3cd73d89861e145b95003bdcf0fd6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2ac3cd73d89861e145b95003bdcf0fd6"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2ac3cd73d89861e145b95003bdcf0fd6">Sort</a> ()</td></tr>
-<tr class="memdesc:a2ac3cd73d89861e145b95003bdcf0fd6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Topologically sort layers. <br /></td></tr>
+<tr class="memitem:a2ac3cd73d89861e145b95003bdcf0fd6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2ac3cd73d89861e145b95003bdcf0fd6">Sort</a> ()</td></tr>
+<tr class="memdesc:a2ac3cd73d89861e145b95003bdcf0fd6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Topologically sort layers.  <a href="#a2ac3cd73d89861e145b95003bdcf0fd6">More...</a><br /></td></tr>
 <tr class="separator:a2ac3cd73d89861e145b95003bdcf0fd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af97edc144ff6ba2482b69d40a9a22419"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af97edc144ff6ba2482b69d40a9a22419">Fprop</a> (<a class="el" href="classLayer.html">Layer</a> &amp;input, <a class="el" href="classLayer.html">Layer</a> &amp;output, <a class="el" href="classEdge.html">Edge</a> &amp;edge, bool overwrite)</td></tr>
 <tr class="memdesc:af97edc144ff6ba2482b69d40a9a22419"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forward propagate one layer.  <a href="#af97edc144ff6ba2482b69d40a9a22419">More...</a><br /></td></tr>
@@ -192,21 +188,20 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a69c98ca042953a1339d53f884927a5d8"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a69c98ca042953a1339d53f884927a5d8">Fprop</a> (bool train)</td></tr>
 <tr class="memdesc:a69c98ca042953a1339d53f884927a5d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Forward propagate through the network.  <a href="#a69c98ca042953a1339d53f884927a5d8">More...</a><br /></td></tr>
 <tr class="separator:a69c98ca042953a1339d53f884927a5d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a78379554e7923d7949c7c111fa007097"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a78379554e7923d7949c7c111fa007097"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a78379554e7923d7949c7c111fa007097">Bprop</a> (bool update_weights)</td></tr>
-<tr class="memdesc:a78379554e7923d7949c7c111fa007097"><td class="mdescLeft">&#160;</td><td class="mdescRight">Backpropagate through the network and update weights. <br /></td></tr>
+<tr class="memitem:a78379554e7923d7949c7c111fa007097"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a78379554e7923d7949c7c111fa007097">Bprop</a> (bool update_weights)</td></tr>
+<tr class="memdesc:a78379554e7923d7949c7c111fa007097"><td class="mdescLeft">&#160;</td><td class="mdescRight">Backpropagate through the network and update weights.  <a href="#a78379554e7923d7949c7c111fa007097">More...</a><br /></td></tr>
 <tr class="separator:a78379554e7923d7949c7c111fa007097"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4afb5f6eec7ca48bbcdec8db49e18dce"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4afb5f6eec7ca48bbcdec8db49e18dce"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a4afb5f6eec7ca48bbcdec8db49e18dce">ComputeDeriv</a> ()</td></tr>
-<tr class="memdesc:a4afb5f6eec7ca48bbcdec8db49e18dce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the derivative of the loss function. <br /></td></tr>
+<tr class="memitem:a4afb5f6eec7ca48bbcdec8db49e18dce"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a4afb5f6eec7ca48bbcdec8db49e18dce">ComputeDeriv</a> ()</td></tr>
+<tr class="memdesc:a4afb5f6eec7ca48bbcdec8db49e18dce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the derivative of the loss function.  <a href="#a4afb5f6eec7ca48bbcdec8db49e18dce">More...</a><br /></td></tr>
 <tr class="separator:a4afb5f6eec7ca48bbcdec8db49e18dce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a156eeaa43a09a35188b3052d5bef75"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9a156eeaa43a09a35188b3052d5bef75"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a9a156eeaa43a09a35188b3052d5bef75">GetLoss</a> (vector&lt; float &gt; &amp;error)</td></tr>
-<tr class="memdesc:a9a156eeaa43a09a35188b3052d5bef75"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the loss function. <br /></td></tr>
+<tr class="memitem:a9a156eeaa43a09a35188b3052d5bef75"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a9a156eeaa43a09a35188b3052d5bef75">GetLoss</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:a9a156eeaa43a09a35188b3052d5bef75"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the loss function (to be displayed).  <a href="#a9a156eeaa43a09a35188b3052d5bef75">More...</a><br /></td></tr>
 <tr class="separator:a9a156eeaa43a09a35188b3052d5bef75"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8c13d7d61f1f9b7b051485c1c70d933"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa8c13d7d61f1f9b7b051485c1c70d933"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa8c13d7d61f1f9b7b051485c1c70d933">TrainOneBatch</a> (vector&lt; float &gt; &amp;error)</td></tr>
-<tr class="memdesc:aa8c13d7d61f1f9b7b051485c1c70d933"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes one optimization step. <br /></td></tr>
+<tr class="memitem:a59518a533d30641e5bdfcdda9066d2d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a59518a533d30641e5bdfcdda9066d2d5">DumpOutputs</a> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt; &amp;layers)</td></tr>
+<tr class="memdesc:a59518a533d30641e5bdfcdda9066d2d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Write the state of the layers to disk.  <a href="#a59518a533d30641e5bdfcdda9066d2d5">More...</a><br /></td></tr>
+<tr class="separator:a59518a533d30641e5bdfcdda9066d2d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8c13d7d61f1f9b7b051485c1c70d933"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#aa8c13d7d61f1f9b7b051485c1c70d933">TrainOneBatch</a> (vector&lt; float &gt; &amp;error)</td></tr>
+<tr class="memdesc:aa8c13d7d61f1f9b7b051485c1c70d933"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes one optimization step.  <a href="#aa8c13d7d61f1f9b7b051485c1c70d933">More...</a><br /></td></tr>
 <tr class="separator:aa8c13d7d61f1f9b7b051485c1c70d933"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc889e38678c99a90cd52c311f214c98"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="adc889e38678c99a90cd52c311f214c98"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>DisplayLayers</b> ()</td></tr>
@@ -235,14 +230,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>WriteValLog</b> (int 
 <tr class="memitem:a039cfeca7e676c02cdeffaf9c067483d"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a039cfeca7e676c02cdeffaf9c067483d"></a>
 <a class="el" href="classLayer.html">Layer</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>GetLayerByName</b> (const string &amp;name)</td></tr>
 <tr class="separator:a039cfeca7e676c02cdeffaf9c067483d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a59518a533d30641e5bdfcdda9066d2d5"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a59518a533d30641e5bdfcdda9066d2d5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>DumpOutputs</b> (const string &amp;output_file, <a class="el" href="classDataHandler.html">DataHandler</a> *dataset, vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt; &amp;layers)</td></tr>
-<tr class="separator:a59518a533d30641e5bdfcdda9066d2d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a18034a69678ee220a5192a58a3df38f6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a18034a69678ee220a5192a58a3df38f6"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>CheckReduceLearningRate</b> (const vector&lt; float &gt; &amp;val_error)</td></tr>
+<tr class="memitem:a18034a69678ee220a5192a58a3df38f6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a18034a69678ee220a5192a58a3df38f6">CheckReduceLearningRate</a> (const vector&lt; float &gt; &amp;val_error)</td></tr>
+<tr class="memdesc:a18034a69678ee220a5192a58a3df38f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Decides if learning rate should be reduced.  <a href="#a18034a69678ee220a5192a58a3df38f6">More...</a><br /></td></tr>
 <tr class="separator:a18034a69678ee220a5192a58a3df38f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abacd8e3636287e19ca5bbbdf36cef1c7"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abacd8e3636287e19ca5bbbdf36cef1c7"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ReduceLearningRate</b> (const float factor)</td></tr>
+<tr class="memitem:abacd8e3636287e19ca5bbbdf36cef1c7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#abacd8e3636287e19ca5bbbdf36cef1c7">ReduceLearningRate</a> (const float factor)</td></tr>
+<tr class="memdesc:abacd8e3636287e19ca5bbbdf36cef1c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Multiply learning rate by factor.  <a href="#abacd8e3636287e19ca5bbbdf36cef1c7">More...</a><br /></td></tr>
 <tr class="separator:abacd8e3636287e19ca5bbbdf36cef1c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-static-methods"></a>
@@ -256,23 +248,23 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:aba50a31a3871d85ead557e67e23c0954"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aba50a31a3871d85ead557e67e23c0954"></a>
 config::Model&#160;</td><td class="memItemRight" valign="bottom"><b>model_</b></td></tr>
 <tr class="separator:aba50a31a3871d85ead557e67e23c0954"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af1ea3f2fe80b149b09eddd66766609f2"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af1ea3f2fe80b149b09eddd66766609f2"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>layers_</b></td></tr>
+<tr class="memitem:af1ea3f2fe80b149b09eddd66766609f2"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#af1ea3f2fe80b149b09eddd66766609f2">layers_</a></td></tr>
+<tr class="memdesc:af1ea3f2fe80b149b09eddd66766609f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">The model protobuf config.  <a href="#af1ea3f2fe80b149b09eddd66766609f2">More...</a><br /></td></tr>
 <tr class="separator:af1ea3f2fe80b149b09eddd66766609f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2fc4c53f5b52737615299772867a1baf"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2fc4c53f5b52737615299772867a1baf"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>data_layers_</b></td></tr>
+<tr class="memitem:a2fc4c53f5b52737615299772867a1baf"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2fc4c53f5b52737615299772867a1baf">data_layers_</a></td></tr>
+<tr class="memdesc:a2fc4c53f5b52737615299772867a1baf"><td class="mdescLeft">&#160;</td><td class="mdescRight">The layers in the network.  <a href="#a2fc4c53f5b52737615299772867a1baf">More...</a><br /></td></tr>
 <tr class="separator:a2fc4c53f5b52737615299772867a1baf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2078e81e46a2878f199e438e10cb0ee1"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2078e81e46a2878f199e438e10cb0ee1"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>input_layers_</b></td></tr>
+<tr class="memitem:a2078e81e46a2878f199e438e10cb0ee1"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2078e81e46a2878f199e438e10cb0ee1">input_layers_</a></td></tr>
+<tr class="memdesc:a2078e81e46a2878f199e438e10cb0ee1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Layers which have data associated with them.  <a href="#a2078e81e46a2878f199e438e10cb0ee1">More...</a><br /></td></tr>
 <tr class="separator:a2078e81e46a2878f199e438e10cb0ee1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acbda19a7b0bd4ebc7f8910637129d566"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acbda19a7b0bd4ebc7f8910637129d566"></a>
-vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>output_layers_</b></td></tr>
+<tr class="memitem:acbda19a7b0bd4ebc7f8910637129d566"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#acbda19a7b0bd4ebc7f8910637129d566">output_layers_</a></td></tr>
+<tr class="memdesc:acbda19a7b0bd4ebc7f8910637129d566"><td class="mdescLeft">&#160;</td><td class="mdescRight">Input layers.  <a href="#acbda19a7b0bd4ebc7f8910637129d566">More...</a><br /></td></tr>
 <tr class="separator:acbda19a7b0bd4ebc7f8910637129d566"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ada1772d829698d3b51803b20b879d0b6"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ada1772d829698d3b51803b20b879d0b6"></a>
-vector&lt; <a class="el" href="classEdge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>edges_</b></td></tr>
+<tr class="memitem:ada1772d829698d3b51803b20b879d0b6"><td class="memItemLeft" align="right" valign="top">vector&lt; <a class="el" href="classEdge.html">Edge</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#ada1772d829698d3b51803b20b879d0b6">edges_</a></td></tr>
+<tr class="memdesc:ada1772d829698d3b51803b20b879d0b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output layers.  <a href="#ada1772d829698d3b51803b20b879d0b6">More...</a><br /></td></tr>
 <tr class="separator:ada1772d829698d3b51803b20b879d0b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f28a5e2b59eb986ee99b94f09f78a06"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2f28a5e2b59eb986ee99b94f09f78a06"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>max_iter_</b></td></tr>
+<tr class="memitem:a2f28a5e2b59eb986ee99b94f09f78a06"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConvNet.html#a2f28a5e2b59eb986ee99b94f09f78a06">max_iter_</a></td></tr>
+<tr class="memdesc:a2f28a5e2b59eb986ee99b94f09f78a06"><td class="mdescLeft">&#160;</td><td class="mdescRight">The edges in the network.  <a href="#a2f28a5e2b59eb986ee99b94f09f78a06">More...</a><br /></td></tr>
 <tr class="separator:a2f28a5e2b59eb986ee99b94f09f78a06"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a69a93febac1bf21ae4d005ba59a37fd7"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a69a93febac1bf21ae4d005ba59a37fd7"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>batch_size_</b></td></tr>
@@ -316,7 +308,89 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A Convolutional Net Model. </p>
+<p>This class provides the interface for training and using conv nets. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a class="anchor" id="a25353d323e9bd9e62e058b27dbc0d6e0"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::AllocateEdgeMemory </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>fprop_only</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Allocate memory for edges. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fprop_only</td><td>If true, does not allocate memory needed for optimization. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="a11262b0b65822295d06523fecfba7deb"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::AllocateLayerMemory </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Allocate layer memory for using mini-batches of batch_size_. </p>
+
+</div>
+</div>
+<a class="anchor" id="aa6efa305063df66a9363baa9aa80806c"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::AllocateMemory </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>fprop_only</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Allocate memory for the model. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">fprop_only</td><td>If true, does not allocate memory needed for optimization. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a class="anchor" id="adf84ba29173bdaf76811e53b30371059"></a>
 <div class="memitem">
 <div class="memproto">
@@ -375,6 +449,280 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
     <tr><td class="paramname">edge</td><td>the edge connecting the input to the output. </td></tr>
     <tr><td class="paramname">overwrite</td><td>If true, overwrite the deriv present in input, else add to it. </td></tr>
     <tr><td class="paramname">update_weights</td><td>If true, the weights will be updated. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="a78379554e7923d7949c7c111fa007097"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Bprop </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>update_weights</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Backpropagate through the network and update weights. </p>
+
+<p>Reimplemented in <a class="el" href="classMultiGPUConvNet.html#a211af934cd9e5ec5da7c97933b6e8d5a">MultiGPUConvNet</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="af1c2008d83336afc373bee99347551bb"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::BuildNet </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Creates layers and edges. </p>
+
+</div>
+</div>
+<a class="anchor" id="a18034a69678ee220a5192a58a3df38f6"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool ConvNet::CheckReduceLearningRate </td>
+          <td>(</td>
+          <td class="paramtype">const vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>val_error</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Decides if learning rate should be reduced. </p>
+
+</div>
+</div>
+<a class="anchor" id="a4afb5f6eec7ca48bbcdec8db49e18dce"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::ComputeDeriv </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the derivative of the loss function. </p>
+
+</div>
+</div>
+<a class="anchor" id="a452ecae43e29e3e500f61f2e1033fc9c"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::DestroyNet </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Release all memory held by the model. </p>
+
+</div>
+</div>
+<a class="anchor" id="a8649a90884e40f29a371d5b16bb00bd5"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Display </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Display the state of the model. </p>
+<p>Shows the layers and edges for which display is enabled. </p>
+
+</div>
+</div>
+<a class="anchor" id="a808a47dee4a28dd122ae6983b5c79bea"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::DumpOutputs </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>output_file</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classDataHandler.html">DataHandler</a> *&#160;</td>
+          <td class="paramname"><em>dataset</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const vector&lt; string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>layer_names</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write the state of the layers to disk. </p>
+<p>This method runs the model on the specified dataset and writes the layer states out to disk in a hdf5 file. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">output_file</td><td>The name of the output hdf5 file. </td></tr>
+    <tr><td class="paramname">dataset</td><td>The dataset to be run. </td></tr>
+    <tr><td class="paramname">layer_names</td><td>The names of the layers whose state needs to be written out. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="aef302bf04015a17b6b2c2751aea5be3a"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::DumpOutputs </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>output_file</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const vector&lt; string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>layer_names</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write the state of the layers to disk. </p>
+<p>This method runs the model on the train dataset and writes the layer states out to disk in a hdf5 file. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">output_file</td><td>The name of the output hdf5 file. </td></tr>
+    <tr><td class="paramname">layer_names</td><td>The names of the layers whose state needs to be written out. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="a59518a533d30641e5bdfcdda9066d2d5"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::DumpOutputs </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>output_file</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classDataHandler.html">DataHandler</a> *&#160;</td>
+          <td class="paramname"><em>dataset</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">vector&lt; <a class="el" href="classLayer.html">Layer</a> * &gt; &amp;&#160;</td>
+          <td class="paramname"><em>layers</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Write the state of the layers to disk. </p>
+<p>This method runs the model on the specified dataset and writes the layer states out to disk in a hdf5 file. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">output_file</td><td>The name of the output hdf5 file. </td></tr>
+    <tr><td class="paramname">dataset</td><td>The dataset to be run. </td></tr>
+    <tr><td class="paramname">layers</td><td>The layers whose state needs to be written out. </td></tr>
   </table>
   </dd>
 </dl>
@@ -472,6 +820,398 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
 
 </div>
 </div>
+<a class="anchor" id="a9a156eeaa43a09a35188b3052d5bef75"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::GetLoss </td>
+          <td>(</td>
+          <td class="paramtype">vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>error</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Computes the loss function (to be displayed). </p>
+
+<p>Reimplemented in <a class="el" href="classGradChecker.html#a426b1e8666f68ce1890e4a2fb262e566">GradChecker</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="ac1c3b1d62ac25a423220afa3ccf56184"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Load </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Load the model. </p>
+
+</div>
+</div>
+<a class="anchor" id="adb05e61ecca9d5d7cf143f8cb9ff4926"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Load </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>input_file</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Load the model from the file specified. </p>
+
+</div>
+</div>
+<a class="anchor" id="abacd8e3636287e19ca5bbbdf36cef1c7"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::ReduceLearningRate </td>
+          <td>(</td>
+          <td class="paramtype">const float&#160;</td>
+          <td class="paramname"><em>factor</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Multiply learning rate by factor. </p>
+
+</div>
+</div>
+<a class="anchor" id="ae7d42402468235019bbbfaadd5f007b0"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Save </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write the model to disk. </p>
+
+</div>
+</div>
+<a class="anchor" id="a854a0d1fb46f4ec62ed5d2c76db2e2fc"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Save </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>output_file</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Write the model to disk in the file specified. </p>
+
+</div>
+</div>
+<a class="anchor" id="a2ac3cd73d89861e145b95003bdcf0fd6"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Sort </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Topologically sort layers. </p>
+
+</div>
+</div>
+<a class="anchor" id="abf4d97bb7264d7cc8e8beeb550468710"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Train </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Start training. </p>
+
+</div>
+</div>
+<a class="anchor" id="aa8c13d7d61f1f9b7b051485c1c70d933"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::TrainOneBatch </td>
+          <td>(</td>
+          <td class="paramtype">vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>error</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Takes one optimization step. </p>
+
+</div>
+</div>
+<a class="anchor" id="a7f3f245c4e3c0e4059d0683b0e7b1ef3"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Validate </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classDataHandler.html">DataHandler</a> *&#160;</td>
+          <td class="paramname"><em>dataset</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>error</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validate the model on the specfied dataset and return the error. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">dataset</td><td>The dataset. </td></tr>
+    <tr><td class="paramname">error</td><td>A vector of errors (one element for each output layer). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a class="anchor" id="a05682abe2a19e80eb7f3bbe7daac9c71"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ConvNet::Validate </td>
+          <td>(</td>
+          <td class="paramtype">vector&lt; float &gt; &amp;&#160;</td>
+          <td class="paramname"><em>error</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validate the model on the validation dataset and return the error. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">error</td><td>A vector of errors (one element for each output layer). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a class="anchor" id="a2fc4c53f5b52737615299772867a1baf"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">vector&lt;<a class="el" href="classLayer.html">Layer</a>*&gt; ConvNet::data_layers_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The layers in the network. </p>
+
+</div>
+</div>
+<a class="anchor" id="ada1772d829698d3b51803b20b879d0b6"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">vector&lt;<a class="el" href="classEdge.html">Edge</a>*&gt; ConvNet::edges_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Output layers. </p>
+
+</div>
+</div>
+<a class="anchor" id="a2078e81e46a2878f199e438e10cb0ee1"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">vector&lt;<a class="el" href="classLayer.html">Layer</a>*&gt; ConvNet::input_layers_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Layers which have data associated with them. </p>
+
+</div>
+</div>
+<a class="anchor" id="af1ea3f2fe80b149b09eddd66766609f2"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">vector&lt;<a class="el" href="classLayer.html">Layer</a>*&gt; ConvNet::layers_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The model protobuf config. </p>
+
+</div>
+</div>
+<a class="anchor" id="a2f28a5e2b59eb986ee99b94f09f78a06"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int ConvNet::max_iter_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>The edges in the network. </p>
+
+</div>
+</div>
+<a class="anchor" id="acbda19a7b0bd4ebc7f8910637129d566"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">vector&lt;<a class="el" href="classLayer.html">Layer</a>*&gt; ConvNet::output_layers_</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Input layers. </p>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="convnet_8h_source.html">convnet.h</a></li>
 <li>src/convnet.cc</li>
@@ -479,7 +1219,7 @@ string&#160;</td><td class="memItemRight" valign="bottom"><b>val_log_file_</b></
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:14 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

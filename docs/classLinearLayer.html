@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -91,14 +91,19 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">LinearLayer Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Implements a layer with a linear activation function.  
+ <a href="classLinearLayer.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="layer_8h_source.html">layer.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for LinearLayer:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classLinearLayer.png" usemap="#LinearLayer_map" alt=""/>
   <map id="LinearLayer_map" name="LinearLayer_map">
-<area href="classLayer.html" alt="Layer" shape="rect" coords="0,0,81,24"/>
-<area href="classReLULayer.html" alt="ReLULayer" shape="rect" coords="0,112,81,136"/>
+<area href="classLayer.html" title="The base class for all layers. " alt="Layer" shape="rect" coords="0,0,81,24"/>
+<area href="classReLULayer.html" title="Implements a layer with a rectified linear activation function. " alt="ReLULayer" shape="rect" coords="0,112,81,136"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -107,43 +112,35 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aacb030cc97ee27d6ccb9a83ce61ea96e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aacb030cc97ee27d6ccb9a83ce61ea96e"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>LinearLayer</b> (const config::Layer &amp;config)</td></tr>
 <tr class="separator:aacb030cc97ee27d6ccb9a83ce61ea96e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e44c26e6da4d37ac0edf945d7a16146"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4e44c26e6da4d37ac0edf945d7a16146"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>AllocateMemory</b> (int imgsize, int batch_size)</td></tr>
+<tr class="memitem:a4e44c26e6da4d37ac0edf945d7a16146"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLinearLayer.html#a4e44c26e6da4d37ac0edf945d7a16146">AllocateMemory</a> (int imgsize, int batch_size)</td></tr>
+<tr class="memdesc:a4e44c26e6da4d37ac0edf945d7a16146"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate memory for storing the state and derivative at this layer.  <a href="#a4e44c26e6da4d37ac0edf945d7a16146">More...</a><br /></td></tr>
 <tr class="separator:a4e44c26e6da4d37ac0edf945d7a16146"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a143b4df134b9df7b3a56c78c4a1ce708"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a143b4df134b9df7b3a56c78c4a1ce708"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyActivation</b> (bool train)</td></tr>
+<tr class="memitem:a143b4df134b9df7b3a56c78c4a1ce708"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLinearLayer.html#a143b4df134b9df7b3a56c78c4a1ce708">ApplyActivation</a> (bool train)</td></tr>
+<tr class="memdesc:a143b4df134b9df7b3a56c78c4a1ce708"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the activation function.  <a href="#a143b4df134b9df7b3a56c78c4a1ce708">More...</a><br /></td></tr>
 <tr class="separator:a143b4df134b9df7b3a56c78c4a1ce708"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a53ff20c82bf7de8b33a07663c7c76404"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a53ff20c82bf7de8b33a07663c7c76404"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDerivativeOfActivation</b> ()</td></tr>
+<tr class="memitem:a53ff20c82bf7de8b33a07663c7c76404"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLinearLayer.html#a53ff20c82bf7de8b33a07663c7c76404">ApplyDerivativeOfActivation</a> ()</td></tr>
+<tr class="memdesc:a53ff20c82bf7de8b33a07663c7c76404"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply the derivative of the activation.  <a href="#a53ff20c82bf7de8b33a07663c7c76404">More...</a><br /></td></tr>
 <tr class="separator:a53ff20c82bf7de8b33a07663c7c76404"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afef2b24b5d0e305351c73c7eda630273"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afef2b24b5d0e305351c73c7eda630273"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>ComputeDeriv</b> ()</td></tr>
+<tr class="memitem:afef2b24b5d0e305351c73c7eda630273"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLinearLayer.html#afef2b24b5d0e305351c73c7eda630273">ComputeDeriv</a> ()</td></tr>
+<tr class="memdesc:afef2b24b5d0e305351c73c7eda630273"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute derivative of loss function.  <a href="#afef2b24b5d0e305351c73c7eda630273">More...</a><br /></td></tr>
 <tr class="separator:afef2b24b5d0e305351c73c7eda630273"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae73b0007f92660164da2c35dc66a9f25"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae73b0007f92660164da2c35dc66a9f25"></a>
-virtual float&#160;</td><td class="memItemRight" valign="bottom"><b>GetLoss</b> ()</td></tr>
+<tr class="memitem:ae73b0007f92660164da2c35dc66a9f25"><td class="memItemLeft" align="right" valign="top">virtual float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLinearLayer.html#ae73b0007f92660164da2c35dc66a9f25">GetLoss</a> ()</td></tr>
+<tr class="memdesc:ae73b0007f92660164da2c35dc66a9f25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the value of the loss function that is displayed during training.  <a href="#ae73b0007f92660164da2c35dc66a9f25">More...</a><br /></td></tr>
 <tr class="separator:ae73b0007f92660164da2c35dc66a9f25"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_classLayer"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_classLayer')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classLayer.html">Layer</a></td></tr>
 <tr class="memitem:a3f1aa6409f9dccd2a91c57ae011e52c9 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3f1aa6409f9dccd2a91c57ae011e52c9"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Layer</b> (const config::Layer &amp;config)</td></tr>
+&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a3f1aa6409f9dccd2a91c57ae011e52c9">Layer</a> (const config::Layer &amp;config)</td></tr>
+<tr class="memdesc:a3f1aa6409f9dccd2a91c57ae011e52c9 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Instantiate a layer from config. <br /></td></tr>
 <tr class="separator:a3f1aa6409f9dccd2a91c57ae011e52c9 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae0f832bc6eea199499a0f03b4a27a03c inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae0f832bc6eea199499a0f03b4a27a03c"></a>
-virtual float&#160;</td><td class="memItemRight" valign="bottom"><b>GetLoss2</b> ()</td></tr>
+<tr class="memitem:ae0f832bc6eea199499a0f03b4a27a03c inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top">virtual float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#ae0f832bc6eea199499a0f03b4a27a03c">GetLoss2</a> ()</td></tr>
+<tr class="memdesc:ae0f832bc6eea199499a0f03b4a27a03c inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the value of the actual loss function.  <a href="#ae0f832bc6eea199499a0f03b4a27a03c">More...</a><br /></td></tr>
 <tr class="separator:ae0f832bc6eea199499a0f03b4a27a03c inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb724a0ce50186c378a4a20c5d0f8629 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acb724a0ce50186c378a4a20c5d0f8629"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDropout</b> (bool train)</td></tr>
+<tr class="memitem:acb724a0ce50186c378a4a20c5d0f8629 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#acb724a0ce50186c378a4a20c5d0f8629">ApplyDropout</a> (bool train)</td></tr>
+<tr class="memdesc:acb724a0ce50186c378a4a20c5d0f8629 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply dropout to this layer.  <a href="#acb724a0ce50186c378a4a20c5d0f8629">More...</a><br /></td></tr>
 <tr class="separator:acb724a0ce50186c378a4a20c5d0f8629 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51a0f152982c8a0a761ca060f6b08f91 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a51a0f152982c8a0a761ca060f6b08f91"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDropoutAtTrainTime</b> ()</td></tr>
-<tr class="separator:a51a0f152982c8a0a761ca060f6b08f91 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a630bb8877f17429ad3872ef0a9dae31b inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a630bb8877f17429ad3872ef0a9dae31b"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDropoutAtTestTime</b> ()</td></tr>
-<tr class="separator:a630bb8877f17429ad3872ef0a9dae31b inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa7504a69d40d83850418bac12d8908c9 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa7504a69d40d83850418bac12d8908c9"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDerivativeofDropout</b> ()</td></tr>
+<tr class="memitem:aa7504a69d40d83850418bac12d8908c9 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#aa7504a69d40d83850418bac12d8908c9">ApplyDerivativeofDropout</a> ()</td></tr>
+<tr class="memdesc:aa7504a69d40d83850418bac12d8908c9 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Apply derivative of dropout.  <a href="#aa7504a69d40d83850418bac12d8908c9">More...</a><br /></td></tr>
 <tr class="separator:aa7504a69d40d83850418bac12d8908c9 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9d1f0f0365602fa2b9dc93d5b038e43 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae9d1f0f0365602fa2b9dc93d5b038e43"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>AllocateMemoryEdges</b> (int image_size)</td></tr>
-<tr class="separator:ae9d1f0f0365602fa2b9dc93d5b038e43 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7e0c7b2b2cd8f4b2d29425774e8059f9 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7e0c7b2b2cd8f4b2d29425774e8059f9"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>AccessStateBegin</b> ()</td></tr>
 <tr class="separator:a7e0c7b2b2cd8f4b2d29425774e8059f9 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -156,17 +153,17 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>AccessDerivBegin</b> 
 <tr class="memitem:af160cabb61ad811c1a0a94fde4446658 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af160cabb61ad811c1a0a94fde4446658"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>AccessDerivEnd</b> ()</td></tr>
 <tr class="separator:af160cabb61ad811c1a0a94fde4446658 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f2666b65b7f87761eda1c31f9a8205a inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a9f2666b65b7f87761eda1c31f9a8205a"></a>
-<a class="el" href="classEdge.html">Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>GetIncomingEdge</b> (int index)</td></tr>
+<tr class="memitem:a9f2666b65b7f87761eda1c31f9a8205a inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classEdge.html">Edge</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a9f2666b65b7f87761eda1c31f9a8205a">GetIncomingEdge</a> (int index)</td></tr>
+<tr class="memdesc:a9f2666b65b7f87761eda1c31f9a8205a inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the incoming edge by index.  <a href="#a9f2666b65b7f87761eda1c31f9a8205a">More...</a><br /></td></tr>
 <tr class="separator:a9f2666b65b7f87761eda1c31f9a8205a inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa56bf8224bdb28fcfe2ded6984513a54 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa56bf8224bdb28fcfe2ded6984513a54"></a>
-<a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetState</b> ()</td></tr>
+<tr class="memitem:aa56bf8224bdb28fcfe2ded6984513a54 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#aa56bf8224bdb28fcfe2ded6984513a54">GetState</a> ()</td></tr>
+<tr class="memdesc:aa56bf8224bdb28fcfe2ded6984513a54 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a reference to the state of the layer.  <a href="#aa56bf8224bdb28fcfe2ded6984513a54">More...</a><br /></td></tr>
 <tr class="separator:aa56bf8224bdb28fcfe2ded6984513a54 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2cedc2d2f67df3e7011adeb8eeed7516 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2cedc2d2f67df3e7011adeb8eeed7516"></a>
-<a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetDeriv</b> ()</td></tr>
+<tr class="memitem:a2cedc2d2f67df3e7011adeb8eeed7516 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a2cedc2d2f67df3e7011adeb8eeed7516">GetDeriv</a> ()</td></tr>
+<tr class="memdesc:a2cedc2d2f67df3e7011adeb8eeed7516 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a reference to the deriv at this layer.  <a href="#a2cedc2d2f67df3e7011adeb8eeed7516">More...</a><br /></td></tr>
 <tr class="separator:a2cedc2d2f67df3e7011adeb8eeed7516 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c33d8784bf6a213cb8dbe9269cef213 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2c33d8784bf6a213cb8dbe9269cef213"></a>
-<a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetData</b> ()</td></tr>
+<tr class="memitem:a2c33d8784bf6a213cb8dbe9269cef213 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a2c33d8784bf6a213cb8dbe9269cef213">GetData</a> ()</td></tr>
+<tr class="memdesc:a2c33d8784bf6a213cb8dbe9269cef213 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a reference to the data at this layer.  <a href="#a2c33d8784bf6a213cb8dbe9269cef213">More...</a><br /></td></tr>
 <tr class="separator:a2c33d8784bf6a213cb8dbe9269cef213 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4755659498ee98580ec59fd9fa5e3a32 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4755659498ee98580ec59fd9fa5e3a32"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>Display</b> ()</td></tr>
@@ -174,11 +171,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>Display</b> ()</td></
 <tr class="memitem:ab536ac5f0cf121ac62fabe67675ad5e7 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab536ac5f0cf121ac62fabe67675ad5e7"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>Display</b> (int image_id)</td></tr>
 <tr class="separator:ab536ac5f0cf121ac62fabe67675ad5e7 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a02dafb94dcfc454e1bc7771df7c17e63 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a02dafb94dcfc454e1bc7771df7c17e63"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>AddIncoming</b> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memitem:a02dafb94dcfc454e1bc7771df7c17e63 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a02dafb94dcfc454e1bc7771df7c17e63">AddIncoming</a> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memdesc:a02dafb94dcfc454e1bc7771df7c17e63 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an incoming edge to this layer.  <a href="#a02dafb94dcfc454e1bc7771df7c17e63">More...</a><br /></td></tr>
 <tr class="separator:a02dafb94dcfc454e1bc7771df7c17e63 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a621f3815368d1146eb2cd1869e129521 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a621f3815368d1146eb2cd1869e129521"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>AddOutgoing</b> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memitem:a621f3815368d1146eb2cd1869e129521 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a621f3815368d1146eb2cd1869e129521">AddOutgoing</a> (<a class="el" href="classEdge.html">Edge</a> *e)</td></tr>
+<tr class="memdesc:a621f3815368d1146eb2cd1869e129521 inherit pub_methods_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an outgoing edge from this layer.  <a href="#a621f3815368d1146eb2cd1869e129521">More...</a><br /></td></tr>
 <tr class="separator:a621f3815368d1146eb2cd1869e129521 inherit pub_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ac6a0905fe01cd02b063972c4b74604 inherit pub_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2ac6a0905fe01cd02b063972c4b74604"></a>
 const string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>GetName</b> () const </td></tr>
@@ -245,6 +242,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_incoming_from_oth
 <tr class="memitem:a2978920c4caabde4d572012713d3f813 inherit pub_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a2978920c4caabde4d572012713d3f813"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_outgoing_to_other_gpus_</b></td></tr>
 <tr class="separator:a2978920c4caabde4d572012713d3f813 inherit pub_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_methods_classLayer"><td colspan="2" onclick="javascript:toggleInherit('pro_methods_classLayer')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classLayer.html">Layer</a></td></tr>
+<tr class="memitem:a51a0f152982c8a0a761ca060f6b08f91 inherit pro_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a51a0f152982c8a0a761ca060f6b08f91"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDropoutAtTrainTime</b> ()</td></tr>
+<tr class="separator:a51a0f152982c8a0a761ca060f6b08f91 inherit pro_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a630bb8877f17429ad3872ef0a9dae31b inherit pro_methods_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a630bb8877f17429ad3872ef0a9dae31b"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>ApplyDropoutAtTestTime</b> ()</td></tr>
+<tr class="separator:a630bb8877f17429ad3872ef0a9dae31b inherit pro_methods_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_attribs_classLayer"><td colspan="2" onclick="javascript:toggleInherit('pro_attribs_classLayer')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classLayer.html">Layer</a></td></tr>
 <tr class="memitem:afb6eef1d8b0d248f90d1de036126a204 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afb6eef1d8b0d248f90d1de036126a204"></a>
 const string&#160;</td><td class="memItemRight" valign="bottom"><b>name_</b></td></tr>
@@ -282,23 +286,23 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>image_size_</b></td></
 <tr class="memitem:a204f9dd7538928accf45d37a3a0c30a3 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a204f9dd7538928accf45d37a3a0c30a3"></a>
 <a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>state_</b></td></tr>
 <tr class="separator:a204f9dd7538928accf45d37a3a0c30a3 inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb100825a2187c847a07a7a621ffcfd0 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acb100825a2187c847a07a7a621ffcfd0"></a>
-<a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>deriv_</b></td></tr>
+<tr class="memitem:acb100825a2187c847a07a7a621ffcfd0 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#acb100825a2187c847a07a7a621ffcfd0">deriv_</a></td></tr>
+<tr class="memdesc:acb100825a2187c847a07a7a621ffcfd0 inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">State (activation) of the layer.  <a href="#acb100825a2187c847a07a7a621ffcfd0">More...</a><br /></td></tr>
 <tr class="separator:acb100825a2187c847a07a7a621ffcfd0 inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6286dc480b66529ae9435ef0427c0713 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a6286dc480b66529ae9435ef0427c0713"></a>
-<a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>data_</b></td></tr>
+<tr class="memitem:a6286dc480b66529ae9435ef0427c0713 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a6286dc480b66529ae9435ef0427c0713">data_</a></td></tr>
+<tr class="memdesc:a6286dc480b66529ae9435ef0427c0713 inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deriv of the loss function w.r.t.  <a href="#a6286dc480b66529ae9435ef0427c0713">More...</a><br /></td></tr>
 <tr class="separator:a6286dc480b66529ae9435ef0427c0713 inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a23f399ece6efb808caf36cb61d8e2d4c inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a23f399ece6efb808caf36cb61d8e2d4c"></a>
-<a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rand_gaussian_</b></td></tr>
+<tr class="memitem:a23f399ece6efb808caf36cb61d8e2d4c inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMatrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a23f399ece6efb808caf36cb61d8e2d4c">rand_gaussian_</a></td></tr>
+<tr class="memdesc:a23f399ece6efb808caf36cb61d8e2d4c inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Data (targets) associated with this layer.  <a href="#a23f399ece6efb808caf36cb61d8e2d4c">More...</a><br /></td></tr>
 <tr class="separator:a23f399ece6efb808caf36cb61d8e2d4c inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9ced18e81ae35e69cb7058c9e0cb290 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af9ced18e81ae35e69cb7058c9e0cb290"></a>
-map&lt; int, <a class="el" href="classMatrix.html">Matrix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>other_states_</b></td></tr>
+<tr class="memitem:af9ced18e81ae35e69cb7058c9e0cb290 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top">map&lt; int, <a class="el" href="classMatrix.html">Matrix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#af9ced18e81ae35e69cb7058c9e0cb290">other_states_</a></td></tr>
+<tr class="memdesc:af9ced18e81ae35e69cb7058c9e0cb290 inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Need to store random variates when doing gaussian dropout.  <a href="#af9ced18e81ae35e69cb7058c9e0cb290">More...</a><br /></td></tr>
 <tr class="separator:af9ced18e81ae35e69cb7058c9e0cb290 inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4dae3436dd8e32dafd1e579b7626502d inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4dae3436dd8e32dafd1e579b7626502d"></a>
-map&lt; int, <a class="el" href="classMatrix.html">Matrix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>other_derivs_</b></td></tr>
+<tr class="memitem:a4dae3436dd8e32dafd1e579b7626502d inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top">map&lt; int, <a class="el" href="classMatrix.html">Matrix</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#a4dae3436dd8e32dafd1e579b7626502d">other_derivs_</a></td></tr>
+<tr class="memdesc:a4dae3436dd8e32dafd1e579b7626502d inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies of this layer's state on other gpus.  <a href="#a4dae3436dd8e32dafd1e579b7626502d">More...</a><br /></td></tr>
 <tr class="separator:a4dae3436dd8e32dafd1e579b7626502d inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab6e4370bf21dc6bcd578610f23900dc4 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ab6e4370bf21dc6bcd578610f23900dc4"></a>
-<a class="el" href="classImageDisplayer.html">ImageDisplayer</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>img_display_</b></td></tr>
+<tr class="memitem:ab6e4370bf21dc6bcd578610f23900dc4 inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classImageDisplayer.html">ImageDisplayer</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classLayer.html#ab6e4370bf21dc6bcd578610f23900dc4">img_display_</a></td></tr>
+<tr class="memdesc:ab6e4370bf21dc6bcd578610f23900dc4 inherit pro_attribs_classLayer"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies of this layer's deriv on other gpus.  <a href="#ab6e4370bf21dc6bcd578610f23900dc4">More...</a><br /></td></tr>
 <tr class="separator:ab6e4370bf21dc6bcd578610f23900dc4 inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7d7fa968bd9047e34fa5456b79eea95c inherit pro_attribs_classLayer"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7d7fa968bd9047e34fa5456b79eea95c"></a>
 const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td></tr>
@@ -310,6 +314,176 @@ set&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>other_inc
 set&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>other_outgoing_gpu_ids_</b></td></tr>
 <tr class="separator:a79114ff4972822039920663ae731ce2e inherit pro_attribs_classLayer"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Implements a layer with a linear activation function. </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a class="anchor" id="a4e44c26e6da4d37ac0edf945d7a16146"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LinearLayer::AllocateMemory </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>imgsize</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>batch_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Allocate memory for storing the state and derivative at this layer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">imgsize</td><td>The spatial size of the layer (width and height). </td></tr>
+    <tr><td class="paramname">batch_size</td><td>The mini-batch size. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented from <a class="el" href="classLayer.html#a6374c4746482820b10b2c00a68c98f3d">Layer</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a143b4df134b9df7b3a56c78c4a1ce708"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LinearLayer::ApplyActivation </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>train</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Apply the activation function. </p>
+<p>Derived classes must implement this. This method applies the activation function to the state_ and overwrites it. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">train</td><td>If true, use dropout. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Implements <a class="el" href="classLayer.html#a0da18813ed5e0ac4e5111de5a9256a0f">Layer</a>.</p>
+
+<p>Reimplemented in <a class="el" href="classReLULayer.html#abc06132feaf7eb4b1eacd812f263a566">ReLULayer</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="a53ff20c82bf7de8b33a07663c7c76404"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LinearLayer::ApplyDerivativeOfActivation </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Apply the derivative of the activation. </p>
+<p>Derived classes must implement this. Computes the derivative w.r.t the inputs to this layer from the derivative w.r.t the outputs of this layer. Applies the derivative of the activation function to deriv_ and overwrites it. </p>
+
+<p>Implements <a class="el" href="classLayer.html#ad160cbfae07605b2c908e86cc33444a1">Layer</a>.</p>
+
+<p>Reimplemented in <a class="el" href="classReLULayer.html#ab1f259fcf5d0c6aa2beccde84450782b">ReLULayer</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="afef2b24b5d0e305351c73c7eda630273"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void LinearLayer::ComputeDeriv </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Compute derivative of loss function. </p>
+<p>This is applicable only if this layer is an output layer. </p>
+
+<p>Implements <a class="el" href="classLayer.html#abe3aeb2e8c83dca546253e9c87f950d7">Layer</a>.</p>
+
+</div>
+</div>
+<a class="anchor" id="ae73b0007f92660164da2c35dc66a9f25"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">float LinearLayer::GetLoss </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Compute the value of the loss function that is displayed during training. </p>
+<p>This is applicable only if this layer is an output layer. </p>
+
+<p>Implements <a class="el" href="classLayer.html#ae4e0af00ad9c9c31e4670845be898e22">Layer</a>.</p>
+
+</div>
+</div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="layer_8h_source.html">layer.h</a></li>
 <li>src/layer.cc</li>
@@ -317,7 +491,7 @@ set&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>other_out
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:30 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:18 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

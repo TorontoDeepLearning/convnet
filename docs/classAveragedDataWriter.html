@@ -73,7 +73,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(4)"><span class="SelectionMark">&#160;</span>Variables</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -91,13 +91,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="title">AveragedDataWriter Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Buffers a specified number of batches, averages them and then writes the average into an HDF5 file.  
+ <a href="classAveragedDataWriter.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="datahandler_8h_source.html">datahandler.h</a>&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for AveragedDataWriter:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classAveragedDataWriter.png" usemap="#AveragedDataWriter_map" alt=""/>
   <map id="AveragedDataWriter_map" name="AveragedDataWriter_map">
-<area href="classDataWriter.html" alt="DataWriter" shape="rect" coords="0,0,128,24"/>
+<area href="classDataWriter.html" title="Writes data into an HDF5 file. " alt="DataWriter" shape="rect" coords="0,0,128,24"/>
 </map>
  </div></div>
 <table class="memberdecls">
@@ -117,14 +122,16 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>Write</b> (<a
 &#160;</td><td class="memItemRight" valign="bottom"><b>DataWriter</b> (const string &amp;output_file, const int dataset_size)</td></tr>
 <tr class="separator:a2af8ab8650ac5f3a3527dcf261d1f8e5 inherit pub_methods_classDataWriter"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following files:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Buffers a specified number of batches, averages them and then writes the average into an HDF5 file. </p>
+</div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="datahandler_8h_source.html">datahandler.h</a></li>
 <li>src/datahandler.cc</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:42:14 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>
