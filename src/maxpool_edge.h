@@ -2,6 +2,7 @@
 #define MAXPOOL_EDGE_H_
 #include "edge.h"
 
+/** Implements a Max-pool edge.*/
 class MaxPoolEdge : public Edge {
  public:
   MaxPoolEdge(const config::Edge& edge_config);

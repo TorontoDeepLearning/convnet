@@ -29,28 +29,15 @@
 using namespace cimg_library;
 using namespace std;
 
-struct box {
-  int xmin, xmax, ymin, ymax, label;
-  float confidence;
-  bool is_neg;
-};
-
-/* This structure mirrors the one found in /usr/include/asm/ucontext.h */
-typedef struct _sig_ucontext {
-  unsigned long     uc_flags;
-  struct ucontext   *uc_link;
-  stack_t           uc_stack;
-  struct sigcontext uc_mcontext;
-  sigset_t          uc_sigmask;
-} sig_ucontext_t;
-
+// Outputs a string that describes the err_code.
 string GetStringError(int err_code);
-void ReadModel(const string& model_file, config::Model *model);
-void ReadModelText(const string& model_file, config::Model *model);
-void ReadDataConfig(const string& data_config_file, config::DatasetConfig *data_config);
-void ReadLayerConfig(const string& layer_config_file, config::Layer *layer_config);
-void WriteModelBinary(const string& output_file, config::Model *model);
-void ReadModelBinary(const string& input_file, config::Model *model);
+// Reads model_file from the disk and instantiates a Model.
+void ReadModel(const string& model_file, config::Model& model);
+void ReadModelText(const string& model_file, config::Model& model);
+void ReadDataConfig(const string& data_config_file, config::DatasetConfig& data_config);
+void ReadLayerConfig(const string& layer_config_file, config::Layer& layer_config);
+void WriteModelBinary(const string& output_file, const config::Model& model);
+void ReadModelBinary(const string& input_file, config::Model& model);
 void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name);
 void ReadHDF5IntAttr(hid_t file, const string& name, int* val);
 void WriteHDF5IntAttr(hid_t file, const string& name, const int* val);

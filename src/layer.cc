@@ -180,9 +180,6 @@ void Layer::AllocateMemory(int image_size, int batch_size) {
   }
 }
 
-void Layer::AllocateMemoryEdges(int image_size) {
-}
-
 void Layer::ApplyDropoutAtTrainTime() {
   if (dropprob_ > 0) {
     cudamat* state = state_.GetMat();

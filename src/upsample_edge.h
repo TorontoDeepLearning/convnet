@@ -2,6 +2,9 @@
 #define UPSAMPLE_EDGE_H_
 #include "edge.h"
 
+/** Implements an up-sampling edge.
+ * Only integer up-sampling factors are supported.
+ */ 
 class UpSampleEdge : public Edge {
  public:
   UpSampleEdge(const config::Edge& edge_config);

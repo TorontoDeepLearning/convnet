@@ -2,6 +2,8 @@
 #define CONV_ONETOONE_EDGE_H_
 #include "edge_with_weight.h"
 
+/** An edge with one-to-one connectivity over spatial locations.
+ */ 
 class ConvOneToOneEdge : public EdgeWithWeight {
  public:
   ConvOneToOneEdge(const config::Edge& edge_config);

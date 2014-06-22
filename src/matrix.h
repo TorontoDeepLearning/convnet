@@ -7,6 +7,7 @@
 #include <vector>
 using namespace std;
 
+/** A GPU matrix class.*/
 class Matrix {
  public:
   Matrix();

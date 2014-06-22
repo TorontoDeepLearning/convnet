@@ -9,6 +9,10 @@
 using namespace cimg_library;
 using namespace std;
 
+/** An iterator over list of image files.
+ * Takes a list of image files and iterates over them.
+ * Images are cropped, jittered, flip etc.
+ */ 
 template<typename T>
 class RawImageFileIterator {
  public:
@@ -33,6 +37,7 @@ class RawImageFileIterator {
   CImgDisplay* disp_;
 };
 
+/** An iterator over sliding windows of an image.*/
 template<typename T>
 class SlidingWindowIterator {
  public:

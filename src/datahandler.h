@@ -5,6 +5,12 @@
 #include <random>
 #include <thread>
 class DataIterator;
+
+/** Makes data accessible to the model.
+ * Provides a GetBatch() method that is used by the model to fetch
+ * mini-batches.
+ * Handles multiple streams of data.
+ */ 
 class DataHandler {
  public:
   DataHandler(const config::DatasetConfig& config);
@@ -41,6 +47,11 @@ class DataHandler {
   const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
 };
 
+/** Base class for implementing data iterators.
+ * Each data iterator handles a single stream of data.
+ * All derived classes must implement the GetNext() method
+ * and override the Seek() method appripriately.
+ */ 
 class DataIterator {
  public:
   DataIterator(const config::DataStreamConfig& config);
@@ -68,12 +79,17 @@ class DataIterator {
   const float pca_noise_stddev_; 
 };
 
+/** A dummy iterator.
+ * Returns random numbers.
+ */ 
 class DummyDataIterator : public DataIterator {
  public:
   DummyDataIterator(const config::DataStreamConfig& config);
   void GetNext(float* data_out);
 };
 
+/** An iterator over a dataset in an HDF5 file.
+ * T specifies the type of data being iterated over.*/
 template <typename T>
 class HDF5DataIterator : public DataIterator {
  public:
@@ -88,6 +104,7 @@ class HDF5DataIterator : public DataIterator {
   T* buf_;
 };
 
+/** An iterator over images stored as individual files.*/
 class ImageDataIterator : public DataIterator {
  public:
   ImageDataIterator(const config::DataStreamConfig& config);
@@ -101,6 +118,7 @@ class ImageDataIterator : public DataIterator {
   const int raw_image_size_, image_size_;
 };
 
+/** An iterator over sliding windows of an image dataset.*/
 class SlidingWindowDataIterator : public DataIterator {
  public:
   SlidingWindowDataIterator(const config::DataStreamConfig& config);
@@ -116,6 +134,10 @@ class SlidingWindowDataIterator : public DataIterator {
   int file_id_;
 };
 
+/** An iterator over data stored in a text file.
+ * Each data vector on a new line.
+ * Whitespace separated.
+ */
 class TextDataIterator : public DataIterator {
  public:
   TextDataIterator(const config::DataStreamConfig& config);
@@ -126,6 +148,9 @@ class TextDataIterator : public DataIterator {
   float* data_;
 };
 
+/** Writes data into an HDF5 file.
+ * Handles multiple output streams.
+ */ 
 class DataWriter {
  public:
   DataWriter(const string& output_file, const int dataset_size);
@@ -143,6 +168,9 @@ class DataWriter {
   int num_streams_;
 };
 
+/** Buffers a specified number of batches, averages them and then writes
+ * the average into an HDF5 file.
+ */ 
 class AveragedDataWriter : public DataWriter {
  public:
   AveragedDataWriter(const string& output_file, const int dataset_size,
@@ -156,6 +184,9 @@ class AveragedDataWriter : public DataWriter {
   vector<int> counter_;
 };
 
+/** Averages a specified number of consecutive entries and writes the
+ * average into an HDF5 file.
+ */
 class SequentialAveragedDataWriter : public DataWriter {
  public:
   SequentialAveragedDataWriter(const string& output_file, const int dataset_size,
@@ -171,4 +202,3 @@ class SequentialAveragedDataWriter : public DataWriter {
 };
 
 #endif
-

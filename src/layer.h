@@ -3,42 +3,90 @@
 #include "edge.h"
 #include <set>
 
+/** The base class for all layers.
+ * Each layer has a state_ and deriv_.
+ */ 
 class Layer {
  public:
+  /** Instantiate a layer from config. */ 
   Layer(const config::Layer& config);
   ~Layer();
 
+  /** Allocate memory for storing the state and derivative at this layer.
+   * @param imgsize The spatial size of the layer (width and height).
+   * @param batch_size The mini-batch size.
+   */ 
   virtual void AllocateMemory(int imgsize, int batch_size);
-  virtual void ApplyActivation(bool train) = 0; 
+
+  /** Apply the activation function.
+   * Derived classes must implement this. This method applies the activation
+   * function to the state_ and overwrites it.
+   * @param train If true, use dropout.
+   */ 
+  virtual void ApplyActivation(bool train) = 0;
+
+  /** Apply the derivative of the activation.
+   * Derived classes must implement this. Computes the derivative w.r.t the
+   * inputs to this layer from the derivative w.r.t the outputs of this layer.
+   * Applies the derivative of the activation function to deriv_ and overwrites
+   * it.
+   */ 
   virtual void ApplyDerivativeOfActivation() = 0;
+
+  /** Compute derivative of loss function.
+   * This is applicable only if this layer is an output layer.
+   */ 
   virtual void ComputeDeriv() = 0;
+
+  /** Compute the value of the loss function that is displayed during training.
+   * This is applicable only if this layer is an output layer.
+   */ 
   virtual float GetLoss() = 0;
-  virtual float GetLoss2();  // For computing a loss that grad check cares about.
 
+  /** Compute the value of the actual loss function.
+   * This is applicable only if this layer is an output layer.
+   */ 
+  virtual float GetLoss2();
+
+  /** Apply dropout to this layer.
+   * @param train If train is true, drop units stochastically,
+   * else use all the units.
+   */ 
   void ApplyDropout(bool train);
-  void ApplyDropoutAtTrainTime();
-  void ApplyDropoutAtTestTime();
-  void ApplyDerivativeofDropout();
-  void AllocateMemoryEdges(int image_size);
 
-  // Methods for prevent race conditions when using multiple GPUs.
+  /** Apply derivative of dropout.
+   * This method scales the derivative to compensate for dropout.
+   */ 
+  void ApplyDerivativeofDropout();
+
+  // Methods for preventing race conditions when using multiple GPUs.
   void AccessStateBegin();
   void AccessStateEnd();
   void AccessDerivBegin();
   void AccessDerivEnd();
 
+  /** Returns the incoming edge by index. */
   Edge* GetIncomingEdge(int index) { return incoming_edge_[index]; }  // TODO:add check for size.
+
+  /** Returns a reference to the state of the layer.*/
   Matrix& GetState() { return state_;}
+
+  /** Returns a reference to the deriv at this layer.*/
   Matrix& GetDeriv() { return deriv_;}
+  
+  /** Returns a reference to the data at this layer.*/
   Matrix& GetData() { return data_;}
 
   void Display();
   void Display(int image_id);
 
+  /** Add an incoming edge to this layer.*/
   void AddIncoming(Edge* e);
+
+  /** Add an outgoing edge from this layer.*/
   void AddOutgoing(Edge* e);
 
-  const string& GetName() const { return name_; };
+  const string& GetName() const { return name_; }
   int GetNumChannels() const { return num_channels_; }
   int GetSize() const { return image_size_; }
   bool IsInput() const { return is_input_; }
@@ -60,6 +108,9 @@ class Layer {
   bool has_incoming_from_other_gpus_, has_outgoing_to_other_gpus_;
 
  protected:
+  void ApplyDropoutAtTrainTime();
+  void ApplyDropoutAtTestTime();
+
   const string name_;
   const int num_channels_;
   const bool is_input_, is_output_;
@@ -72,18 +123,19 @@ class Layer {
 
   int scale_targets_, image_size_;
 
-  Matrix state_;  // State (activation) of the layer.
-  Matrix deriv_;  // Deriv of the objective function w.r.t. the state.
-  Matrix data_;   // Data (inputs or targets) associated with this layer.
-  Matrix rand_gaussian_;  // We need to store random variates when doing gaussian dropout.
-  map<int, Matrix> other_states_; // Layer copies on other gpus.
-  map<int, Matrix> other_derivs_; // Layer copies on other gpus.
+  Matrix state_;  /** State (activation) of the layer. */
+  Matrix deriv_;  /** Deriv of the loss function w.r.t. the state. */
+  Matrix data_;   /** Data (targets) associated with this layer. */
+  Matrix rand_gaussian_;  /** Need to store random variates when doing gaussian dropout. */
+  map<int, Matrix> other_states_; /** Copies of this layer's state on other gpus.*/
+  map<int, Matrix> other_derivs_; /** Copies of this layer's deriv on other gpus.*/
 
   ImageDisplayer *img_display_;
   const int gpu_id_;
   set<int> other_incoming_gpu_ids_, other_outgoing_gpu_ids_;
 };
 
+/** Implements a layer with a linear activation function.*/
 class LinearLayer : public Layer {
  public:
   LinearLayer(const config::Layer& config) : Layer(config) {};
@@ -94,6 +146,7 @@ class LinearLayer : public Layer {
   virtual float GetLoss();
 };
 
+/** Implements a layer with a rectified linear activation function.*/
 class ReLULayer : public LinearLayer {
  public:
   ReLULayer(const config::Layer& config);
@@ -103,6 +156,9 @@ class ReLULayer : public LinearLayer {
   const bool rectify_after_gaussian_dropout_;
 };
 
+/** Implements a layer with a softmax activation function.
+ * This must be an output layer. The target must be one of K choices.
+ */
 class SoftmaxLayer : public Layer {
  public:
   SoftmaxLayer(const config::Layer& config) : Layer(config) {};
@@ -114,6 +170,10 @@ class SoftmaxLayer : public Layer {
   virtual float GetLoss2();
 };
 
+/** Implements a layer with a softmax activation function.
+ * This must be an output layer.
+ * The target must be a distribution over K choices.
+ */
 class SoftmaxDistLayer : public SoftmaxLayer {
  public:
   SoftmaxDistLayer(const config::Layer& config) : SoftmaxLayer(config) {};
@@ -125,6 +185,8 @@ class SoftmaxDistLayer : public SoftmaxLayer {
   Matrix cross_entropy_;
 };
 
+/** Implements a layer with a logistic activation function.
+ */ 
 class LogisticLayer : public Layer {
  public:
   LogisticLayer(const config::Layer& config) : Layer(config) {};

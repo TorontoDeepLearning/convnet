@@ -3,7 +3,9 @@
 #include "edge.h"
 #include "optimizer.h"
 
-// All edges which have trainable parameters should inherit from this class.
+/** Base class for all edges which have weights.
+ * All edges which have trainable parameters should inherit from this class.
+ */ 
 class EdgeWithWeight : public Edge {
  public:
   EdgeWithWeight(const config::Edge& edge_config);

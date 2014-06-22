@@ -11,20 +11,19 @@
 
 using namespace std;
 ConvNet::ConvNet(const string& model_file):
-  model_(NULL), max_iter_(0), batch_size_(0), current_iter_(0),
+  max_iter_(0), batch_size_(0), current_iter_(0),
   lr_reduce_counter_(0),
   train_dataset_(NULL), val_dataset_(NULL),
   model_filename_(model_file) {
-  model_ = new config::Model;
   ReadModel(model_file, model_);
-  Matrix::InitRandom(model_->seed());
-  srand(model_->seed());
-  model_name_ = model_->name();
-  checkpoint_dir_ = model_->checkpoint_dir();
+  Matrix::InitRandom(model_.seed());
+  srand(model_.seed());
+  model_name_ = model_.name();
+  checkpoint_dir_ = model_.checkpoint_dir();
 
-  int num_tstampts = model_->timestamp_size();
+  int num_tstampts = model_.timestamp_size();
   if (num_tstampts > 0) {
-    timestamp_ = model_->timestamp(num_tstampts - 1);
+    timestamp_ = model_.timestamp(num_tstampts - 1);
   }
   BuildNet();  // Build a net using the connectivity specified in model_.
 }
@@ -33,7 +32,6 @@ ConvNet::~ConvNet() {
   DestroyNet();
   if (val_dataset_ != NULL) delete val_dataset_;
   if (train_dataset_ != NULL) delete train_dataset_;
-  delete model_;
 }
 
 void ConvNet::DestroyNet() {
@@ -42,12 +40,12 @@ void ConvNet::DestroyNet() {
 }
 
 void ConvNet::BuildNet() {
-  layers_.resize(model_->layer_size());
-  edges_.resize(model_->edge_size());
+  layers_.resize(model_.layer_size());
+  edges_.resize(model_.edge_size());
 
   // Setup edges.
   for (int i = 0; i < edges_.size(); i++) {
-    edges_[i] = Edge::ChooseEdgeClass(model_->edge(i));
+    edges_[i] = Edge::ChooseEdgeClass(model_.edge(i));
   }
 
   // Communicate information about tied edges.
@@ -63,7 +61,7 @@ void ConvNet::BuildNet() {
 
   // Setup layers.
   for (int i = 0; i < layers_.size(); i++) {
-    layers_[i] = Layer::ChooseLayerClass(model_->layer(i));
+    layers_[i] = Layer::ChooseLayerClass(model_.layer(i));
     for (Edge* e : edges_) {
       if (layers_[i]->GetName().compare(e->GetSourceName()) == 0) {
         layers_[i]->AddOutgoing(e);
@@ -91,14 +89,13 @@ void ConvNet::BuildNet() {
   }
 }
 
-// Allocate layer memory for using mini-batches of batch_size_.
 void ConvNet::AllocateLayerMemory() {
   cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
   int image_size;
   for (Layer* l : layers_) {
     // Find out the spatial size of the layer.
     if (l->IsInput()) {
-      image_size = model_->patch_size();
+      image_size = model_.patch_size();
     } else {
       image_size = 0;
       for (Edge* e: l->incoming_edge_) {
@@ -114,7 +111,6 @@ void ConvNet::AllocateLayerMemory() {
   }
 }
 
-// Allocate memory for edges.
 void ConvNet::AllocateEdgeMemory(bool fprop_only) {
   for (Edge* e : edges_) e->AllocateMemory(fprop_only);
 
@@ -126,7 +122,6 @@ void ConvNet::AllocateEdgeMemory(bool fprop_only) {
   }
 }
 
-// Topologically sort layers.
 void ConvNet::Sort() {
   Layer *m, *n;
   vector<Layer*> L;
@@ -227,7 +222,6 @@ void ConvNet::TrainOneBatch(vector<float>& error) {
   Bprop(true);
 }
 
-// Sets up the dataset to be used with the conv net.
 void ConvNet::SetupDataset(const string& train_data_config_file) {
   SetupDataset(train_data_config_file, "");
 }
@@ -236,14 +230,14 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
 
   config::DatasetConfig train_data_config;
-  ReadDataConfig(train_data_config_file, &train_data_config);
+  ReadDataConfig(train_data_config_file, train_data_config);
   train_dataset_ = new DataHandler(train_data_config);
   batch_size_ = train_dataset_->GetBatchSize();
   int dataset_size = train_dataset_->GetDataSetSize();
   cout << "Training data set size " << dataset_size << endl;
   if (!val_data_config_file.empty()) {
     config::DatasetConfig val_data_config;
-    ReadDataConfig(val_data_config_file, &val_data_config);
+    ReadDataConfig(val_data_config_file, val_data_config);
     val_dataset_ = new DataHandler(val_data_config);
     dataset_size = val_dataset_->GetDataSetSize();
     cout << "Validation data set size " << dataset_size << endl;
@@ -331,7 +325,7 @@ void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vecto
     for (int p = 0; p < num_positions; p++) {
       dataset->GetBatch(data_layers_);
       Fprop(false);
-      if (k % model_->display_after() == 0 && model_->display()) {
+      if (k % model_.display_after() == 0 && model_.display()) {
         DisplayLayers();
         DisplayEdges();
       }
@@ -400,7 +394,7 @@ void ConvNet::Load(const string& input_file) {
   for (Edge* e : edges_) e->LoadParameters(file);
   ReadHDF5IntAttr(file, "__lr_reduce_counter__", &lr_reduce_counter_);
   for (int i = 0; i < lr_reduce_counter_; i++) {
-    ReduceLearningRate(model_->reduce_lr_factor());
+    ReduceLearningRate(model_.reduce_lr_factor());
   }
   ReadHDF5IntAttr(file, "__current_iter__", &current_iter_);
   H5Fclose(file);
@@ -452,7 +446,7 @@ bool ConvNet::CheckReduceLearningRate(const vector<float>& val_error) {
   cout << "Argmax : " << argmax << " len " << len << endl;
   return (len - argmax > threshold);
   */
-  const int num_steps = model_->reduce_lr_num_steps();
+  const int num_steps = model_.reduce_lr_num_steps();
   /*
   bool r = len >= num_steps;
   for (int i = 0; i < num_steps - 1 && r; i++) {
@@ -469,8 +463,8 @@ bool ConvNet::CheckReduceLearningRate(const vector<float>& val_error) {
   for (int j = 0; j < num_steps - num_steps/2; j++) {
     mean2 = (mean2 * j) / (j+1) + val_error[i++] / (j+1);
   }
-  float diff = model_->smaller_is_better() ? mean1 - mean2 : mean2 - mean1;
-  return diff < model_->reduce_lr_threshold();
+  float diff = model_.smaller_is_better() ? mean1 - mean2 : mean2 - mean1;
+  return diff < model_.reduce_lr_threshold();
 }
 
 void ConvNet::ReduceLearningRate(const float factor) {
@@ -514,17 +508,17 @@ void ConvNet::Train() {
   // Before starting the training, mark this model with a timestamp.
   TimestampModel();
 
-  const int display_after = model_->display_after(),
-            print_after = model_->print_after(),
-            validate_after = model_->validate_after(),
-            save_after = model_->save_after(),
-            polyak_after = model_->polyak_after(),
-            start_polyak_queue = validate_after - polyak_after * model_->polyak_queue_size();
+  const int display_after = model_.display_after(),
+            print_after = model_.print_after(),
+            validate_after = model_.validate_after(),
+            save_after = model_.save_after(),
+            polyak_after = model_.polyak_after(),
+            start_polyak_queue = validate_after - polyak_after * model_.polyak_queue_size();
 
-  const bool display = model_->display();
-             //display_spatial_output = model_->display_spatial_output();
+  const bool display = model_.display();
+             //display_spatial_output = model_.display_spatial_output();
 
-  const float learning_rate_reduce_factor = model_->reduce_lr_factor();
+  const float learning_rate_reduce_factor = model_.reduce_lr_factor();
 
   // Time keeping.
   chrono::time_point<chrono::system_clock> start_t, end_t;
@@ -534,10 +528,10 @@ void ConvNet::Train() {
   vector<float> train_error, this_train_error;
   vector<float> val_error, this_val_error;
   int dont_reduce_lr = 0;
-  const int lr_max_reduce = model_->reduce_lr_max();
+  const int lr_max_reduce = model_.reduce_lr_max();
   bool newline;
 
-  for(int i = current_iter_; i < model_->max_iter(); i++) {
+  for(int i = current_iter_; i < model_.max_iter(); i++) {
     current_iter_++;
     cout << "\rStep " << current_iter_;
     cout.flush();
@@ -587,7 +581,7 @@ void ConvNet::Train() {
         bool reduce_learning_rate = CheckReduceLearningRate(val_error);
         if (reduce_learning_rate && lr_reduce_counter_ < lr_max_reduce
             && dont_reduce_lr-- < 0) {
-          dont_reduce_lr = model_->reduce_lr_num_steps();
+          dont_reduce_lr = model_.reduce_lr_num_steps();
           cout << "Learning rate reduced " << ++lr_reduce_counter_ << " time(s).";
           ReduceLearningRate(learning_rate_reduce_factor);
         }
@@ -600,7 +594,7 @@ void ConvNet::Train() {
       Save();
     }
   }
-  if (model_->max_iter() % save_after != 0) {
+  if (model_.max_iter() % save_after != 0) {
     train_dataset_->Sync();
     Save();
   }

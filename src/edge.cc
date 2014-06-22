@@ -1,5 +1,3 @@
-
-//timestamp : "20140404113057";
 #include "edge.h"
 #include "matrix.h"
 #include "util.h"
@@ -180,10 +178,11 @@ int Edge::GetNumModules() const {
 string Edge::GetTiedEdgeName() {
   return tied_edge_name_;
 }
-
+/*
 bool Edge::RequiresMemoryForDeriv() const {
  return false;
 } 
+*/
 
 bool Edge::IsTied() {
   return is_tied_;

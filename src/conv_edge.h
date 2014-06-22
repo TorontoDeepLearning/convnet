@@ -2,6 +2,7 @@
 #define CONV_EDGE_H_
 #include "edge_with_weight.h"
 
+/** Implements a convolutional edge.*/
 class ConvEdge : public EdgeWithWeight {
  public:
   ConvEdge(const config::Edge& edge_config);

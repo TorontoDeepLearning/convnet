@@ -3,7 +3,8 @@
 #include "util.h"
 #include "matrix.h"
 
-// Base class for all optimizers.
+/** Base class for all optimizers.
+ */
 class Optimizer {
  public:
   Optimizer(const config::Optimizer& optimizer_config);
@@ -35,6 +36,9 @@ class Optimizer {
   int step_;
 };
 
+/** Stochastic gradient descent.
+ * Implements stochastic gradient descent with momentum.
+ */
 class SGDOptimizer : public Optimizer {
  public:
   SGDOptimizer(const config::Optimizer& optimizer_config);
@@ -55,6 +59,9 @@ class SGDOptimizer : public Optimizer {
   const int momentum_transition_timescale_;
 };
 
+/** Implmenets LBFGS optimization.
+ * This class is under construction.
+ */
 class LBFGSOptimizer : public Optimizer {
  public:
   LBFGSOptimizer(const config::Optimizer& optimizer_config);

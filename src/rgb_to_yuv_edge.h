@@ -2,6 +2,7 @@
 #define RGB_TO_YUV_EDGE_H_
 #include "edge.h"
 
+/** Implements an edge that maps RGB to YUV.*/
 class RGBToYUVEdge : public Edge {
  public:
   RGBToYUVEdge(const config::Edge& edge_config);

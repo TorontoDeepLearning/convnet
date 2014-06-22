@@ -2,6 +2,7 @@
 #define FC_EDGE_H_
 #include "edge_with_weight.h"
 
+/** Implements a fully-connected edge.*/
 class FCEdge : public EdgeWithWeight {
  public:
   FCEdge(const config::Edge& edge_config);

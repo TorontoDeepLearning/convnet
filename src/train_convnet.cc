@@ -4,13 +4,11 @@ using namespace std;
 
 
 int main(int argc, char** argv) {
-  SetupBackTraceHandler();  // Prints back trace in case of seg fault.
   int board = atoi(argv[1]);
   string model_file(argv[2]);
   string data_file(argv[3]);
 
   Matrix::SetupCUDADevice(board);
-  //Matrix::SetupCUDADevices(board);
   cout << "Using board " << board << endl;
 
   ConvNet net = ConvNet(model_file);

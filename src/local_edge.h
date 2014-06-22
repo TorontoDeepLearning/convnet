@@ -2,6 +2,7 @@
 #define LOCAL_EDGE_H_
 #include "edge_with_weight.h"
 
+/** Implements a locally connected edge.*/
 class LocalEdge : public EdgeWithWeight {
  public:
   LocalEdge(const config::Edge& edge_config);

@@ -2,6 +2,9 @@
 #define DOWNSAMPLE_EDGE_H_
 #include "edge.h"
 
+/** Implements a down-sampling edge.
+ * Only integer down-sampling factors are supported.
+ */ 
 class DownSampleEdge : public Edge {
  public:
   DownSampleEdge(const config::Edge& edge_config);

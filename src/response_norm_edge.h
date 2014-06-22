@@ -2,6 +2,8 @@
 #define RESPONSE_NORM_EDGE_H_
 #include "edge.h"
 
+/** Response Normalization across filters at the same location.
+ */
 class ResponseNormEdge : public Edge {
  public:
   ResponseNormEdge(const config::Edge& edge_config);

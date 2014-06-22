@@ -4,7 +4,6 @@ using namespace std;
 
 
 int main(int argc, char** argv) {
-  SetupBackTraceHandler();  // Prints back trace in case of seg fault.
   vector<int> boards;
   boards.push_back(atoi(argv[1]));
   boards.push_back(atoi(argv[2]));
