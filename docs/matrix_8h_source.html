@@ -98,85 +98,85 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;<span class="keyword">using namespace </span><a class="code" href="namespacestd.html">std</a>;</div>
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;</div>
-<div class="line"><a name="l00010"></a><span class="lineno"><a class="line" href="classMatrix.html">   10</a></span>&#160;<span class="keyword">class </span><a class="code" href="classMatrix.html">Matrix</a> {</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;  <a class="code" href="classMatrix.html">Matrix</a>();</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;  <a class="code" href="classMatrix.html">Matrix</a>(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">bool</span> on_gpu);</div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;  ~<a class="code" href="classMatrix.html">Matrix</a>();</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;  </div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;  <span class="keywordtype">void</span> Tie(<a class="code" href="classMatrix.html">Matrix</a> &amp;m);</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  <span class="keywordtype">void</span> AllocateGPUMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;  <span class="keywordtype">void</span> AllocateGPUMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;  <span class="keywordtype">void</span> AllocateMainMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;  <span class="comment">//void ClearMainMemory();</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;  <span class="comment">//void ClearGPUMemory();</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;  <span class="keywordtype">void</span> Set(<span class="keyword">const</span> <span class="keywordtype">float</span> val);</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;  <span class="keywordtype">void</span> Set(<a class="code" href="classMatrix.html">Matrix</a>&amp; val);</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;  <span class="keywordtype">void</span> GetSlice(<a class="code" href="classMatrix.html">Matrix</a>&amp; slice, <span class="keywordtype">int</span> start, <span class="keywordtype">int</span> end);</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keywordtype">void</span> FillWithRand();</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;  <span class="keywordtype">void</span> FillWithRandn();</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;  <span class="keywordtype">void</span> CopyToHost();</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;  <span class="keywordtype">void</span> CopyToDevice();</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;  <span class="keywordtype">void</span> CopyToDeviceSlice(<span class="keyword">const</span> <span class="keywordtype">int</span> start, <span class="keyword">const</span> <span class="keywordtype">int</span> end);</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keywordtype">void</span> CopyToHostSlice(<span class="keyword">const</span> <span class="keywordtype">int</span> start, <span class="keyword">const</span> <span class="keywordtype">int</span> end);</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keywordtype">void</span> CopyFromMainMemory(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keywordtype">void</span> Reshape(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keywordtype">float</span> Norm();</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keywordtype">void</span> Print();</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keywordtype">void</span> WriteToFile(FILE* file);</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  <span class="keywordtype">void</span> ReadFromFile(FILE* file);</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  <span class="keywordtype">void</span> WriteHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keywordtype">void</span> ReadHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keywordtype">void</span> AllocateAndReadHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keywordtype">string</span> GetShapeString();</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a>* GetMat() { <span class="keywordflow">return</span> &amp;mat_; }</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a>* GetMatTranspose() { <span class="keywordflow">return</span> &amp;mat_t_; }</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keywordtype">float</span>* GetHostData() { <span class="keywordflow">return</span> mat_.data_host; }</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keywordtype">int</span> GetRows()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[0];}</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  <span class="keywordtype">int</span> GetCols()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[1];}</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordtype">int</span> GetNumEls()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[1] * mat_.size[0]; }</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="keywordtype">float</span> Sum();</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  <span class="keywordtype">void</span> Add(<a class="code" href="classMatrix.html">Matrix</a>&amp; m);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <span class="keywordtype">void</span> SquashRelu();</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  <span class="keywordtype">int</span> GetGPUId()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gpu_id_; }</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  <span class="keywordtype">void</span> SetReady();</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <span class="keywordtype">void</span> WaitTillReady();</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> GetOnes(<span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <a class="code" href="classMatrix.html">Matrix</a>&amp; ones);</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterTempMemory(<span class="keywordtype">int</span> size);</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterTempMemory(<span class="keywordtype">int</span> size, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; why);</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterOnes(<span class="keywordtype">int</span> size);</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> GetTemp(<span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <a class="code" href="classMatrix.html">Matrix</a>&amp; temp);</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> InitRandom(<span class="keywordtype">int</span> seed);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetupCUDADevice(<span class="keywordtype">int</span> gpu_id);</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetupCUDADevices(<span class="keyword">const</span> vector&lt;int&gt;&amp; boards);</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetDevice(<span class="keywordtype">int</span> gpu_id);</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SyncAllDevices();</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> GetDevice();</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> GetNumBoards() {<span class="keywordflow">return</span> num_boards_;}</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  <span class="keyword">static</span> vector&lt;Matrix&gt; ones_, temp_;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="keyword">static</span> vector&lt;rnd_struct&gt; rnd_;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160; <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a> mat_, mat_t_;</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  cudaEvent_t ready_;</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <span class="keywordtype">int</span> gpu_id_;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <span class="keywordtype">string</span> name_;</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> num_boards_;</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> current_gpu_id_;</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  <span class="keyword">static</span> vector&lt;int&gt; boards_, temp_size_, ones_size_;</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;};</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00011"></a><span class="lineno"><a class="line" href="classMatrix.html">   11</a></span>&#160;<span class="keyword">class </span><a class="code" href="classMatrix.html">Matrix</a> {</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;  <a class="code" href="classMatrix.html">Matrix</a>();</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;  <a class="code" href="classMatrix.html">Matrix</a>(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">bool</span> on_gpu);</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;  ~<a class="code" href="classMatrix.html">Matrix</a>();</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;  </div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;  <span class="keywordtype">void</span> Tie(<a class="code" href="classMatrix.html">Matrix</a> &amp;m);</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;  <span class="keywordtype">void</span> AllocateGPUMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;  <span class="keywordtype">void</span> AllocateGPUMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;  <span class="keywordtype">void</span> AllocateMainMemory(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;  <span class="comment">//void ClearMainMemory();</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;  <span class="comment">//void ClearGPUMemory();</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;  <span class="keywordtype">void</span> Set(<span class="keyword">const</span> <span class="keywordtype">float</span> val);</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;  <span class="keywordtype">void</span> Set(<a class="code" href="classMatrix.html">Matrix</a>&amp; val);</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keywordtype">void</span> GetSlice(<a class="code" href="classMatrix.html">Matrix</a>&amp; slice, <span class="keywordtype">int</span> start, <span class="keywordtype">int</span> end);</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;  <span class="keywordtype">void</span> FillWithRand();</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;  <span class="keywordtype">void</span> FillWithRandn();</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;  <span class="keywordtype">void</span> CopyToHost();</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;  <span class="keywordtype">void</span> CopyToDevice();</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keywordtype">void</span> CopyToDeviceSlice(<span class="keyword">const</span> <span class="keywordtype">int</span> start, <span class="keyword">const</span> <span class="keywordtype">int</span> end);</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keywordtype">void</span> CopyToHostSlice(<span class="keyword">const</span> <span class="keywordtype">int</span> start, <span class="keyword">const</span> <span class="keywordtype">int</span> end);</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keywordtype">void</span> CopyFromMainMemory(<a class="code" href="classMatrix.html">Matrix</a>&amp; mat);</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keywordtype">void</span> Reshape(<span class="keyword">const</span> <span class="keywordtype">int</span> rows, <span class="keyword">const</span> <span class="keywordtype">int</span> cols);</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keywordtype">float</span> Norm();</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keywordtype">void</span> Print();</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  <span class="keywordtype">void</span> WriteToFile(FILE* file);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  <span class="keywordtype">void</span> ReadFromFile(FILE* file);</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keywordtype">void</span> WriteHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keywordtype">void</span> ReadHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keywordtype">void</span> AllocateAndReadHDF5(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keywordtype">string</span> GetShapeString();</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a>* GetMat() { <span class="keywordflow">return</span> &amp;mat_; }</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a>* GetMatTranspose() { <span class="keywordflow">return</span> &amp;mat_t_; }</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keywordtype">float</span>* GetHostData() { <span class="keywordflow">return</span> mat_.data_host; }</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  <span class="keywordtype">int</span> GetRows()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[0];}</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordtype">int</span> GetCols()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[1];}</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="keywordtype">int</span> GetNumEls()<span class="keyword"> const </span>{<span class="keywordflow">return</span> mat_.size[1] * mat_.size[0]; }</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  <span class="keywordtype">float</span> Sum();</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <span class="keywordtype">void</span> Add(<a class="code" href="classMatrix.html">Matrix</a>&amp; m);</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  <span class="keywordtype">void</span> SquashRelu();</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  <span class="keywordtype">int</span> GetGPUId()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> gpu_id_; }</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <span class="keywordtype">void</span> SetReady();</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  <span class="keywordtype">void</span> WaitTillReady();</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> GetOnes(<span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <a class="code" href="classMatrix.html">Matrix</a>&amp; ones);</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterTempMemory(<span class="keywordtype">int</span> size);</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterTempMemory(<span class="keywordtype">int</span> size, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; why);</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RegisterOnes(<span class="keywordtype">int</span> size);</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> GetTemp(<span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <a class="code" href="classMatrix.html">Matrix</a>&amp; temp);</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> InitRandom(<span class="keywordtype">int</span> seed);</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetupCUDADevice(<span class="keywordtype">int</span> gpu_id);</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetupCUDADevices(<span class="keyword">const</span> vector&lt;int&gt;&amp; boards);</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SetDevice(<span class="keywordtype">int</span> gpu_id);</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> SyncAllDevices();</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> GetDevice();</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> GetNumBoards() {<span class="keywordflow">return</span> num_boards_;}</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="keyword">static</span> vector&lt;Matrix&gt; ones_, temp_;</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <span class="keyword">static</span> vector&lt;rnd_struct&gt; rnd_;</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  <a class="code" href="structcudamat.html">cudamat</a> mat_, mat_t_;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  cudaEvent_t ready_;</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <span class="keywordtype">int</span> gpu_id_;</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  <span class="keywordtype">string</span> name_;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> num_boards_;</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">int</span> current_gpu_id_;</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  <span class="keyword">static</span> vector&lt;int&gt; boards_, temp_size_, ones_size_;</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;};</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="ttc" id="namespacestd_html"><div class="ttname"><a href="namespacestd.html">std</a></div><div class="ttdoc">STL namespace. </div></div>
 <div class="ttc" id="structcudamat_html"><div class="ttname"><a href="structcudamat.html">cudamat</a></div><div class="ttdef"><b>Definition:</b> cudamat.cuh:28</div></div>
-<div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:10</div></div>
+<div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdoc">A GPU matrix class. </div><div class="ttdef"><b>Definition:</b> matrix.h:11</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 09:42:13 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:56:01 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

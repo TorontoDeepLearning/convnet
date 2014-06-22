@@ -104,14 +104,14 @@ Inheritance diagram for Edge:</div>
  <div class="center">
   <img src="classEdge.png" usemap="#Edge_map" alt=""/>
   <map id="Edge_map" name="Edge_map">
-<area href="classDownSampleEdge.html" title="Implements a downsampling edges. " alt="DownSampleEdge" shape="rect" coords="0,56,133,80"/>
-<area href="classEdgeWithWeight.html" alt="EdgeWithWeight" shape="rect" coords="214,56,347,80"/>
+<area href="classDownSampleEdge.html" title="Implements a down-sampling edge. " alt="DownSampleEdge" shape="rect" coords="0,56,133,80"/>
+<area href="classEdgeWithWeight.html" title="Base class for all edges which have weights. " alt="EdgeWithWeight" shape="rect" coords="214,56,347,80"/>
 <area href="classMaxPoolEdge.html" title="Implements a Max-pool edge. " alt="MaxPoolEdge" shape="rect" coords="357,56,490,80"/>
-<area href="classResponseNormEdge.html" alt="ResponseNormEdge" shape="rect" coords="500,56,633,80"/>
+<area href="classResponseNormEdge.html" title="Response Normalization across filters at the same location. " alt="ResponseNormEdge" shape="rect" coords="500,56,633,80"/>
 <area href="classRGBToYUVEdge.html" title="Implements an edge that maps RGB to YUV. " alt="RGBToYUVEdge" shape="rect" coords="643,56,776,80"/>
-<area href="classUpSampleEdge.html" title="Implements a upsampling edges. " alt="UpSampleEdge" shape="rect" coords="786,56,919,80"/>
+<area href="classUpSampleEdge.html" title="Implements an up-sampling edge. " alt="UpSampleEdge" shape="rect" coords="786,56,919,80"/>
 <area href="classConvEdge.html" title="Implements a convolutional edge. " alt="ConvEdge" shape="rect" coords="0,112,133,136"/>
-<area href="classConvOneToOneEdge.html" alt="ConvOneToOneEdge" shape="rect" coords="143,112,276,136"/>
+<area href="classConvOneToOneEdge.html" title="An edge with one-to-one connectivity over spatial locations. " alt="ConvOneToOneEdge" shape="rect" coords="143,112,276,136"/>
 <area href="classFCEdge.html" title="Implements a fully-connected edge. " alt="FCEdge" shape="rect" coords="286,112,419,136"/>
 <area href="classLocalEdge.html" title="Implements a locally connected edge. " alt="LocalEdge" shape="rect" coords="429,112,562,136"/>
 </map>
@@ -344,7 +344,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classMaxPoolEdge.html#aba561876cf1c7aceb6d5baf9596864ab">MaxPoolEdge</a>, <a class="el" href="classConvEdge.html#a2b6249d05ae6c7e4461c18c898e64e0d">ConvEdge</a>, <a class="el" href="classFCEdge.html#afd012f0b9b3475c238836d2a0e382729">FCEdge</a>, <a class="el" href="classLocalEdge.html#a4bc7216e73c228f39695e12cba9f41ba">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#a6c731f8ef216ac8b7c3f3fee97e39366">ResponseNormEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a52610b9e7d35042e646d17ec5b4aa1bd">ConvOneToOneEdge</a>.</p>
+<p>Reimplemented in <a class="el" href="classResponseNormEdge.html#a6c731f8ef216ac8b7c3f3fee97e39366">ResponseNormEdge</a>, <a class="el" href="classConvOneToOneEdge.html#a52610b9e7d35042e646d17ec5b4aa1bd">ConvOneToOneEdge</a>, <a class="el" href="classMaxPoolEdge.html#aba561876cf1c7aceb6d5baf9596864ab">MaxPoolEdge</a>, <a class="el" href="classConvEdge.html#a2b6249d05ae6c7e4461c18c898e64e0d">ConvEdge</a>, <a class="el" href="classFCEdge.html#afd012f0b9b3475c238836d2a0e382729">FCEdge</a>, and <a class="el" href="classLocalEdge.html#a4bc7216e73c228f39695e12cba9f41ba">LocalEdge</a>.</p>
 
 </div>
 </div>
@@ -435,7 +435,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
   </dd>
 </dl>
 
-<p>Implemented in <a class="el" href="classDownSampleEdge.html#a522f4aecc2c19f9799c3f817bd2d95b2">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a6c85084ad1d05b4304a3de79cf990c61">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#a4db7710a572a74867d9e66a167b6859f">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#a4669bd0d61894e99e9fd38f3bf43e672">ConvEdge</a>, <a class="el" href="classFCEdge.html#a7055863ce2322951d0dd960b03907855">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae1d5515d8c514d82113412af21333dfe">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#aa0c11e37bf52808e3b28cfcaf365bf3c">ResponseNormEdge</a>, <a class="el" href="classRGBToYUVEdge.html#a384347a559aea58415a01fb29464efec">RGBToYUVEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a89d95cfdb34b4dc24c67868ac3be4426">ConvOneToOneEdge</a>.</p>
+<p>Implemented in <a class="el" href="classResponseNormEdge.html#aa0c11e37bf52808e3b28cfcaf365bf3c">ResponseNormEdge</a>, <a class="el" href="classConvOneToOneEdge.html#a89d95cfdb34b4dc24c67868ac3be4426">ConvOneToOneEdge</a>, <a class="el" href="classDownSampleEdge.html#a522f4aecc2c19f9799c3f817bd2d95b2">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a6c85084ad1d05b4304a3de79cf990c61">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#a4db7710a572a74867d9e66a167b6859f">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#a4669bd0d61894e99e9fd38f3bf43e672">ConvEdge</a>, <a class="el" href="classFCEdge.html#a7055863ce2322951d0dd960b03907855">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae1d5515d8c514d82113412af21333dfe">LocalEdge</a>, and <a class="el" href="classRGBToYUVEdge.html#a384347a559aea58415a01fb29464efec">RGBToYUVEdge</a>.</p>
 
 </div>
 </div>
@@ -480,7 +480,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classConvEdge.html#a2460e763316c3efc3a4c7ac35d2a3a90">ConvEdge</a>, <a class="el" href="classFCEdge.html#ac8f0792a43e83a6f56b9bc22bc3d29e4">FCEdge</a>, <a class="el" href="classLocalEdge.html#a9456067740f5a6a1a58f37f276a2f7d3">LocalEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#ab5660b05445bf0cbf38ba65a834f8dcd">ConvOneToOneEdge</a>.</p>
+<p>Reimplemented in <a class="el" href="classConvOneToOneEdge.html#ab5660b05445bf0cbf38ba65a834f8dcd">ConvOneToOneEdge</a>, <a class="el" href="classConvEdge.html#a2460e763316c3efc3a4c7ac35d2a3a90">ConvEdge</a>, <a class="el" href="classFCEdge.html#ac8f0792a43e83a6f56b9bc22bc3d29e4">FCEdge</a>, and <a class="el" href="classLocalEdge.html#a9456067740f5a6a1a58f37f276a2f7d3">LocalEdge</a>.</p>
 
 </div>
 </div>
@@ -525,7 +525,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 <p>Computes the output layer state given the input. </p>
 <p>Applies the weights and adds bias. </p>
 
-<p>Implemented in <a class="el" href="classDownSampleEdge.html#aafd13df8b70c9f2c031bf14b4af2e164">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a2488652a48ea7e162ca54b4f75c1c63c">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#ad17ce88231ae9dc26ac81700a08793b7">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#ab7f53a9ca0412cf60b45b93980bf9d19">ConvEdge</a>, <a class="el" href="classFCEdge.html#a3f5c76ef541294c6b2ee5f31bf90c878">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae142186c7259f4f38534434e5b06de8a">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#a3d7b688261446597417c3f48a1842fc0">ResponseNormEdge</a>, <a class="el" href="classRGBToYUVEdge.html#a3f5ed55f9c2970ad34e56948838d52af">RGBToYUVEdge</a>, and <a class="el" href="classConvOneToOneEdge.html#a926b02fe0e3671cf6150cdeba639ab67">ConvOneToOneEdge</a>.</p>
+<p>Implemented in <a class="el" href="classResponseNormEdge.html#a3d7b688261446597417c3f48a1842fc0">ResponseNormEdge</a>, <a class="el" href="classConvOneToOneEdge.html#a926b02fe0e3671cf6150cdeba639ab67">ConvOneToOneEdge</a>, <a class="el" href="classDownSampleEdge.html#aafd13df8b70c9f2c031bf14b4af2e164">DownSampleEdge</a>, <a class="el" href="classMaxPoolEdge.html#a2488652a48ea7e162ca54b4f75c1c63c">MaxPoolEdge</a>, <a class="el" href="classUpSampleEdge.html#ad17ce88231ae9dc26ac81700a08793b7">UpSampleEdge</a>, <a class="el" href="classConvEdge.html#ab7f53a9ca0412cf60b45b93980bf9d19">ConvEdge</a>, <a class="el" href="classFCEdge.html#a3f5c76ef541294c6b2ee5f31bf90c878">FCEdge</a>, <a class="el" href="classLocalEdge.html#ae142186c7259f4f38534434e5b06de8a">LocalEdge</a>, and <a class="el" href="classRGBToYUVEdge.html#a3f5ed55f9c2970ad34e56948838d52af">RGBToYUVEdge</a>.</p>
 
 </div>
 </div>
@@ -608,7 +608,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 <p>Returns the number of modules. </p>
 <p>This is relevant for convolution-like edges. </p>
 
-<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#afe3d07ff2e7e0c09b1022913640898ac">EdgeWithWeight</a>, <a class="el" href="classLocalEdge.html#a2d9c15293b616b42f7bfe1f59a994c14">LocalEdge</a>, <a class="el" href="classConvEdge.html#aec5c0ba8fae7545eb3b4456a7167318c">ConvEdge</a>, <a class="el" href="classMaxPoolEdge.html#ac5f044916169c91d41f9d173c93daefb">MaxPoolEdge</a>, <a class="el" href="classConvOneToOneEdge.html#afd0215ef052240f940e6e40918b4d3f3">ConvOneToOneEdge</a>, and <a class="el" href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">RGBToYUVEdge</a>.</p>
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#afe3d07ff2e7e0c09b1022913640898ac">EdgeWithWeight</a>, <a class="el" href="classLocalEdge.html#a2d9c15293b616b42f7bfe1f59a994c14">LocalEdge</a>, <a class="el" href="classConvEdge.html#aec5c0ba8fae7545eb3b4456a7167318c">ConvEdge</a>, <a class="el" href="classConvOneToOneEdge.html#afd0215ef052240f940e6e40918b4d3f3">ConvOneToOneEdge</a>, <a class="el" href="classMaxPoolEdge.html#ac5f044916169c91d41f9d173c93daefb">MaxPoolEdge</a>, and <a class="el" href="classRGBToYUVEdge.html#aca02b25b765ecfb1ad265afddbfb5d32">RGBToYUVEdge</a>.</p>
 
 </div>
 </div>
@@ -838,7 +838,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 
 <p>Set the spatial size of the input to this edge. </p>
 
-<p>Reimplemented in <a class="el" href="classLocalEdge.html#afa369630d74d609668d65ac7f45f6c3f">LocalEdge</a>, <a class="el" href="classConvEdge.html#a4c51293ff717cc70fb587f7ad8337cd4">ConvEdge</a>, <a class="el" href="classMaxPoolEdge.html#a8746573f0b346c84fa21f9c1355493d7">MaxPoolEdge</a>, <a class="el" href="classConvOneToOneEdge.html#af86468d64e9af04bca380d61765130e9">ConvOneToOneEdge</a>, <a class="el" href="classDownSampleEdge.html#a9a0358e1b58c66227170f83859bc6433">DownSampleEdge</a>, <a class="el" href="classResponseNormEdge.html#a7e430b5e3335ce12f36908314b4f46b9">ResponseNormEdge</a>, and <a class="el" href="classUpSampleEdge.html#af83edd6d17454f02386b21fe9ebd3c35">UpSampleEdge</a>.</p>
+<p>Reimplemented in <a class="el" href="classLocalEdge.html#afa369630d74d609668d65ac7f45f6c3f">LocalEdge</a>, <a class="el" href="classConvEdge.html#a4c51293ff717cc70fb587f7ad8337cd4">ConvEdge</a>, <a class="el" href="classConvOneToOneEdge.html#af86468d64e9af04bca380d61765130e9">ConvOneToOneEdge</a>, <a class="el" href="classMaxPoolEdge.html#a8746573f0b346c84fa21f9c1355493d7">MaxPoolEdge</a>, <a class="el" href="classResponseNormEdge.html#a7e430b5e3335ce12f36908314b4f46b9">ResponseNormEdge</a>, <a class="el" href="classDownSampleEdge.html#a9a0358e1b58c66227170f83859bc6433">DownSampleEdge</a>, and <a class="el" href="classUpSampleEdge.html#af83edd6d17454f02386b21fe9ebd3c35">UpSampleEdge</a>.</p>
 
 </div>
 </div>
@@ -902,7 +902,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 
 <p>Sets the edge to be tied to another edge. </p>
 
-<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a0f03c8aa61aaeb741aeb492b50b21bcf">EdgeWithWeight</a>, <a class="el" href="classConvEdge.html#a708830c43c063490c8097877f231cfe3">ConvEdge</a>, <a class="el" href="classLocalEdge.html#a66bd99ff6160ced6c69bb019b0ba63d8">LocalEdge</a>, <a class="el" href="classMaxPoolEdge.html#aa88882d46b5e52a9171319fc2af23ad7">MaxPoolEdge</a>, and <a class="el" href="classResponseNormEdge.html#a695fbc118e971ad326a2d158a4638c6b">ResponseNormEdge</a>.</p>
+<p>Reimplemented in <a class="el" href="classEdgeWithWeight.html#a0f03c8aa61aaeb741aeb492b50b21bcf">EdgeWithWeight</a>, <a class="el" href="classConvEdge.html#a708830c43c063490c8097877f231cfe3">ConvEdge</a>, <a class="el" href="classLocalEdge.html#a66bd99ff6160ced6c69bb019b0ba63d8">LocalEdge</a>, <a class="el" href="classResponseNormEdge.html#a695fbc118e971ad326a2d158a4638c6b">ResponseNormEdge</a>, and <a class="el" href="classMaxPoolEdge.html#aa88882d46b5e52a9171319fc2af23ad7">MaxPoolEdge</a>.</p>
 
 </div>
 </div>
@@ -1008,7 +1008,7 @@ const int&#160;</td><td class="memItemRight" valign="bottom"><b>gpu_id_</b></td>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 09:42:16 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 09:56:04 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>
