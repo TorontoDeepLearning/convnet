@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['textdataiterator',['TextDataIterator',['../classTextDataIterator.html',1,'']]]
+  ['upsampleedge',['UpSampleEdge',['../classUpSampleEdge.html',1,'']]]
 ];

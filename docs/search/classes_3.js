@@ -1,9 +1,8 @@
 var searchData=
 [
-  ['convedge',['ConvEdge',['../classConvEdge.html',1,'']]],
-  ['convnet',['ConvNet',['../classConvNet.html',1,'']]],
-  ['convonetooneedge',['ConvOneToOneEdge',['../classConvOneToOneEdge.html',1,'']]],
-  ['cudamat',['cudamat',['../structcudamat.html',1,'']]],
-  ['cudamat_5fbbox',['cudamat_bbox',['../structcudamat__bbox.html',1,'']]],
-  ['cudamat_5fsparse',['cudamat_sparse',['../structcudamat__sparse.html',1,'']]]
+  ['datahandler',['DataHandler',['../classDataHandler.html',1,'']]],
+  ['dataiterator',['DataIterator',['../classDataIterator.html',1,'']]],
+  ['datawriter',['DataWriter',['../classDataWriter.html',1,'']]],
+  ['downsampleedge',['DownSampleEdge',['../classDownSampleEdge.html',1,'']]],
+  ['dummydataiterator',['DummyDataIterator',['../classDummyDataIterator.html',1,'']]]
 ];

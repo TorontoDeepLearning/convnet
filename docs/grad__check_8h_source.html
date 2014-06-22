@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -101,17 +101,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <span class="keywordtype">void</span> Run(<a class="code" href="classMatrix.html">Matrix</a>&amp; w, <a class="code" href="classMatrix.html">Matrix</a>&amp; dLbydw_analytical, <span class="keywordtype">float</span> epsilon, <span class="keyword">const</span> vector&lt;float&gt;&amp; analytical_error); </div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;</div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; <span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> GetLoss(vector&lt;float&gt;&amp; error);</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classGradChecker.html#a426b1e8666f68ce1890e4a2fb262e566">GetLoss</a>(vector&lt;float&gt;&amp; error);</div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;};</div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;</div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="ttc" id="classGradChecker_html"><div class="ttname"><a href="classGradChecker.html">GradChecker</a></div><div class="ttdef"><b>Definition:</b> grad_check.h:6</div></div>
-<div class="ttc" id="classConvNet_html"><div class="ttname"><a href="classConvNet.html">ConvNet</a></div><div class="ttdoc">A Convolutional Net Model. </div><div class="ttdef"><b>Definition:</b> convnet.h:12</div></div>
+<div class="ttc" id="classGradChecker_html_a426b1e8666f68ce1890e4a2fb262e566"><div class="ttname"><a href="classGradChecker.html#a426b1e8666f68ce1890e4a2fb262e566">GradChecker::GetLoss</a></div><div class="ttdeci">virtual void GetLoss(vector&lt; float &gt; &amp;error)</div><div class="ttdoc">Computes the loss function. </div><div class="ttdef"><b>Definition:</b> grad_check.cc:8</div></div>
+<div class="ttc" id="classConvNet_html"><div class="ttname"><a href="classConvNet.html">ConvNet</a></div><div class="ttdoc">A Convolutional Net Model. </div><div class="ttdef"><b>Definition:</b> convnet.h:14</div></div>
 <div class="ttc" id="classMatrix_html"><div class="ttname"><a href="classMatrix.html">Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:10</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 05:37:41 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 06:47:28 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

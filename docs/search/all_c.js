@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['optimizer',['Optimizer',['../classOptimizer.html',1,'']]]
+  ['pbtxt2dot',['pbtxt2dot',['../namespacepbtxt2dot.html',1,'']]],
+  ['probmaxpooler',['ProbMaxPooler',['../classProbMaxPooler.html',1,'']]]
 ];

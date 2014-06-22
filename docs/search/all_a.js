@@ -1,8 +1,7 @@
 var searchData=
 [
-  ['layer',['Layer',['../classLayer.html',1,'']]],
-  ['lbfgsoptimizer',['LBFGSOptimizer',['../classLBFGSOptimizer.html',1,'']]],
-  ['linearlayer',['LinearLayer',['../classLinearLayer.html',1,'']]],
-  ['localedge',['LocalEdge',['../classLocalEdge.html',1,'']]],
-  ['logisticlayer',['LogisticLayer',['../classLogisticLayer.html',1,'']]]
+  ['matrix',['Matrix',['../classMatrix.html',1,'']]],
+  ['maxpooledge',['MaxPoolEdge',['../classMaxPoolEdge.html',1,'']]],
+  ['maxpooler',['MaxPooler',['../classMaxPooler.html',1,'']]],
+  ['multigpuconvnet',['MultiGPUConvNet',['../classMultiGPUConvNet.html',1,'']]]
 ];

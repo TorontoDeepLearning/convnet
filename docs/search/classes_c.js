@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['optimizer',['Optimizer',['../classOptimizer.html',1,'']]]
+  ['probmaxpooler',['ProbMaxPooler',['../classProbMaxPooler.html',1,'']]]
 ];

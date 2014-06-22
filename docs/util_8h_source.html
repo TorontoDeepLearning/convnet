@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -120,78 +120,63 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keyword">using namespace </span><a class="code" href="namespacecimg__library.html">cimg_library</a>;</div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="keyword">using namespace </span><a class="code" href="namespacestd.html">std</a>;</div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;</div>
-<div class="line"><a name="l00032"></a><span class="lineno"><a class="line" href="structbox.html">   32</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structbox.html">box</a> {</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keywordtype">int</span> xmin, xmax, ymin, ymax, label;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keywordtype">float</span> confidence;</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keywordtype">bool</span> is_neg;</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;};</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="comment">/* This structure mirrors the one found in /usr/include/asm/ucontext.h */</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="struct__sig__ucontext.html">   39</a></span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span><a class="code" href="struct__sig__ucontext.html">_sig_ucontext</a> {</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keywordtype">unsigned</span> <span class="keywordtype">long</span>     uc_flags;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keyword">struct </span>ucontext   *uc_link;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  stack_t           uc_stack;</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">struct </span>sigcontext uc_mcontext;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  sigset_t          uc_sigmask;</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;} <a class="code" href="struct__sig__ucontext.html">sig_ucontext_t</a>;</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="keywordtype">string</span> GetStringError(<span class="keywordtype">int</span> err_code);</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="keywordtype">void</span> ReadModel(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; model_file, config::Model *model);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="keywordtype">void</span> ReadModelText(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; model_file, config::Model *model);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="keywordtype">void</span> ReadDataConfig(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; data_config_file, config::DatasetConfig *data_config);</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="keywordtype">void</span> ReadLayerConfig(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; layer_config_file, config::Layer *layer_config);</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keywordtype">void</span> WriteModelBinary(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; output_file, config::Model *model);</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="keywordtype">void</span> ReadModelBinary(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; input_file, config::Model *model);</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="keywordtype">void</span> WriteHDF5CPU(hid_t file, <span class="keywordtype">float</span>* mat, <span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="keywordtype">void</span> ReadHDF5IntAttr(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keywordtype">int</span>* val);</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="keywordtype">void</span> WriteHDF5IntAttr(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keyword">const</span> <span class="keywordtype">int</span>* val);</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="comment">// Outputs a string that describes the err_code.</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keywordtype">string</span> GetStringError(<span class="keywordtype">int</span> err_code);</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="comment">// Reads model_file from the disk and instantiates a Model.</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="keywordtype">void</span> ReadModel(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; model_file, config::Model&amp; model);</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="keywordtype">void</span> ReadModelText(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; model_file, config::Model&amp; model);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keywordtype">void</span> ReadDataConfig(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; data_config_file, config::DatasetConfig&amp; data_config);</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keywordtype">void</span> ReadLayerConfig(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; layer_config_file, config::Layer&amp; layer_config);</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="keywordtype">void</span> WriteModelBinary(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; output_file, <span class="keyword">const</span> config::Model&amp; model);</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keywordtype">void</span> ReadModelBinary(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; input_file, config::Model&amp; model);</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="keywordtype">void</span> WriteHDF5CPU(hid_t file, <span class="keywordtype">float</span>* mat, <span class="keywordtype">int</span> rows, <span class="keywordtype">int</span> cols, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="keywordtype">void</span> ReadHDF5IntAttr(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keywordtype">int</span>* val);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="keywordtype">void</span> WriteHDF5IntAttr(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keyword">const</span> <span class="keywordtype">int</span>* val);</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="comment">// mat must already be allocated. Use ReadHDF5Shape to figure out the shape, if needed.</span></div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="keywordtype">void</span> ReadHDF5CPU(hid_t file, <span class="keywordtype">float</span>* mat, <span class="keywordtype">int</span> size, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="keywordtype">void</span> ReadHDF5Shape(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keywordtype">int</span>* rows, <span class="keywordtype">int</span>* cols);</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="keywordtype">void</span> ReadHDF5ShapeFromFile(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; file_name, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; dataset_name, <span class="keywordtype">int</span>* rows, <span class="keywordtype">int</span>* cols);</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="keywordtype">void</span> SetupBackTraceHandler();</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="keywordtype">void</span> WaitForEnter();</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keywordtype">int</span> Bound(<span class="keywordtype">int</span> val, <span class="keywordtype">int</span> lb, <span class="keywordtype">int</span> ub);</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="keywordtype">string</span> GetTimeStamp();</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="keywordtype">void</span> TimestampModelFile(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; src_file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; dest_file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; timestamp);</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="keywordtype">bool</span> ReadLines(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; filename, vector&lt;string&gt;&amp; lines);</div>
 <div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="comment">// mat must already be allocated. Use ReadHDF5Shape to figure out the shape, if needed.</span></div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="keywordtype">void</span> ReadHDF5CPU(hid_t file, <span class="keywordtype">float</span>* mat, <span class="keywordtype">int</span> size, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="keywordtype">void</span> ReadHDF5Shape(hid_t file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name, <span class="keywordtype">int</span>* rows, <span class="keywordtype">int</span>* cols);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="keywordtype">void</span> ReadHDF5ShapeFromFile(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; file_name, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; dataset_name, <span class="keywordtype">int</span>* rows, <span class="keywordtype">int</span>* cols);</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="keywordtype">void</span> SetupBackTraceHandler();</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="keywordtype">void</span> WaitForEnter();</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<span class="keywordtype">int</span> Bound(<span class="keywordtype">int</span> val, <span class="keywordtype">int</span> lb, <span class="keywordtype">int</span> ub);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;<span class="keywordtype">string</span> GetTimeStamp();</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="keywordtype">void</span> TimestampModelFile(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; src_file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; dest_file, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; timestamp);</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="keywordtype">bool</span> ReadLines(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; filename, vector&lt;string&gt;&amp; lines);</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;</div>
+<div class="line"><a name="l00059"></a><span class="lineno"><a class="line" href="classImageDisplayer.html">   59</a></span>&#160;<span class="keyword">class </span><a class="code" href="classImageDisplayer.html">ImageDisplayer</a> {</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; <span class="keyword">public</span>:</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a>();</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a>(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height, <span class="keywordtype">int</span> num_colors, <span class="keywordtype">bool</span> show_separate, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  ~<a class="code" href="classImageDisplayer.html">ImageDisplayer</a>() { <span class="keyword">delete</span> main_disp; <span class="keyword">delete</span> disp; }</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="keywordtype">void</span> SetTitle(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; title) {title_ = title;}</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keywordtype">void</span> DisplayImage(<span class="keywordtype">float</span>* data, <span class="keywordtype">int</span> spacing, <span class="keywordtype">int</span> image_id);</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  <span class="keywordtype">void</span> DisplayWeights(<span class="keywordtype">float</span>* data, <span class="keywordtype">int</span> size, <span class="keywordtype">int</span> num_filters, <span class="keywordtype">int</span> display_size, <span class="keywordtype">bool</span> yuv = <span class="keyword">false</span>);</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  <span class="comment">//void DisplayWeightStats(float* data, int size);</span></div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  <span class="comment">//void DisplayMathGL(mglGraph&amp; gr);</span></div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  CImgDisplay* main_disp, *disp;</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;</div>
-<div class="line"><a name="l00072"></a><span class="lineno"><a class="line" href="classImageDisplayer.html">   72</a></span>&#160;<span class="keyword">class </span><a class="code" href="classImageDisplayer.html">ImageDisplayer</a> {</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; <span class="keyword">public</span>:</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a>();</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <a class="code" href="classImageDisplayer.html">ImageDisplayer</a>(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height, <span class="keywordtype">int</span> num_colors, <span class="keywordtype">bool</span> show_separate, <span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name);</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  ~<a class="code" href="classImageDisplayer.html">ImageDisplayer</a>() { <span class="keyword">delete</span> main_disp; <span class="keyword">delete</span> disp; }</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keywordtype">void</span> SetTitle(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; title) {title_ = title;}</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  <span class="keywordtype">void</span> DisplayImage(<span class="keywordtype">float</span>* data, <span class="keywordtype">int</span> spacing, <span class="keywordtype">int</span> image_id);</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  <span class="keywordtype">void</span> DisplayWeights(<span class="keywordtype">float</span>* data, <span class="keywordtype">int</span> size, <span class="keywordtype">int</span> num_filters, <span class="keywordtype">int</span> display_size, <span class="keywordtype">bool</span> yuv = <span class="keyword">false</span>);</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  <span class="comment">//void DisplayWeightStats(float* data, int size);</span></div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  <span class="comment">//void DisplayMathGL(mglGraph&amp; gr);</span></div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  CImgDisplay* main_disp, *disp;</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> YUVToRGB(<span class="keyword">const</span> <span class="keywordtype">float</span>* yuv, <span class="keywordtype">float</span>* rgb, <span class="keywordtype">int</span> spacing);</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RGBToYUV(<span class="keyword">const</span> <span class="keywordtype">float</span>* rgb, <span class="keywordtype">float</span>* yuv, <span class="keywordtype">int</span> spacing);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; <span class="keyword">private</span>:</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  <span class="keywordtype">int</span> width, height, num_colors;</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  <span class="keywordtype">bool</span> show_separate;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  <span class="keywordtype">string</span> title_;</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;};</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="classImageDisplayer_html"><div class="ttname"><a href="classImageDisplayer.html">ImageDisplayer</a></div><div class="ttdef"><b>Definition:</b> util.h:72</div></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> YUVToRGB(<span class="keyword">const</span> <span class="keywordtype">float</span>* yuv, <span class="keywordtype">float</span>* rgb, <span class="keywordtype">int</span> spacing);</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> RGBToYUV(<span class="keyword">const</span> <span class="keywordtype">float</span>* rgb, <span class="keywordtype">float</span>* yuv, <span class="keywordtype">int</span> spacing);</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; <span class="keyword">private</span>:</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <span class="keywordtype">int</span> width, height, num_colors;</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  <span class="keywordtype">bool</span> show_separate;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keywordtype">string</span> title_;</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;};</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="classImageDisplayer_html"><div class="ttname"><a href="classImageDisplayer.html">ImageDisplayer</a></div><div class="ttdef"><b>Definition:</b> util.h:59</div></div>
 <div class="ttc" id="namespacestd_html"><div class="ttname"><a href="namespacestd.html">std</a></div><div class="ttdoc">STL namespace. </div></div>
 <div class="ttc" id="namespacecimg__library_html"><div class="ttname"><a href="namespacecimg__library.html">cimg_library</a></div></div>
-<div class="ttc" id="struct__sig__ucontext_html"><div class="ttname"><a href="struct__sig__ucontext.html">_sig_ucontext</a></div><div class="ttdef"><b>Definition:</b> util.h:39</div></div>
-<div class="ttc" id="structbox_html"><div class="ttname"><a href="structbox.html">box</a></div><div class="ttdef"><b>Definition:</b> util.h:32</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 05:37:41 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 06:47:29 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

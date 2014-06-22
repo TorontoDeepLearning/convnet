@@ -1,5 +1,9 @@
 var searchData=
 [
-  ['pbtxt2dot',['pbtxt2dot',['../namespacepbtxt2dot.html',1,'']]],
-  ['probmaxpooler',['ProbMaxPooler',['../classProbMaxPooler.html',1,'']]]
+  ['rawimagefileiterator',['RawImageFileIterator',['../classRawImageFileIterator.html',1,'']]],
+  ['rawimagefileiterator_3c_20unsigned_20char_20_3e',['RawImageFileIterator&lt; unsigned char &gt;',['../classRawImageFileIterator.html',1,'']]],
+  ['relulayer',['ReLULayer',['../classReLULayer.html',1,'']]],
+  ['responsenormedge',['ResponseNormEdge',['../classResponseNormEdge.html',1,'']]],
+  ['rgbtoyuvedge',['RGBToYUVEdge',['../classRGBToYUVEdge.html',1,'']]],
+  ['rnd_5fstruct',['rnd_struct',['../structrnd__struct.html',1,'']]]
 ];

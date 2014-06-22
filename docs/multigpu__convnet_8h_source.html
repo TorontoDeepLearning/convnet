@@ -70,7 +70,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
      onmouseover="return searchBox.OnSearchSelectShow()"
      onmouseout="return searchBox.OnSearchSelectHide()"
      onkeydown="return searchBox.OnSearchSelectKey(event)">
-<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a></div>
+<a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(0)"><span class="SelectionMark">&#160;</span>All</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(1)"><span class="SelectionMark">&#160;</span>Classes</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(2)"><span class="SelectionMark">&#160;</span>Namespaces</a><a class="SelectItem" href="javascript:void(0)" onclick="searchBox.OnSelectItem(3)"><span class="SelectionMark">&#160;</span>Functions</a></div>
 
 <!-- iframe showing the search results (closed by default) -->
 <div id="MSearchResultsWindow">
@@ -98,16 +98,18 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;  <a class="code" href="classMultiGPUConvNet.html">MultiGPUConvNet</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; model_file);</div>
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;</div>
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160; <span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> Fprop(<span class="keywordtype">bool</span> train);</div>
-<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> Bprop(<span class="keywordtype">bool</span> update_weights);</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classMultiGPUConvNet.html#a2253a207a11a88a0eb376d1eb35e3cc1">Fprop</a>(<span class="keywordtype">bool</span> train);</div>
+<div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="classMultiGPUConvNet.html#a211af934cd9e5ec5da7c97933b6e8d5a">Bprop</a>(<span class="keywordtype">bool</span> update_weights);</div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;};</div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="classMultiGPUConvNet_html_a211af934cd9e5ec5da7c97933b6e8d5a"><div class="ttname"><a href="classMultiGPUConvNet.html#a211af934cd9e5ec5da7c97933b6e8d5a">MultiGPUConvNet::Bprop</a></div><div class="ttdeci">virtual void Bprop(bool update_weights)</div><div class="ttdoc">Backpropagate through the network and update weights. </div><div class="ttdef"><b>Definition:</b> multigpu_convnet.cc:49</div></div>
 <div class="ttc" id="classMultiGPUConvNet_html"><div class="ttname"><a href="classMultiGPUConvNet.html">MultiGPUConvNet</a></div><div class="ttdef"><b>Definition:</b> multigpu_convnet.h:5</div></div>
-<div class="ttc" id="classConvNet_html"><div class="ttname"><a href="classConvNet.html">ConvNet</a></div><div class="ttdoc">A Convolutional Net Model. </div><div class="ttdef"><b>Definition:</b> convnet.h:12</div></div>
+<div class="ttc" id="classMultiGPUConvNet_html_a2253a207a11a88a0eb376d1eb35e3cc1"><div class="ttname"><a href="classMultiGPUConvNet.html#a2253a207a11a88a0eb376d1eb35e3cc1">MultiGPUConvNet::Fprop</a></div><div class="ttdeci">virtual void Fprop(bool train)</div><div class="ttdoc">Forward propagate through the network. </div><div class="ttdef"><b>Definition:</b> multigpu_convnet.cc:6</div></div>
+<div class="ttc" id="classConvNet_html"><div class="ttname"><a href="classConvNet.html">ConvNet</a></div><div class="ttdoc">A Convolutional Net Model. </div><div class="ttdef"><b>Definition:</b> convnet.h:14</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Jun 22 2014 05:37:41 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Sun Jun 22 2014 06:47:28 for ConvNet by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.7
 </small></address>

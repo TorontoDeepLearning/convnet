@@ -7,16 +7,18 @@
 
 var indexSectionsWithContent =
 {
-  0: "_abcdefghilmoprstu",
-  1: "_abcdefghilmoprstu",
-  2: "p"
+  0: "abcdefghilmoprstu",
+  1: "abcdefghilmoprstu",
+  2: "p",
+  3: "abcdfgst"
 };
 
 var indexSectionNames =
 {
   0: "all",
   1: "classes",
-  2: "namespaces"
+  2: "namespaces",
+  3: "functions"
 };
 
 function convertToId(search)
