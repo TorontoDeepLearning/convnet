@@ -6,7 +6,9 @@
 #include <vector>
 #include <string>
 using namespace std;
-
+/**
+ * A Convolutional Net Model.
+ */
 class ConvNet {
  public:
   ConvNet(const string& model_file);
