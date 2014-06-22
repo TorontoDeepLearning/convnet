@@ -91,15 +91,4 @@ class ImageDisplayer {
 };
 
 
-class HDF5Handler {
- public:
-  HDF5Handler(const string& hdf5_file);
-  ~HDF5Handler();
-  void LoadNext(vector<float>& out);
-
- private:
-  hid_t file_;
-  float* mat_;
-  int batch_index_, case_index_, mat_size_, num_cases_, num_dims_;  
-};
 #endif

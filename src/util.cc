@@ -420,7 +420,6 @@ void ImageDisplayer::DisplayWeights(float* data, int size, int num_filters, int 
           data_pos = f + num_filters * (w + size * (h + size * k));
           col = w + size * (f % num_filters_w);
           row = h + size * (f / num_filters_w);
-          //img(col, row, 0, k) = (unsigned char)(255 * (data[data_pos] - min)) / (max - min);
           img(col, row, 0, k) = data[data_pos];
         }
       }
@@ -471,41 +470,3 @@ void ImageDisplayer::DisplayWeightStats(float* data, int size) {
   DisplayMathGL(gr);
 }
 */
-
-
-HDF5Handler::HDF5Handler(const string& hdf5_file) {
-  file_ = H5Fopen(hdf5_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  mat_ = NULL;
-  batch_index_ = 0;
-  case_index_ = 0;
-  mat_size_ = 0;
-  num_cases_ = 0;
-  num_dims_ = 0;
-}
-
-HDF5Handler::~HDF5Handler() {
-  H5Fclose(file_);
-  if (mat_ != NULL) free(mat_);
-}
-
-void HDF5Handler::LoadNext(vector<float>& out) {
-  if (case_index_ == num_cases_) {
-    case_index_ = 0;
-    stringstream ss;
-    ss << "batch_" << batch_index_;
-    string name = ss.str();
-    ReadHDF5Shape(file_, name, &num_cases_, &num_dims_);
-    int size = num_cases_ * num_dims_;
-    if (mat_size_ != size) {
-      mat_ = (float*) realloc(mat_, size * sizeof(float));
-      mat_size_ = size;
-    }
-    ReadHDF5CPU(file_, mat_, mat_size_, name);
-    batch_index_++;
-  }
-  for (int i = 0; i < num_dims_; i++) {
-    int index = case_index_ + i * num_cases_;
-    out.push_back(mat_[index]);
-  }
-  case_index_++;
-}

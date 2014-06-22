@@ -39,6 +39,22 @@ struct rnd_struct {
     unsigned int* dev_mults;
     unsigned long long* dev_words;
 };
+// bounding boxes.
+struct bbox {
+    int *seg;   // array of length 'size' + 1.
+    int *labels;  // labels[seg[i]:seg[i+1]] are the labels for image i.
+    int *boxes;   // boxes[4*seg[i]:4*seg[i+1]] are bounding boxes for image i.
+};
+
+struct cudamat_bbox {
+    bbox data_host;
+    bbox data_device;
+    int on_device;
+    int on_host;
+    int size;  // Number of images in the (mini)batch.
+    int numboxes;  // Total number of boxes over all images in the (mini)batch.
+};
+
 
 struct sparse_data {
   int *indices, *indptr;
