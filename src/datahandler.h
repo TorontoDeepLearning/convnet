@@ -66,6 +66,7 @@ class DataIterator {
   void SetJitterVariables(int max_offset);
   void Jitter(Matrix& source, Matrix& dest);
   static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
+  int GetGPUId() const { return gpu_id_;}
 
  protected:
   void LoadMeans(const string& data_file);

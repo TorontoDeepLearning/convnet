@@ -8,6 +8,8 @@ class MultiGPUConvNet : public ConvNet {
 
  protected:
   virtual void Fprop(bool train);
+  virtual void ComputeDeriv();
+  virtual void GetLoss(vector<float>& error);
   virtual void Bprop(bool update_weights);
 };
 #endif

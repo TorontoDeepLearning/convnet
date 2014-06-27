@@ -41,6 +41,7 @@ void EdgeWithWeight::SaveParameters(hid_t file) {
 
 void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
   if (is_tied_) return;
+  Matrix::SetDevice(gpu_id_);
   stringstream ss;
   ss << edge_name << ":" << "weight";
   cout << "Loading " << ss.str() << endl;

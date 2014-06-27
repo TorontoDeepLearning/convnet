@@ -30,7 +30,7 @@ DATAHANDLER_SRC := $(SRC)/image_iterators.cc $(SRC)/datahandler.cc
 DATAHANDLER_OBJS := $(OBJ)/image_iterators.o $(OBJ)/datahandler.o
 CUDA_OBJS := $(OBJ)/matrix.o $(OBJ)/cudamat.o $(OBJ)/cudamat_kernels.o $(OBJ)/cudamat_conv.o $(OBJ)/cudamat_conv_kernels.o
 COMMONOBJS = $(OBJ)/convnet_config.pb.o $(DATAHANDLER_OBJS) $(OBJ)/layer.o $(OBJ)/util.o $(CUDA_OBJS) $(EDGES_OBJS)
-TARGETS := $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/jpeg2hdf5
+TARGETS := $(BIN)/train_multigpu_convnet $(BIN)/train_convnet $(BIN)/run_grad_check $(BIN)/extract_multigpu_representation $(BIN)/extract_representation $(BIN)/jpeg2hdf5
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
 
@@ -38,6 +38,9 @@ $(BIN)/train_multigpu_convnet: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/multigpu_co
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/train_convnet: $(COMMONOBJS) $(OBJ)/convnet.o  $(OBJ)/train_convnet.o
+	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
+
+$(BIN)/extract_multigpu_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/multigpu_convnet.o $(OBJ)/extract_multigpu_representation.o 
 	$(NVCC) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/extract_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/extract_representation.o 

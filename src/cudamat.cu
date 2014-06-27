@@ -77,6 +77,7 @@ int cuda_record_event(cudaEvent_t* t) {
 
 int cuda_synchronize_event(cudaEvent_t* t) {
   cudaError_t err = cudaEventSynchronize(*t);
+  //cudaError_t err = cudaStreamWaitEvent(NULL, *t, 0);
   if (cudaSuccess != err) {
     printf("%s\n", cudaGetErrorString( err));
   }
@@ -85,6 +86,7 @@ int cuda_synchronize_event(cudaEvent_t* t) {
 
 int cuda_create_event(cudaEvent_t* t) {
   cudaError_t err = cudaEventCreateWithFlags(t, cudaEventBlockingSync);
+  //cudaError_t err = cudaEventCreate(t);
   if (cudaSuccess != err) {
     printf("%s\n", cudaGetErrorString( err));
   }
@@ -113,6 +115,9 @@ int cuda_set_P2P(int gpu1, int gpu2) {
 
   cudaDeviceCanAccessPeer(&access2from1, gpu1, gpu2);
   cudaDeviceCanAccessPeer(&access1from2, gpu2, gpu1);
+
+  //printf("%d can access %d : %d\n ", gpu1, gpu2, access2from1);
+  //printf("%d can access %d : %d\n ", gpu2, gpu1, access1from2);
 
   bool same_complex = false;
   if(access2from1==1 && access1from2==1) same_complex = true;
@@ -456,6 +461,20 @@ int copy_on_device(cudamat* mat1, cudamat* mat2) {
     else
         return 0;
 }
+int copy_on_device_p2p_async(cudamat* src, cudamat* dst, int src_dev, int dst_dev) {
+    int len = src->size[0]*src->size[1];
+
+    if (src->size[0] != dst->size[0] || src->size[1] != dst->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    cudaMemcpyPeerAsync(dst->data_device, dst_dev, src->data_device, src_dev, len * sizeof(float));
+
+    if (check_cublas_error())
+        return CUBLAS_ERROR;
+    else
+        return 0;
+}
+
 
 int get_row_slice(cudamat* source, cudamat* target, unsigned int start, unsigned int end) {
     int height = source->size[0];

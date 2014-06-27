@@ -29,7 +29,7 @@ void TimestampModelFile(const string& src_file, const string& dest_file, const s
     cout << "Timestamped model : " << dest_file << endl;
   }
   dst << src.rdbuf();
-  dst << endl << "timestamp : \"" << timestamp << "\";" << endl;
+  dst << endl << "timestamp : \"" << timestamp << "\"" << endl;
   dst.close();
   src.close();
 }
@@ -100,16 +100,14 @@ void ReadModelBinary(const string& input_file, config::Model& model) {
 
 
 void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name) {
-  hid_t dataset, dataspace, datatype;
+  hid_t dataset, dataspace;
   hsize_t dimsf[2];
   dimsf[0] = rows;
   dimsf[1] = cols;
   dataspace = H5Screate_simple(2, dimsf, NULL);
-  datatype = H5Tcopy(H5T_NATIVE_FLOAT);
-  dataset = H5Dcreate(file, name.c_str(), datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  dataset = H5Dcreate(file, name.c_str(), H5T_NATIVE_FLOAT, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, mat);
   H5Sclose(dataspace);
-  H5Tclose(datatype);
   H5Dclose(dataset);
 }
 

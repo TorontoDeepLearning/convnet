@@ -34,17 +34,14 @@ void MaxPoolEdge::AllocateMemory(bool fprop_only) {
 }
 
 void MaxPoolEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  ComputeStart(input);
   cudamat* input_mat = input.GetMat();
   cudamat* output_mat = output.GetMat();
   MaxPool(input_mat, output_mat, num_input_channels_, kernel_size_, -padding_,
           stride_, num_modules_);
-  ComputeEnd(output);
 }
 
 void MaxPoolEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                               Matrix& output, Matrix& deriv_input, bool overwrite) {
-  ComputeStart(deriv_output);
   cudamat* input_mat = input.GetMat();
   cudamat* output_mat = output.GetMat();
   
@@ -56,6 +53,5 @@ void MaxPoolEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   
   MaxPoolUndo(input_mat, deriv_output_mat, output_mat, deriv_input_mat,
               kernel_size_, -padding_, stride_, num_modules_);
-  ComputeEnd(deriv_input);
 }
 

@@ -82,9 +82,6 @@ void Layer::AllocateMemoryOnOtherGPUs() {
   for (int gpu_id : other_gpu_ids) {
     Matrix::SetDevice(gpu_id);
     other_states_[gpu_id].AllocateGPUMemory(state_.GetRows(), state_.GetCols(), GetName() + " other state");
-  }
-  for (int gpu_id : other_gpu_ids) {
-    Matrix::SetDevice(gpu_id);
     other_derivs_[gpu_id].AllocateGPUMemory(deriv_.GetRows(), deriv_.GetCols(), GetName() + " other deriv");
   }
 }
@@ -108,13 +105,12 @@ Matrix& Layer::GetOtherDeriv(int gpu_id) {
   return it->second;
 }
 
-
-void Layer::SyncIncomingState() {
-  Matrix::SetDevice(gpu_id_);
+/** Add up the state from all GPUs.*/
+void Layer::AccumulateState() {
   bool overwrite = !has_incoming_from_same_gpu_;
   for (int gpu_id : other_incoming_gpu_ids_) {
     Matrix& other = GetOtherState(gpu_id);
-    other.WaitTillReady();
+    other.WaitTillReady();  // dst->SetReady after ComputeUp.
     if (overwrite) {
       state_.Set(other);
     } else {
@@ -122,24 +118,13 @@ void Layer::SyncIncomingState() {
     }
     overwrite = false;
   }
-  state_.SetReady();
 }
 
-void Layer::SyncOutgoingState() {
-  if (has_outgoing_to_other_gpus_) state_.WaitTillReady();
-  for (int gpu_id : other_outgoing_gpu_ids_) {
-    Matrix& other = GetOtherState(gpu_id);
-    Matrix::SetDevice(other.GetGPUId());
-    other.Set(state_);
-  }
-}
-
-void Layer::SyncOutgoingDeriv() {
-  Matrix::SetDevice(gpu_id_);
+void Layer::AccumulateDeriv() {
   bool overwrite = !has_outgoing_to_same_gpu_;
   for (int gpu_id : other_outgoing_gpu_ids_) {
     Matrix& other = GetOtherDeriv(gpu_id);
-    other.WaitTillReady();
+    other.WaitTillReady();  // setready after computedown.
     if (overwrite) {
       deriv_.Set(other);
     } else {
@@ -147,16 +132,27 @@ void Layer::SyncOutgoingDeriv() {
     }
     overwrite = false;
   }
-  deriv_.SetReady();
 }
 
+void Layer::BroadcastState() {
+  if (has_outgoing_to_other_gpus_) {
+    for (int gpu_id: other_outgoing_gpu_ids_) {
+      Matrix::SetDevice(gpu_id);
+      state_.WaitTillReady();  // wait for l->GetDeriv().GetReady() after ApplyDerivativeofActivation.
+      //GetOtherState(gpu_id).CopyP2PAsync(state_);
+      GetOtherState(gpu_id).Set(state_);
+    }
+  }
+}
 
-void Layer::SyncIncomingDeriv() {
-  if (has_incoming_from_other_gpus_) deriv_.WaitTillReady();
-  for (int gpu_id : other_incoming_gpu_ids_) {
-    Matrix& other = GetOtherDeriv(gpu_id);
-    Matrix::SetDevice(other.GetGPUId());
-    other.Set(deriv_);
+void Layer::BroadcastDeriv() {
+  if (has_incoming_from_other_gpus_) {
+    for (int gpu_id: other_incoming_gpu_ids_) {
+      Matrix::SetDevice(gpu_id);
+      deriv_.WaitTillReady();  // wait for l->GetDeriv().GetReady() after ApplyDerivativeofActivation.
+      //GetOtherDeriv(gpu_id).CopyP2PAsync(deriv_);
+      GetOtherDeriv(gpu_id).Set(deriv_);
+    }
   }
 }
 
@@ -256,52 +252,24 @@ void Layer::ApplyDropout(bool train) {
   }
 }
 
-void Layer::AccessStateBegin() {
-  Matrix::SetDevice(gpu_id_);
-}
-
-void Layer::AccessDerivBegin() {
-  Matrix::SetDevice(gpu_id_);
-}
-
-void Layer::AccessStateEnd() {
-  if (has_outgoing_to_other_gpus_) {
-    state_.SetReady();
-  }
-}
-
-void Layer::AccessDerivEnd() {
-  if (has_incoming_from_other_gpus_) {
-    deriv_.SetReady();
-  }
-}
-
 void LinearLayer::ApplyActivation(bool train) {
   // Linear layer, do nothing.
-  // cout<< "Linear layer activation called." << endl;
-  AccessStateBegin();
   ApplyDropout(train);
-  AccessStateEnd();
 }
 
 void LinearLayer::ApplyDerivativeOfActivation() {
-  AccessDerivBegin();
   ApplyDerivativeofDropout();
-  AccessDerivEnd();
 }
 
 void LinearLayer::ComputeDeriv() {
-  AccessStateBegin();
   int err_code = subtract_elementwise(state_.GetMat(), data_.GetMat(), deriv_.GetMat());
   if (err_code != 0) {
     cerr << "Error in compute deriv of linear unit." << endl;
     exit(1);
   }
-  AccessDerivEnd();
 }
 
 float LinearLayer::GetLoss() {
-  AccessStateBegin();
   Matrix temp;
   Matrix::GetTemp(data_.GetRows(), data_.GetCols(), temp);
   int err_code = subtract_elementwise(state_.GetMat(), data_.GetMat(), temp.GetMat());
@@ -326,23 +294,19 @@ ReLULayer::ReLULayer(const config::Layer& config) :
 {}
 
 void ReLULayer::ApplyActivation(bool train) {
-  AccessStateBegin();
   cudamat* state = state_.GetMat();
   lower_bound_scalar(state, 0, state);
   ApplyDropout(train);
   if (gaussian_dropout_ && rectify_after_gaussian_dropout_) {
     lower_bound_scalar(state, 0, state);
   }
-  AccessStateEnd();
 }
 
 void ReLULayer::ApplyDerivativeOfActivation() {
-  AccessDerivBegin();
   ApplyDerivativeofDropout();
   cudamat* deriv = deriv_.GetMat();
   cudamat* state = state_.GetMat();
   apply_rectified_linear_deriv(deriv, state, deriv);
-  AccessDerivEnd();
 }
 
 void SoftmaxLayer::AllocateMemory(int image_size, int batch_size) {
@@ -352,42 +316,33 @@ void SoftmaxLayer::AllocateMemory(int image_size, int batch_size) {
 }
 
 void SoftmaxLayer::ApplyActivation(bool train) {
-  AccessStateBegin();
   cudamat* state = state_.GetMat();
   softmax_row_major_multi(state, state_.GetCols());
   ApplyDropout(train);
-  AccessStateEnd();
 }
 
 void SoftmaxLayer::ApplyDerivativeOfActivation() {
-  AccessDerivBegin();
   cerr << "Back prop through softmax is not implemented." << endl;
   exit(1);
-  AccessDerivEnd();
 }
 
 void SoftmaxLayer::ComputeDeriv() {
-  AccessStateBegin();
   cudamat* state = state_.GetMat();
   cudamat* target = data_.GetMat();
   cudamat* deriv = deriv_.GetMat();
   apply_softmax_grad_row_major(state, target, deriv);
-  AccessDerivEnd();
 }
 
 float SoftmaxLayer::GetLoss() {
-  AccessStateBegin();
   cudamat* state = state_.GetMat();
   Matrix temp;
   Matrix::GetTemp(data_.GetRows(), 1, temp);
   get_softmax_correct_row_major(state, data_.GetMat(), temp.GetMat());
   float res = temp.Sum();
-  //cout << "Softmax loss " << res << " out of " << data_.GetRows() << endl;
   return res;
 }
 
 float SoftmaxLayer::GetLoss2() {
-  AccessStateBegin();
   cudamat* state = state_.GetMat();
   Matrix temp;
   Matrix::GetTemp(data_.GetRows(), 1, temp);
@@ -405,13 +360,10 @@ void SoftmaxDistLayer::AllocateMemory(int imgsize, int batch_size) {
 }
 
 void SoftmaxDistLayer::ComputeDeriv() {
-  AccessStateBegin();
   apply_logistic_grad(state_.GetMat(), data_.GetMat(), deriv_.GetMat());
-  AccessDerivEnd();
 }
 
 float SoftmaxDistLayer::GetLoss() {
-  AccessStateBegin();
   int err;
   err = compute_cross_entropy(data_.GetMat(), state_.GetMat(), cross_entropy_.GetMat(), 1e-10);
   if (err != 0) {
@@ -428,31 +380,23 @@ void LogisticLayer::AllocateMemory(int image_size, int batch_size) {
 }
 
 void LogisticLayer::ApplyActivation(bool train) {
-  AccessStateBegin();
-  // cout<< "Logistic layer activation called." << endl;
   cudamat* state = state_.GetMat();
   apply_sigmoid(state, state);
   ApplyDropout(train);
-  AccessStateEnd();
 }
 
 void LogisticLayer::ApplyDerivativeOfActivation() {
-  AccessDerivBegin();
   ApplyDerivativeofDropout();
   cudamat* deriv = deriv_.GetMat();
   cudamat* state = state_.GetMat();
   apply_logistic_deriv(deriv, state, deriv);
-  AccessDerivEnd();
 }
 
 void LogisticLayer::ComputeDeriv() {
-  AccessStateBegin();
   apply_logistic_grad(state_.GetMat(), data_.GetMat(), deriv_.GetMat());
-  AccessDerivEnd();
 }
 
 float LogisticLayer::GetLoss() {
-  AccessStateBegin();
   Matrix temp;
   Matrix::GetTemp(data_.GetRows(), 1, temp);
   get_logistic_correct_normalized(state_.GetMat(), data_.GetMat(), temp.GetMat());

@@ -46,7 +46,6 @@ void ConvOneToOneEdge::AllocateMemoryFprop() {
 }
 
 void ConvOneToOneEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  ComputeStart(input);
   int batch_size = input.GetRows();
   input.Reshape(-1, num_input_channels_);
   output.Reshape(-1, num_output_channels_);
@@ -65,12 +64,10 @@ void ConvOneToOneEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) 
 
   input.Reshape(batch_size, -1);
   output.Reshape(batch_size, -1);
-  ComputeEnd(output);
 }
 
 void ConvOneToOneEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
-  ComputeStart(deriv_output);
   int batch_size = input.GetRows();
   deriv_output.Reshape(-1, num_output_channels_);
   deriv_input.Reshape(-1, num_input_channels_);
@@ -85,11 +82,9 @@ void ConvOneToOneEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   dot(deriv_output_mat, w_mat, deriv_input_mat, scale_targets, 1);
   deriv_output.Reshape(batch_size, -1);
   deriv_input.Reshape(batch_size, -1);
-  ComputeEnd(deriv_input);
 }
 
 void ConvOneToOneEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
-  ComputeStart(deriv_output);
   int batch_size = input.GetRows();
   input.Reshape(-1, num_input_channels_);
   deriv_output.Reshape(-1, num_output_channels_);

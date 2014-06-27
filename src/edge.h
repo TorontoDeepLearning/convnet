@@ -116,10 +116,6 @@ class Edge {
   bool IsTied();
   int GetGPUId() const { return gpu_id_; }
 
-  // Multi-gpu.
-  void ComputeStart(Matrix& mat);
-  void ComputeEnd(Matrix& mat);
-
   /** Selects the appropriate derived class for the edge config.*/
   static Edge* ChooseEdgeClass(const config::Edge& edge_config);
   

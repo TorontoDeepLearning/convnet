@@ -17,6 +17,7 @@ void MultiGPUConvNet::Fprop(bool train) {
       src_layer = e->GetSource();
       edge_gpu_id = e->GetGPUId();
       src_layer_gpu_id = src_layer->GetGPUId();
+      Matrix::SetDevice(edge_gpu_id);
 
       if (edge_gpu_id != dst_layer_gpu_id) {
         dst = &(l->GetOtherState(edge_gpu_id));
@@ -30,21 +31,37 @@ void MultiGPUConvNet::Fprop(bool train) {
       }
 
       e->ComputeUp(*src, *dst, overwrite[edge_gpu_id]);
+      dst->SetReady();  // l->AccumulateState will wait for this.
       overwrite[edge_gpu_id] = false;
     }
     
+    Matrix::SetDevice(l->GetGPUId());
     if (l->IsInput()) {
-      Matrix::SetDevice(l->GetGPUId());
       l->ApplyDropout(train);
-      l->GetState().SetReady();
-      l->SyncOutgoingState();
     } else {
-      l->SyncIncomingState();
+      l->AccumulateState();
       l->ApplyActivation(train);
-      l->SyncOutgoingState();
     }
+    l->GetState().SetReady();  // l->BroadcastState will wait for this.
+    l->BroadcastState();
   }
 }
+
+void MultiGPUConvNet::ComputeDeriv() {
+  for (Layer* l: output_layers_) {
+    Matrix::SetDevice(l->GetGPUId());
+    l->ComputeDeriv();
+  }
+}
+
+void MultiGPUConvNet::GetLoss(vector<float>& error) {
+  error.clear();
+  for (Layer* l: output_layers_) {
+    Matrix::SetDevice(l->GetGPUId());
+    error.push_back(l->GetLoss());
+  }
+}
+
 
 void MultiGPUConvNet::Bprop(bool update_weights) {
   Layer *l, *dst_layer;
@@ -55,12 +72,14 @@ void MultiGPUConvNet::Bprop(bool update_weights) {
   for (int i = layers_.size() - 1; i >= 0; i--) {
     for (int i = 0; i < num_gpus; i++) overwrite[i] = true;
     l = layers_[i];
+    //cout << l->GetName() << endl; 
     src_layer_gpu_id = l->GetGPUId();
     for (Edge* e : l->outgoing_edge_) {
       dst_layer = e->GetDest();
       edge_gpu_id = e->GetGPUId();
       dst_layer_gpu_id = dst_layer->GetGPUId();
 
+      Matrix::SetDevice(edge_gpu_id);
       if (edge_gpu_id != src_layer_gpu_id) {
         src_deriv = &(l->GetOtherDeriv(edge_gpu_id));
         src_state = &(l->GetOtherState(edge_gpu_id));
@@ -75,21 +94,23 @@ void MultiGPUConvNet::Bprop(bool update_weights) {
         dst_deriv = &(dst_layer->GetDeriv());
         dst_state = &(dst_layer->GetState());
       }
-
       e->ComputeOuter(*src_state, *dst_deriv);
       if (!l->IsInput() && !e->IsBackPropBlocked()) {
         e->ComputeDown(*dst_deriv, *src_state, *dst_state, *src_deriv,
                        overwrite[edge_gpu_id]);
+        src_deriv->SetReady();
       }
       if (update_weights) e->UpdateWeights();
       overwrite[edge_gpu_id] = false;
     }
     if (!l->IsInput()) {
+      Matrix::SetDevice(l->GetGPUId());
       if (!l->IsOutput()) {
-        l->SyncOutgoingDeriv();
+        l->AccumulateDeriv();
         l->ApplyDerivativeOfActivation();
       }
-      l->SyncIncomingDeriv();
+      l->GetDeriv().SetReady(); // l->BroadcastDeriv will wait for this.
+      l->BroadcastDeriv();
     }
   }
 }

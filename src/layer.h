@@ -96,10 +96,11 @@ class Layer {
   void AllocateMemoryOnOtherGPUs();
   Matrix& GetOtherState(int gpu_id);
   Matrix& GetOtherDeriv(int gpu_id);
-  void SyncIncomingState();
-  void SyncOutgoingState();
-  void SyncIncomingDeriv();
-  void SyncOutgoingDeriv();
+
+  void AccumulateState();
+  void AccumulateDeriv();
+  void BroadcastState();
+  void BroadcastDeriv();
 
   static Layer* ChooseLayerClass(const config::Layer& layer_config);
 

@@ -96,7 +96,7 @@ void Matrix::CopyFromMainMemory(Matrix& mat) {
 void Matrix::Set(const float val) {
   int err_code = assign_scalar(&mat_, val);
   if (err_code != 0) {
-    cout << "Error: Could not set to scalar : " << GetStringError(err_code) << endl;
+    cerr << "Error: Could not set to scalar : " << GetStringError(err_code) << endl;
     exit(1);
   }
 }
@@ -104,16 +104,29 @@ void Matrix::Set(const float val) {
 void Matrix::Set(Matrix& val) {
   int err_code = copy_on_device(val.GetMat(), &mat_);  // source, dest.
   if (err_code != 0) {
-    cout << "Error: Could not set to scalar : " << GetStringError(err_code) << endl;
+    cerr << "Error: Could not set to val : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::CopyP2PAsync(Matrix& val) {
+  int err_code = copy_on_device_p2p_async(val.GetMat(), &mat_, val.GetGPUId(), gpu_id_);  // source, dest.
+  if (err_code != 0) {
+    cerr << "Error: Could not copy async : " << GetStringError(err_code) << endl;
     exit(1);
   }
 }
 
 
+
 void Matrix::FillWithRandn() {
+  if (gpu_id_ != current_gpu_id_) {
+    cerr << "GPU mismatch " << endl;
+    exit(1);
+  }
   int err_code = fill_with_randn(&rnd_[current_gpu_id_], &mat_);
   if (err_code != 0) {
-    cout << "Error: Could not fill with randn : " << GetStringError(err_code) << endl;
+    cerr << "Error: Could not fill with randn : " << GetStringError(err_code) << endl;
     exit(1);
   }
 }
@@ -121,7 +134,7 @@ void Matrix::FillWithRandn() {
 void Matrix::FillWithRand() {
   int err_code = fill_with_rand(&rnd_[current_gpu_id_], &mat_);
   if (err_code != 0) {
-    cout << "Error: Could not fill with rand : " << GetStringError(err_code) << endl;
+    cerr << "Error: Could not fill with rand : " << GetStringError(err_code) << endl;
     exit(1);
   }
 }
@@ -133,10 +146,10 @@ float Matrix::Sum() {
   reshape(&mat_, 1, -1);
   GetOnes(1, rows * cols, ones);
   int err;
-  // cout << "Summing matrix of shape " << rows << " " << cols << endl;
   float res = vdot(ones.GetMat(), &mat_, &err);
   if (err != 0) {
     cerr << "Error in vdot " << GetStringError(err) << endl;
+    cerr << "Summing matrix of shape " << rows << " " << cols << endl;
     exit(1);
   }
   reshape(&mat_, rows, cols);
@@ -184,7 +197,7 @@ void Matrix::Print() {
   cuda_sync_threads();
   int err_code = copy_to_host(&mat_);
   if (err_code != 0) {
-    cout << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
+    cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
     exit(1);
   }
   for (int i = 0; i < mat_.size[0]; i++) {
@@ -222,7 +235,7 @@ void Matrix::ReadFromFile(FILE* file) {
   fread(mat_.data_host, sizeof(float), mat_.size[0] * mat_.size[1], file);
   int err_code = copy_to_device(&mat_);
   if (err_code != 0) {
-    cout << "Error copying matrix to device : " << GetStringError(err_code) << endl;
+    cerr << "Error copying matrix to device : " << GetStringError(err_code) << endl;
     exit(1);
   }
 }
@@ -271,16 +284,10 @@ void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
   int size = t.GetNumEls();
   const int length = rows * cols;
   if (length > size) {  // Allocate memory as required.
-    t.AllocateGPUMemory(1, temp_size_[current_gpu_id_]);
-    size = temp_size_[current_gpu_id_];
+    t.AllocateGPUMemory(1, length);
+    temp_size_[current_gpu_id_] = length;
     //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
-  /*
-  if (length > size) {
-    cerr << "Temp has only " << size << " elements. Requested was " << length << endl;
-    exit(1);
-  }
-  */
   get_slice(t.GetMat(), temp.GetMat(), 0, length);
   reshape(temp.GetMat(), rows, cols);
 }
@@ -338,7 +345,7 @@ void Matrix::SetupCUDADevices(const vector<int>& boards) {
     temp_size_[i] = 0;
     ones_size_[i] = 128*256*256;
   }
-  cuda_set_device(boards[0]);
+  SetDevice(0);
 }
 
 void Matrix::SetupCUDADevice(int board) {
@@ -384,17 +391,23 @@ void Matrix::SyncDevice(int gpu_id) {
 
 void Matrix::SyncAllDevices() {
   if (num_boards_ < 2) return;
+  int current_gpu_backup = current_gpu_id_;
   for (int i = 0; i < num_boards_; i++) {
     SetDevice(i);
     cuda_sync_threads();
   }
-  SetDevice(0);
+  SetDevice(current_gpu_backup);
 }
 
 void Matrix::InitRandom(int seed){
+  int err_code;
   for (int i = 0; i < num_boards_; i++) {
     SetDevice(i);
-    init_random(&rnd_[i], seed + i, NULL);
+    err_code = init_random(&rnd_[i], seed + i, NULL);
+    if (err_code != 0) {
+      cerr << "Error init random board " << i << " " << GetStringError(err_code) << endl;
+      exit(1);
+    }
   }
 }
 
@@ -419,7 +432,8 @@ void Matrix::SetReady() {
   if (num_boards_ < 2) return;
   int err_code;
   if (current_gpu_id_ != gpu_id_) {
-    cerr << "Error: Current gpu must be same as the one on which the event was created." << endl;
+    cerr << "Error: Current gpu " << current_gpu_id_ << " must be same as the"
+         << " one on which the event was created" << gpu_id_ << "." << endl;
     exit(1);
   }
   err_code = cuda_record_event(&ready_);

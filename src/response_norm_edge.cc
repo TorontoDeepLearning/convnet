@@ -34,7 +34,6 @@ void ResponseNormEdge::AllocateMemory(bool fprop_only) {
 }
 
 void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  ComputeStart(input);
   cudamat* input_mat = input.GetMat();
   cudamat* output_mat = output.GetMat();
   if (denoms_.GetNumEls() != input.GetNumEls()) {
@@ -44,12 +43,10 @@ void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) 
   ResponseNormCrossMap(input_mat, denoms_mat, output_mat, num_input_channels_,
                        num_filters_response_norm_, add_scale_, pow_scale_,
                        blocked_);
-  ComputeEnd(output);
 }
 
 void ResponseNormEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                                    Matrix& output, Matrix& deriv_input, bool overwrite) {
-  ComputeStart(deriv_output);
   cudamat* input_mat = input.GetMat();
   cudamat* output_mat = output.GetMat();
 
@@ -66,5 +63,4 @@ void ResponseNormEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            deriv_input_mat, num_input_channels_,
                            num_filters_response_norm_, add_scale_, pow_scale_,
                            blocked_);
-  ComputeEnd(deriv_input);
 }

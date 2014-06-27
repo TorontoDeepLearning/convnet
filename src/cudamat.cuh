@@ -99,6 +99,7 @@ int copy_to_device_slice(cudamat* mat, int start, int end);
 int copy_bbox_to_device(cudamat_bbox* mat);
 int copy_sparse_to_device(cudamat_sparse* mat);
 int copy_on_device(cudamat* mat1, cudamat* mat2);
+int copy_on_device_p2p_async(cudamat* src, cudamat* dst, int src_dev, int dst_dev);
 int get_row_slice(cudamat* source, cudamat* target, unsigned int start, unsigned int end);
 int set_row_slice(cudamat* source, cudamat* target, unsigned int start, unsigned int end);
 int copy_transpose(cudamat* source, cudamat* target);

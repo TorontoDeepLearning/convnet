@@ -22,6 +22,7 @@ class Matrix {
   //void ClearGPUMemory();
   void Set(const float val);
   void Set(Matrix& val);
+  void CopyP2PAsync(Matrix& val);
   void GetSlice(Matrix& slice, int start, int end);
   void FillWithRand();
   void FillWithRandn();

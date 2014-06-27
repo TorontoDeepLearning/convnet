@@ -36,7 +36,6 @@ void FCEdge::AllocateMemory(bool fprop_only) {
 }
 
 void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  ComputeStart(input);
   cudamat *input_mat = input.GetMat(),
           *output_mat = output.GetMat(),
           *w_mat_t = is_tied_? tied_edge_->GetWeight().GetMatTranspose()
@@ -49,12 +48,10 @@ void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
     cudamat* b_mat = is_tied_? tied_edge_->GetBias().GetMat() : bias_.GetMat();
     add_row_vec(output_mat, b_mat, output_mat);
   }
-  ComputeEnd(output);
 }
 
 void FCEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                          Matrix& output, Matrix& deriv_input, bool overwrite) {
-  ComputeStart(deriv_output);
   // Deriv w.r.t output of this edge.
   cudamat* deriv_output_mat = deriv_output.GetMat();
 
@@ -64,11 +61,9 @@ void FCEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   cudamat* w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
   int scale_targets = overwrite ? 0 : 1;
   dot(deriv_output_mat, w_mat, deriv_input_mat, scale_targets, 1);
-  ComputeEnd(deriv_input);
 }
 
 void FCEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
-  ComputeStart(deriv_output);
   // Input to this edge.
   cudamat* input_mat = input.GetMat();
   

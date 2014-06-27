@@ -98,6 +98,7 @@ void Edge::LoadParameters(hid_t file) {
 
 void Edge::Initialize() {
   // no op. Initialization done in derived classes.
+  Matrix::SetDevice(gpu_id_);
 }
 
 void Edge::AllocateMemory(bool fprop_only) {
@@ -200,12 +201,4 @@ void Edge::BackupCurrent() {
 void Edge::LoadCurrentOnGPU() {
 }
 void Edge::LoadPolyakOnGPU() {
-}
-
-void Edge::ComputeStart(Matrix& mat) {
-  Matrix::SetDevice(gpu_id_);
-}
-
-void Edge::ComputeEnd(Matrix& mat) {
-  mat.SetReady(); // It's important that the output and edge be on the same gpu.
 }

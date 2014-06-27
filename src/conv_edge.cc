@@ -114,7 +114,6 @@ void ConvEdge::AllocateMemoryFprop() {
 }
 
 void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  ComputeStart(input);
   cudamat *input_mat = input.GetMat(),
           *output_mat = output.GetMat(),
           *w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
@@ -132,12 +131,10 @@ void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
       add_row_vec(output_mat, b_mat, output_mat);
     }
   }
-  ComputeEnd(output);
 }
 
 void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
-  ComputeStart(deriv_output);
   // Deriv w.r.t output of this edge.
   cudamat* deriv_output_mat = deriv_output.GetMat();
 
@@ -153,11 +150,9 @@ void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   int scale_targets = overwrite ? 0 : 1;
   convDown(deriv_output_mat, w_mat, deriv_input_mat, image_size_, -padding_,
            stride_, num_input_channels_, 1, scale_targets);
-  ComputeEnd(deriv_input);
 }
 
 void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
-  ComputeStart(deriv_output);
   // Input to this edge.
   cudamat* input_mat = input.GetMat();
   

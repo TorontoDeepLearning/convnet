@@ -114,10 +114,11 @@ void ConvNet::AllocateLayerMemory() {
 void ConvNet::AllocateEdgeMemory(bool fprop_only) {
   for (Edge* e : edges_) e->AllocateMemory(fprop_only);
 
-  // Initialize randomly or from a saved model.
   if (timestamp_.empty()) {
+    // Initialize randomly.
     for (Edge* e: edges_) e->Initialize();
   } else {
+    // Initialize from a saved model.
     Load();
   }
 }

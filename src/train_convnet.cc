@@ -2,7 +2,6 @@
 #include <iostream>
 using namespace std;
 
-
 int main(int argc, char** argv) {
   int board = atoi(argv[1]);
   string model_file(argv[2]);

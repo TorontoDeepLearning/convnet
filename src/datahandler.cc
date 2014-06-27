@@ -51,6 +51,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   for (const string& layer_name : layer_names_) {
     DataIterator* it = data_it_[layer_name];
     int num_dims = it->GetDims();
+    Matrix::SetDevice(it->GetGPUId());
     Matrix& data = data_[layer_name];
     data.AllocateGPUMemory(num_dims, chunk_size_);
     cout << "Allocating GPU memory for " << layer_name << " " << num_dims << " " << chunk_size_ << endl;
@@ -118,10 +119,11 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
   }
   for (Layer* l : data_layers) {
     const string& layer_name = l->GetName();
+    DataIterator* it = data_it_[layer_name];
+    Matrix::SetDevice(it->GetGPUId());
     Matrix data_slice;
     data_[layer_name].GetSlice(data_slice, start_, end);
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
-    DataIterator* it = data_it_[layer_name];
     
     // Add noise, if asked for, and copy to dest.
     it->AddNoise(data_slice, dest);
