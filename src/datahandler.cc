@@ -54,7 +54,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     Matrix::SetDevice(it->GetGPUId());
     Matrix& data = data_[layer_name];
     data.AllocateGPUMemory(num_dims, chunk_size_);
-    cout << "Allocating GPU memory for " << layer_name << " " << num_dims << " " << chunk_size_ << endl;
+    //cout << "Allocating GPU memory for " << layer_name << " " << num_dims << " " << chunk_size_ << endl;
   }
 }
 
@@ -386,7 +386,7 @@ void DataIterator::Jitter(Matrix& source, Matrix& dest) {
     int err_code = extract_patches(src_mat, dest_mat, wo, ho, f, image_size,
                                    image_size, patch_size, patch_size);
     if (err_code != 0) {
-      cout << "Error extracting patches " << GetStringError(err_code) << endl;
+      cerr << "Error extracting patches " << GetStringError(err_code) << endl;
       exit(1);
     }
   } else {

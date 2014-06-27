@@ -11,7 +11,6 @@ int main(int argc, char** argv) {
   cout << "Using board " << board << endl;
 
   ConvNet net = ConvNet(model_file);
-  cout << "Setting up dataset" << endl;
   if (argc > 4) {  // Use a validation set.
     string val_data_file(argv[4]);
     net.SetupDataset(data_file, val_data_file);
@@ -19,7 +18,6 @@ int main(int argc, char** argv) {
     net.SetupDataset(data_file);
   }
   net.AllocateMemory(false);
-  cout << "Calling train" << endl;
   net.Train();
   return 0;
 }

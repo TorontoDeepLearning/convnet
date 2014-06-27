@@ -90,7 +90,7 @@ void ConvNet::BuildNet() {
 }
 
 void ConvNet::AllocateLayerMemory() {
-  cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
+  //cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
   int image_size;
   for (Layer* l : layers_) {
     // Find out the spatial size of the layer.
