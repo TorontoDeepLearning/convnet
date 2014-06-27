@@ -54,7 +54,6 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     Matrix::SetDevice(it->GetGPUId());
     Matrix& data = data_[layer_name];
     data.AllocateGPUMemory(num_dims, chunk_size_);
-    //cout << "Allocating GPU memory for " << layer_name << " " << num_dims << " " << chunk_size_ << endl;
   }
 }
 
@@ -120,6 +119,7 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
   for (Layer* l : data_layers) {
     const string& layer_name = l->GetName();
     DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
     Matrix::SetDevice(it->GetGPUId());
     Matrix data_slice;
     data_[layer_name].GetSlice(data_slice, start_, end);

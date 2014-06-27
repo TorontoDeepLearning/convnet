@@ -93,27 +93,28 @@ void LoadImage(const string& filename, int image_size, int big_image_size, int p
 }
 
 int main(int argc, char** argv) {
-  string output_dir(argv[1]);
-  string model_structure(argv[2]);
-  string model_parameters(argv[3]);
+  string model_structure(argv[1]);
+  string model_parameters(argv[2]);
+  string mean_file(argv[3]);
+  string output_dir(argv[4]);
 
-  ConvNetCPU net(model_structure, model_parameters, 1);
+  ConvNetCPU net(model_structure, model_parameters, mean_file, 1);
   vector<Layer*> layers;
   int big_image_size = 256;
   int image_size = 224;
   int position = 0;
   unsigned char* data = new unsigned char[image_size * image_size * 3];
 
-  vector<ofstream> outf(argc-4);
+  vector<ofstream> outf(argc-5);
   cout << "Writing outputs to " << endl;
-  for (int c = 4; c < argc; c++) {
+  for (int c = 5; c < argc; c++) {
     layers.push_back(net.GetLayerByName(string(argv[c])));
     string filename = output_dir + "/" + string(argv[c]) + ".txt";
     cout << filename << endl;
-    outf[c-4].open(filename, ofstream::out);
+    outf[c-5].open(filename, ofstream::out);
   }
 
-  cout << "Starting fprops" << endl;
+  bool show_time = false;
   chrono::time_point<chrono::system_clock> start_t, load_t, fprop_t, end_t;
   chrono::duration<double> time_diff1, time_diff2, time_diff3;
   while (true) {
@@ -146,7 +147,10 @@ int main(int argc, char** argv) {
     time_diff1 = load_t - start_t;
     time_diff2 = fprop_t  - load_t;
     time_diff3 = end_t  - fprop_t;
-    printf(" Time load %f s fprop %f s write %f s", time_diff1.count(), time_diff2.count(), time_diff3.count());
+    if (show_time) {
+      printf(" Time load %f s fprop %f s write %f s",
+             time_diff1.count(), time_diff2.count(), time_diff3.count());
+    }
     start_t = end_t;
     cout << endl;
   }

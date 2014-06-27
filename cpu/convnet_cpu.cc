@@ -6,12 +6,14 @@
 #include <stack>
 using namespace std;
 
-ConvNetCPU::ConvNetCPU(const string& model_structure, const string& model_parameters, int batch_size) {
+ConvNetCPU::ConvNetCPU(
+    const string& model_structure, const string& model_parameters,
+    const string& mean_file, int batch_size) {
   model_ = new config::Model;
   stringstream ss;
   string line;
   ifstream file(model_structure.c_str());
-  while (getline(file, line)) ss << line;
+  ss << file.rdbuf();
   if (!google::protobuf::TextFormat::ParseFromString(ss.str(), model_)) {
     cerr << "Could not read text proto buffer : " << model_structure << endl;
     exit(1);
@@ -75,7 +77,7 @@ ConvNetCPU::ConvNetCPU(const string& model_structure, const string& model_parame
     e->LoadParameters(hdf5_model);
   }
   H5Fclose(hdf5_model);
-  SetMean("/ais/gobi3/u/nitish/imagenet/pixel_mean.h5"); //model_parameters);
+  SetMean(mean_file);
 }
 
 void ConvNetCPU::SetMean(const string& mean_file) {
@@ -275,6 +277,7 @@ void Edge::SetImageSize(int image_size) {
       break;
     case config::Edge::RESPONSE_NORM :
     case config::Edge::RGBTOYUV:
+    case config::Edge::CONV_ONETOONE:
       num_modules_ = image_size_;
       break;
     case config::Edge::UPSAMPLE :

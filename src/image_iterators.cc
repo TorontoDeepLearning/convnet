@@ -75,7 +75,7 @@ void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int posi
     string& filename = filenames_[row];
     image_.assign(filename.c_str());
     
-    // Resize it so that the shorter side is image_size_.
+    // Resize it so that the shorter side is raw_image_size_.
     int width = image_.width(), height = image_.height();
     int new_width, new_height;
     if (width > height) {
@@ -110,12 +110,6 @@ void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int posi
     cerr << "Image has " << num_image_colors << "colors." << endl;
     exit(1);
   }
-  /*
-  for (int i = 0; i < 10; i++) {
-    cout << data_ptr[i] << " ";
-  }
-  cout << endl;
-  */
 }
 template class RawImageFileIterator<float>;
 template class RawImageFileIterator<unsigned char>;

@@ -77,7 +77,8 @@ class Edge {
 
 class ConvNetCPU {
  public:
-  ConvNetCPU(const string& model_structure, const string& model_parameters, int batch_size);
+  ConvNetCPU(const string& model_structure, const string& model_parameters,
+             const string& mean_file, int batch_size);
   void Fprop(const unsigned char* data, int batch_size);
   int GetDims(const string& layer_name) const;
   Layer* GetLayerByName(const string& name);
