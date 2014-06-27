@@ -42,6 +42,8 @@ $ python show_plots.py
 ```
 
 ### Draw the net.
+Draw the network graph.
+```
 $ python ../../src/pbtxt2dot.py net.pbtxt net.dot
 $ dot -Tpng net.dot -o net.png
-
+```
