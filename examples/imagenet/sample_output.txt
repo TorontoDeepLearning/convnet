@@ -1,0 +1,110 @@
+----------------
+mosque 0.919411
+palace 0.0481482
+dome 0.018008
+church, church building 0.00518975
+monastery 0.00461331
+vault 0.00112578
+planetarium 0.00104474
+triumphal arch 0.00069416
+castle 0.000434334
+fountain 0.00034682
+----------------
+chimpanzee, chimp, Pan troglodytes 0.914213
+gorilla, Gorilla gorilla 0.0309826
+guenon, guenon monkey 0.0142933
+siamang, Hylobates syndactylus, Symphalangus syndactylus 0.00858093
+spider monkey, Ateles geoffroyi 0.00798358
+mask 0.00779544
+howler monkey, howler 0.00341189
+orangutan, orang, orangutang, Pongo pygmaeus 0.00229347
+titi, titi monkey 0.0014632
+chambered nautilus, pearly nautilus, nautilus 0.00133158
+----------------
+dumbbell 0.888744
+shower cap 0.0369511
+bathing cap, swimming cap 0.0158496
+barbell 0.00981985
+syringe 0.00553518
+hand blower, blow dryer, blow drier, hair dryer, hair drier 0.00347405
+brassiere, bra, bandeau 0.00323845
+hair spray 0.00320869
+bathtub, bathing tub, bath, tub 0.00245718
+plunger, plumber's helper 0.00211746
+----------------
+birdhouse 0.69057
+ashcan, trash can, garbage can, wastebin, ash bin, ash-bin, ashbin, dustbin, trash barrel, trash bin 0.0392707
+boathouse 0.0327916
+barn 0.0327431
+picket fence, paling 0.0249505
+chainlink fence 0.0234901
+mailbox, letter box 0.0161141
+mobile home, manufactured home 0.0152607
+gas pump, gasoline pump, petrol pump, island dispenser 0.0135965
+solar dish, solar collector, solar furnace 0.0112326
+----------------
+Siamese cat, Siamese 0.995365
+Egyptian cat 0.00215388
+cougar, puma, catamount, mountain lion, painter, panther, Felis concolor 0.0011163
+tiger cat 0.000322536
+tabby, tabby cat 0.000212954
+schipperke 9.94324e-05
+kelpie 9.59496e-05
+lynx, catamount 9.52354e-05
+macaque 6.76792e-05
+Chihuahua 4.1219e-05
+----------------
+car wheel 0.131888
+convertible 0.105134
+grille, radiator grille 0.100532
+sports car, sport car 0.0910149
+beach wagon, station wagon, wagon, estate car, beach waggon, station waggon, waggon 0.0714448
+amphibian, amphibious vehicle 0.0467596
+cab, hack, taxi, taxicab 0.0452234
+ambulance 0.0436399
+pickup, pickup truck 0.0334895
+racer, race car, racing car 0.0289485
+----------------
+seashore, coast, seacoast, sea-coast 0.668281
+umbrella 0.0767169
+sandbar, sand bar 0.0762999
+folding chair 0.039245
+lakeside, lakeshore 0.0194256
+rocking chair, rocker 0.018175
+patio, terrace 0.0180936
+parachute, chute 0.0147511
+dock, dockage, docking facility 0.00836375
+paddlewheel, paddle wheel 0.00617247
+----------------
+scuba diver 0.65456
+snorkel 0.217018
+tiger shark, Galeocerdo cuvieri 0.0252531
+coral reef 0.0171443
+sea snake 0.0141167
+lionfish 0.0099332
+killer whale, killer, orca, grampus, sea wolf, Orcinus orca 0.00767585
+electric ray, crampfish, numbfish, torpedo 0.0054559
+dugong, Dugong dugon 0.00418719
+sea cucumber, holothurian 0.00391947
+----------------
+bikini, two-piece 0.123581
+miniskirt, mini 0.0986669
+maillot, tank suit 0.0960535
+gown 0.0741356
+balance beam, beam 0.0630904
+swimming trunks, bathing trunks 0.060944
+brassiere, bra, bandeau 0.0394408
+muzzle 0.0352671
+maillot 0.0330387
+pajama, pyjama, pj's, jammies 0.0258078
+----------------
+Egyptian cat 0.288773
+keeshond 0.203273
+Norwegian elkhound, elkhound 0.170076
+Persian cat 0.0500776
+tiger cat 0.0431575
+tabby, tabby cat 0.0348756
+African grey, African gray, Psittacus erithacus 0.0339145
+wombat 0.0207283
+laptop, laptop computer 0.0170893
+remote control, remote 0.0160463

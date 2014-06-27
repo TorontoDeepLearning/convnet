@@ -1,0 +1,25 @@
+data_config {
+  layer_name: "input"
+  file_pattern: "/nobackup/nitish/imagenet/imagenet_train.h5"
+  dataset_name: "data"
+  data_type: HDF5
+  mean_file: "/ais/gobi3/u/nitish/imagenet/pixel_mean.h5"
+  pixelwise_normalize: true
+  can_translate: true
+  can_flip: true
+  pca_noise_stddev: 0.1;
+  num_colors: 3
+}
+
+data_config {
+  layer_name: "output"
+  file_pattern: "/ais/gobi3/u/nitish/imagenet/lists/train_classids.txt"
+  data_type: TXT
+}
+
+batch_size : 128
+chunk_size: 2560
+pipeline_loads: true
+randomize_cpu: true
+randomize_gpu: true
+random_access_chunk_size: 8

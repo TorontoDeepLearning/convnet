@@ -1,0 +1,19 @@
+data_config {
+  layer_name: "input"
+  file_pattern: "/nobackup/nitish/imagenet/imagenet_valid.h5"
+  dataset_name: "data"
+  data_type: HDF5
+  mean_file: "/ais/gobi3/u/nitish/imagenet/pixel_mean.h5"
+  pixelwise_normalize: true
+  num_colors: 3
+}
+
+data_config {
+  layer_name: "output"
+  file_pattern: "/ais/gobi3/u/nitish/imagenet/lists/valid_classids.txt"
+  data_type: TXT
+}
+
+batch_size : 128
+chunk_size: 256
+pipeline_loads: true
