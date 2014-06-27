@@ -41,6 +41,6 @@ Add convnet/bin to your PATH variable (maybe in your .bashrc)
 ---------------------
 Run test examples
 --------------------
-Go to examples/
-Examples of nets on MNIST and CIFAR10 are included.
-Follow the instructions in the README.txt.
+Examples of nets on MNIST and ImageNet are included in 
+examples/mnist and examples/imagenet.
+Follow the instructions in the respective README.md files.
