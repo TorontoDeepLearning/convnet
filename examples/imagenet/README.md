@@ -4,7 +4,7 @@ Download the model [476Mb]
 wget http://www.cs.toronto.edu/~nitish/models/CLS_net_20140621074703.h5
 ```
 
-Run the test images
+Run the test images.
 
 - **Batch-mode on a GPU.**
 ```
@@ -15,7 +15,7 @@ For example,
 $ extract_representation 0 CLS_net_20140621074703.pbtxt test_images.pbtxt output.h5 hidden7 output
 $ python show_results.py output.h5
 ```
-This should produce an output like [sample_output.txt](https://github.com/TorontoDeepLearning/convnet/blob/master/examples/imagenet/sample_output.txt)
+This should produce an output like [sample_output.txt](https://github.com/TorontoDeepLearning/convnet/blob/master/examples/imagenet/sample_output.txt) The test images are from the [Toronto Deep Learning Classification Demo](http://deeplearning.cs.toronto.edu/)
 
 - **One-at-a-time on a CPU.**
 
