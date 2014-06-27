@@ -2,7 +2,7 @@ name: "mnist_net";
 seed: 42;
 max_iter: 100000;
 print_after: 1000;
-save_after: 100000;
+save_after: 10000;
 patch_size: 28;
 validate_after: 1000;
 reduce_lr_factor: 0.5;

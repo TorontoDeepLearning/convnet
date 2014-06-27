@@ -1,3 +1,4 @@
+### Training
 - Download the data from www.cs.toronto.edu/~nitish/data/mnist.h5 [390Mb]
 - Set the data_dir in all *_data.pbtxt so that it points to the directory where
   the data was downloaded. 
@@ -5,9 +6,13 @@
   stats, logs etc will be written. Make sure this diretory has been created.
 
 Run:
+```
 $ train_convnet <board-id> net.pbtxt train_data.pbtxt val_data.pbtxt
+```
 or
+```
 $ train_convnet <board-id> net.pbtxt train_plus_val_data.pbtxt test_data.pbtxt
+```
 
 Toronto users-
 Make sure the board is locked before running this.
@@ -17,17 +22,26 @@ checkpoint directory. This takes 4-5 min (on NVIDIA Titan, may vary depending on
 GPU). Training on train_plus_val_data.pbtxt should get around 1.2% test error by
 then.
 
---------------------------
-Looking at the performance
---------------------------
+### Extracting features
+The representation at different layers of the learned model can be extracted:
+```
+$ extract_representation <board-id> <model-file> <data-file> <output-file> <layer-names>
+```
+
+For example, 
+```
+$ extract_representation 0 checkpoint_dir/mnist_net_20140627130044.pbtxt test_data.pbtxt output.h5 output hidden1
+```
+
+### Looking at the performance
 The *.log files in the checkpoint directory contain the performance metrics for
 the training and validation sets.
 Run
+```
 $ python show_plots.py
+```
 
---------------------------
-Draw the net.
---------------------------
+### Draw the net.
 $ python ../../src/pbtxt2dot.py net.pbtxt net.dot
 $ dot -Tpng net.dot -o net.png
 

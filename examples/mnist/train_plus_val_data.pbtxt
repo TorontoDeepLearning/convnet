@@ -1,9 +1,15 @@
-data_dir: "/ais/gobi3/u/nitish/mnist/";
-file_pattern: "mnist.h5";
-dataset_type : IMAGE_HDF5;
-batch_size : 100;
-randomize_cpu: true;
-randomize_gpu: true;
-dataset_name: "train_full";
-dataset_name: "train_full_labels";
-image_size: 28;
+data_config {
+  file_pattern: "/ais/gobi3/u/nitish/mnist/mnist.h5"
+  layer_name: "input"
+  dataset_name: "train_full"
+  data_type: HDF5
+}
+data_config {
+  file_pattern: "/ais/gobi3/u/nitish/mnist/mnist.h5"
+  layer_name: "output"
+  dataset_name: "train_full_labels"
+  data_type: HDF5
+}
+batch_size : 100
+randomize_cpu: true
+randomize_gpu: true
