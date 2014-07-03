@@ -8,7 +8,7 @@ There are two ways to extract features -
 
 - **One-at-a-time on a CPU.**
 
-Run make in the convnet/cpu directory. Then the run the `extract_representation_cpu` binary as follows -
+Run make in the convnet/cpu directory. This should produce a binary called `extract_representation_cpu` in convnet/bin. Then the run the `extract_representation_cpu` binary as follows -
 ```
 $ extract_representation_cpu <model-file> <model-parameters> <pixel-mean> <output-dir> <layer-names>  < <image-files>
 ```
