@@ -4,11 +4,11 @@ Download the model [476Mb]
 wget http://www.cs.toronto.edu/~nitish/models/CLS_net_20140621074703.h5
 ```
 
-Run the test images.
+There are two ways to extract features -
 
 - **One-at-a-time on a CPU.**
 
-Run make in the convnet/cpu directory.
+Run make in the convnet/cpu directory. Then the run the `extract_representation_cpu` binary as follows -
 ```
 $ extract_representation_cpu <model-file> <model-parameters> <pixel-mean> <output-dir> <layer-names>  < <image-files>
 ```
