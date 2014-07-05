@@ -1,11 +1,14 @@
 ##################################
 # Set path to dependencies.
 # Path to CImg.
-CIMG = $(HOME)/CImg
+HOME=.
+CIMG = $(HOME)/local/CImg-1.5.9
+
 
 # Path to protocol buffers, hdf5.
 INC=$(HOME)/local/include
 LIB=$(HOME)/local/lib
+LOCAL_BIN = $(HOME)/local/bin
 
 # CUDA.
 CUDA_INC=/pkgs_local/cuda-5.5/include
@@ -68,7 +71,7 @@ $(OBJ)/%.o: $(SRC)/%.cc
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJ)/convnet_config.pb.o : $(SRC)/convnet_config.proto
-	protoc -I=$(SRC) --cpp_out=$(SRC) --python_out=$(SRC) $(SRC)/convnet_config.proto
+	$(LOCAL_BIN)/protoc -I=$(SRC) --cpp_out=$(SRC) --python_out=$(SRC) $(SRC)/convnet_config.proto
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $(SRC)/convnet_config.pb.cc -o $@
 
 clean:
