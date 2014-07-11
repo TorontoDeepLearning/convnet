@@ -1,6 +1,7 @@
 ------------------
 Dependencies
 -----------------
+
 - CUDA (>= 4.0)
 
 - HDF5 (>= 1.8.11)
@@ -22,6 +23,12 @@ Dependencies
   or clone the git repo.
   $ git clone http://git.code.sf.net/p/cimg/source CImg
   No compilaton/installation is required.
+
+- libjpeg
+  This is often present on standard operating systems since it is used by a lot of programs.
+  It can be downloaded from http://libjpeg.sourceforge.net/
+
+- This code uses C++11. Some features require gcc >= 4.6.
 
 ---------------------------
 Hardware requirements
