@@ -34,7 +34,6 @@ int main(int argc, char** argv) {
       Matrix::SetupCUDADevices(boards);
     } else {
       Matrix::SetupCUDADevice(boards[0]);
-      cout << "Using board " << boards[0] << endl;
     }
     for (const int &b : boards){
       cout << "Using board " << b << endl;

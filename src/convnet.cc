@@ -357,6 +357,7 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
   }
   cout << endl;
   delete data_writer;
+  dataset.Sync();
 }
 
 void ConvNet::Save() {
@@ -419,7 +420,6 @@ void ConvNet::DisplayLayers() {
   for (int i = 0; i < layers_.size(); i++){
     layers_[i]->Display(0);
   }
-
 }
 
 void ConvNet::DisplayEdges() {

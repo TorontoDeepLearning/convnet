@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
     TCLAP::ValueArg<std::string> model_file_arg(
         "m", "model", "Model pbtxt file", true, "", "string");
     TCLAP::ValueArg<std::string> fe_file_arg(
-        "o", "output", "Feature extraction pbtxt file", true, "", "string");
+        "f", "feature-config", "Feature extraction pbtxt file", true, "", "string");
     
     cmd.add(board_arg);
     cmd.add(model_file_arg);
@@ -30,7 +30,6 @@ int main(int argc, char** argv) {
       Matrix::SetupCUDADevices(boards);
     } else {
       Matrix::SetupCUDADevice(boards[0]);
-      cout << "Using board " << boards[0] << endl;
     }
     for (const int &b : boards){
       cout << "Using board " << b << endl;

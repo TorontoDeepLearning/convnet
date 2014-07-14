@@ -148,6 +148,7 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     
     if (it->NeedsNoiseFromLayer()) {
+      cout << "Needs noise from layer" << endl;
       const string& noise_layer_name = it->GetNoiseLayerName();
       DataIterator* noise_it = data_it_[noise_layer_name];
       it->AddNoise(data_slice, dest, *noise_it);
@@ -342,7 +343,7 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
 DataIterator::DataIterator(const config::DataStreamConfig& config):
   num_dims_(0), dataset_size_(0), row_(0),
   file_pattern_(config.file_pattern()),
-  noise_layer_name_(config.file_pattern()),
+  noise_layer_name_(config.noise_layer_name()),
   num_colors_(config.num_colors()),
   gpu_id_(config.gpu_id()),
   translate_(config.can_translate()),
@@ -352,9 +353,7 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   add_pca_noise_(config.pca_noise_stddev() > 0),
   parallel_disk_access_(config.parallel_disk_access()),
   pca_noise_stddev_(config.pca_noise_stddev()),
-  jitter_used_(true) { 
-
-}
+  jitter_used_(true) {}
 
 void DataIterator::SetMaxDataSetSize(int max_dataset_size) {
   if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
