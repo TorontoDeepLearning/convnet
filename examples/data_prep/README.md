@@ -8,12 +8,13 @@ ConvNet provides `jpeg2hdf5` : a useful tool to extract JPEG images into an HDF5
 
 For example, 
 ```
-jpeg2hdf5 --input ../imagenet/test_images.txt --output test_images.h5 --resize 256 --crop 224
+jpeg2hdf5 --input test_images.txt --output test_images.h5 --resize 256 --crop 224
 ```
 
 This takes the image files listed in `test_images.txt` and writes them out to an HDF5 dataset. Each image will be resized so that the shorter side is 256. A central 224 x 224 crop will then be taken. The data is written out in a HDF5 dataset called `data`.
 ```
 $ h5ls test_images.h5
+data                     Dataset {10, 150528}
 ```
 The number of rows is the number of images. The number of columns is 224 x 224 x 3. The data is written out with the R, G and B channels separated  [RRR ...(224x224) .. GGG ... BB ...]. The fastest changing dimension is along the width of the image, followed by height, followed by color channel.
 
@@ -23,7 +24,7 @@ jpeg2hdf5 --input train_images.txt --output imagenet_train.h5 --resize 256 --cro
 jpeg2hdf5 --input valid_images.txt --output imagenet_valid.h5 --resize 256 --crop 256
 ```
 where the `train_images.txt` file lists a random permutation of the training JPEG images.
-We take the entire 256 x 256 image. Random crops are taken later, on the fly, during training.
+We take the central 256 x 256 crop of the image. Smaller random crops of this image will be taken later, on the fly, during training.
 
 
 #### Writing Data Protocol Buffers
