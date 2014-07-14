@@ -1,0 +1,24 @@
+output_file: "output.h5"
+
+feature {
+  layer: "output"
+}
+feature {
+  layer: "hidden7"
+}
+
+input {
+  data_config {
+    layer_name: "input"
+    file_pattern: "test_images.txt"
+    data_type: IMAGE_RAW
+    mean_file: "pixel_mean.h5"
+    pixelwise_normalize: true
+    num_colors: 3
+    raw_image_size: 256
+    image_size: 256
+  }
+  batch_size : 10
+  chunk_size: 10
+  pipeline_loads: true
+}
