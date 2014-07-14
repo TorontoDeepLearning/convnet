@@ -39,3 +39,10 @@ $ python show_results.py output.h5
 ```
 This should produce an output like [sample_output.txt](https://github.com/TorontoDeepLearning/convnet/blob/master/examples/imagenet/sample_output.txt) The test images are from the [Toronto Deep Learning Classification Demo](http://deeplearning.cs.toronto.edu/)
 
+To average over different patches (center + 4 corners) * 2 (horizontal flip)
+```
+$ extract_representation --board 0 --model CLS_net_20140621074703.pbtxt --feature-config feature_config_avg10.pbtxt
+$ python show_results.py output_avg10.h5
+```
+
+
