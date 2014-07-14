@@ -4,7 +4,7 @@ ConvNet is designed to run on data stored in different formats. Storing the data
 HDF5 file is probably the fastest way for the code to access it during training. This is also the default format used for writing out features and storing model parameters.
 
 #### Storing images in HDF5 files.
-ConvNet includes `jpeg2hdf5` : a useful tool to extract JPEG images into an HDF5 file.
+ConvNet provides `jpeg2hdf5` : a useful tool to extract JPEG images into an HDF5 file.
 
 For example, 
 ```
