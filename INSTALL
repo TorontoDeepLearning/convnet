@@ -2,7 +2,7 @@
 Dependencies
 -----------------
 
-- CUDA (>= 4.0)
+- CUDA (>= 4.0) (Not required for the CPU-only feature extractor).
 
 - HDF5 (>= 1.8.11)
   Download the source code http://www.hdfgroup.org/ftp/HDF5/prev-releases/hdf5-1.8.12/src/hdf5-1.8.12.tar.gz
@@ -31,17 +31,22 @@ NVIDIA GPU(s).
 Multi-GPU feature requires Fermi boards.
 
 -------------------
-convnet
-------------------
-Set the paths to the dependencies in the Makefile.
-Set the compute capability for your GPU.
-$ make
+Compilation
+-------------------
+Compiling the CPU-only feature extractor -
+- Set the paths to the dependencies in `convnet/cpu/Makefile`.
+- Run make in `convnet/cpu`.
+
+Compiling the full package -
+- Set the paths to the dependencies in `convnet/Makefile`.
+- Set the compute capability for your GPU.
+- Run make in `convnet`.
 
 Add convnet/bin to your PATH variable (maybe in your .bashrc)
 
 ---------------------
 Run test examples
---------------------
+---------------------
 Examples of nets on MNIST and ImageNet are included in 
 examples/mnist and examples/imagenet.
 Follow the instructions in the respective README.md files.
