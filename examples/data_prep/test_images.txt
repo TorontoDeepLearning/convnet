@@ -1,0 +1,10 @@
+../imagenet/test_images/0.jpg
+../imagenet/test_images/1.jpg
+../imagenet/test_images/2.jpg
+../imagenet/test_images/3.jpg
+../imagenet/test_images/4.jpg
+../imagenet/test_images/5.jpg
+../imagenet/test_images/6.jpg
+../imagenet/test_images/7.jpg
+../imagenet/test_images/8.jpg
+../imagenet/test_images/9.jpg
