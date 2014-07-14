@@ -3,6 +3,7 @@
 #include "layer.h"
 #include "hdf5.h"
 #include "datahandler.h"
+#include "datawriter.h"
 #include <vector>
 #include <string>
 using namespace std;
@@ -60,16 +61,8 @@ class ConvNet {
    * @param layer_names: The names of the layers whose state needs to be written
    * out.
    */ 
-  void DumpOutputs(const string& output_file, DataHandler* dataset, const vector<string>& layer_names);
-
-  /** Write the state of the layers to disk.
-   * This method runs the model on the train dataset and writes the layer
-   * states out to disk in a hdf5 file.
-   * @param output_file: The name of the output hdf5 file.
-   * @param layer_names: The names of the layers whose state needs to be written
-   * out.
-   */ 
-  void DumpOutputs(const string& output_file, const vector<string>& layer_names);
+  void ExtractFeatures(const config::FeatureExtractorConfig& config);
+  void ExtractFeatures(const string& config_file);
 
   /** Allocate memory for the model.
    * @param fprop_only If true, does not allocate memory needed for optimization.
@@ -94,6 +87,9 @@ class ConvNet {
   string GetCheckpointFilename();
   void TimestampModel();
 
+  /** Sets up fields of view as seen by each location at the output layer.*/
+  void FieldsOfView();
+  
   /** Topologically sort layers.*/
   void Sort();
 
@@ -134,19 +130,9 @@ class ConvNet {
   /** Computes the loss function (to be displayed).*/ 
   virtual void GetLoss(vector<float>& error);
 
-  /** Write the state of the layers to disk.
-   * This method runs the model on the specified dataset and writes the layer
-   * states out to disk in a hdf5 file.
-   * @param output_file: The name of the output hdf5 file.
-   * @param dataset: The dataset to be run.
-   * @param layers: The layers whose state needs to be written out.
-   */ 
-  void DumpOutputs(const string& output_file, DataHandler* dataset, vector<Layer*>& layers) ;
-
-
   /** Takes one optimization step.*/ 
   virtual void TrainOneBatch(vector<float>& error);
-  void DisplayLayers();
+  virtual void DisplayLayers();
   void DisplayEdges();
   void InsertPolyak();
   void LoadPolyakWeights();
@@ -162,6 +148,9 @@ class ConvNet {
   /** Multiply learning rate by factor.*/
   void ReduceLearningRate(const float factor);
 
+  void SetupLocalizationDisplay();
+  void DisplayLocalization();
+
   config::Model model_;  /** The model protobuf config.*/
   vector<Layer*> layers_;  /** The layers in the network.*/
   vector<Layer*> data_layers_;  /** Layers which have data associated with them.*/
@@ -174,8 +163,13 @@ class ConvNet {
   ImageDisplayer displayer_;
   string model_filename_, timestamp_, log_file_, val_log_file_;
 
+  float fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
+  int num_fov_x_, num_fov_y_;
+  bool localizer_;
+
   // a+=b;
   static void AddVectors(vector<float>& a, vector<float>& b);
+  ImageDisplayer* localization_display_;
 };
 
 #endif

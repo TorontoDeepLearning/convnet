@@ -1,5 +1,6 @@
 #define cimg_use_jpeg
-#include "CImg.h"
+#include "CImg/CImg.h"
+#include <tclap/CmdLine.h>
 #include "convnet_cpu.h"
 #include <string>
 #include <iostream>
@@ -93,69 +94,98 @@ void LoadImage(const string& filename, int image_size, int big_image_size, int p
 }
 
 int main(int argc, char** argv) {
-  string model_structure(argv[1]);
-  string model_parameters(argv[2]);
-  string mean_file(argv[3]);
-  string output_dir(argv[4]);
+  try {
+    TCLAP::CmdLine cmd("ConvNet CPU-based Feature Extractor", ' ', "1.0");
+    TCLAP::MultiArg<string> layer_arg(
+        "l", "layer", "layer name", true, "string");
+    TCLAP::ValueArg<std::string> model_file_arg(
+        "m", "model", "Model file", true, "", "string");
+    TCLAP::ValueArg<std::string> param_arg(
+        "p", "parameters", "Parameter file", true, "", "string");
+    TCLAP::ValueArg<std::string> mean_file_arg(
+        "s", "mean", "Pixel mean file", true, "", "string");
+    TCLAP::ValueArg<std::string> output_arg(
+        "o", "output", "Output directory", true, "", "string");
+    
 
-  ConvNetCPU net(model_structure, model_parameters, mean_file, 1);
-  vector<Layer*> layers;
-  int big_image_size = 256;
-  int image_size = 224;
-  int position = 0;
-  unsigned char* data = new unsigned char[image_size * image_size * 3];
+    cmd.add(layer_arg);
+    cmd.add(model_file_arg);
+    cmd.add(param_arg);
+    cmd.add(mean_file_arg);
+    cmd.add(output_arg);
 
-  vector<ofstream> outf(argc-5);
-  cout << "Writing outputs to " << endl;
-  for (int c = 5; c < argc; c++) {
-    layers.push_back(net.GetLayerByName(string(argv[c])));
-    string filename = output_dir + "/" + string(argv[c]) + ".txt";
-    cout << filename << endl;
-    outf[c-5].open(filename, ofstream::out);
-  }
+    cmd.parse(argc, argv);
 
-  bool show_time = false;
-  chrono::time_point<chrono::system_clock> start_t, load_t, fprop_t, end_t;
-  chrono::duration<double> time_diff1, time_diff2, time_diff3;
-  while (true) {
-    start_t = chrono::system_clock::now();
+    const vector<string>& layer_names = layer_arg.getValue();
+    const string& model = model_file_arg.getValue();
+    const string& param = param_arg.getValue();
+    const string& mean_file = mean_file_arg.getValue();
+    const string& output_dir = output_arg.getValue();
 
-    string imgfile;
-    cin >> imgfile;
-    if (cin.eof()) break;
-    if (imgfile.empty()) break;
-    cout << imgfile;
 
-    LoadImage(imgfile, image_size, big_image_size, position, data, false);
-    load_t = chrono::system_clock::now();
+    ConvNetCPU net(model, param, mean_file, 1);
+    vector<Layer*> layers;
+    int big_image_size = 256;
+    int image_size = 224;
+    int position = 0;
+    unsigned char* data = new unsigned char[image_size * image_size * 3];
 
-    net.Fprop(data, 1);
-    fprop_t = chrono::system_clock::now();
+    vector<ofstream> outf(layer_names.size());
+    cout << "Writing outputs to " << endl;
+    int i = 0;
+    for (const string& layer_name : layer_names) {
+      layers.push_back(net.GetLayerByName(layer_name));
+      string filename = output_dir + "/" + layer_name + ".txt";
+      cout << filename << endl;
+      outf[i++].open(filename, ofstream::out);
+    }
 
-    int k = 0;
-    for (Layer* l : layers) {
-      const float* state = l->GetState();
-      const int num_dims = l->GetDims();
-      for (int i = 0; i < num_dims; i++) {
-        outf[k] << state[i] << " ";
+    bool show_time = false;
+    chrono::time_point<chrono::system_clock> start_t, load_t, fprop_t, end_t;
+    chrono::duration<double> time_diff1, time_diff2, time_diff3;
+    while (true) {
+      start_t = chrono::system_clock::now();
+
+      string imgfile;
+      cin >> imgfile;
+      if (cin.eof()) break;
+      if (imgfile.empty()) break;
+      cout << imgfile;
+
+      LoadImage(imgfile, image_size, big_image_size, position, data, false);
+      load_t = chrono::system_clock::now();
+
+      net.Fprop(data, 1);
+      fprop_t = chrono::system_clock::now();
+
+      int k = 0;
+      for (Layer* l : layers) {
+        const float* state = l->GetState();
+        const int num_dims = l->GetDims();
+        for (int i = 0; i < num_dims; i++) {
+          outf[k] << state[i] << " ";
+        }
+        outf[k] << endl;
+        k++;
       }
-      outf[k] << endl;
-      k++;
-    }
 
-    end_t = chrono::system_clock::now();
-    time_diff1 = load_t - start_t;
-    time_diff2 = fprop_t  - load_t;
-    time_diff3 = end_t  - fprop_t;
-    if (show_time) {
-      printf(" Time load %f s fprop %f s write %f s",
-             time_diff1.count(), time_diff2.count(), time_diff3.count());
+      end_t = chrono::system_clock::now();
+      time_diff1 = load_t - start_t;
+      time_diff2 = fprop_t  - load_t;
+      time_diff3 = end_t  - fprop_t;
+      if (show_time) {
+        printf(" Time load %f s fprop %f s write %f s",
+               time_diff1.count(), time_diff2.count(), time_diff3.count());
+      }
+      start_t = end_t;
+      cout << endl;
     }
-    start_t = end_t;
-    cout << endl;
+    delete data;
+    for (ofstream& f : outf) {
+      f.close();
+    }
+  } catch (TCLAP::ArgException &e)  {
+    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
   }
-  delete data;
-  for (ofstream& f : outf) {
-    f.close();
-  }
+  return 0;
 }

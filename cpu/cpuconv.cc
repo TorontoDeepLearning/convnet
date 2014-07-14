@@ -4,6 +4,11 @@
 #include <cmath>
 #include <chrono>
 
+#ifdef USE_OPENBLAS
+#include <cblas.h>
+#include <common.h>
+#endif
+
 using namespace std;
 
 CPUMatrix::CPUMatrix(): data_(NULL), rows_(0), cols_(0) {
@@ -74,7 +79,9 @@ void CPUMatrix::ConvUp(const float* images, const float* filters, float* targets
 
   const int chunk = 16;
 
+#ifdef USE_OPENMP
   #pragma omp parallel for
+#endif
   for (long loc = 0; loc < num_images * out_height * out_width; loc++) {
     long i = loc;
     int out_x = i % out_width; i /= out_width;
@@ -125,7 +132,9 @@ void CPUMatrix::MaxPool(const float* images, float* targets,
   const int out_height = (inp_height + 2 * padding_y - kernel_height ) / stride_y + 1;
   const int out_width = (inp_width + 2 * padding_x - kernel_width ) / stride_x + 1;
 
+#ifdef USE_OPENMP
   #pragma omp parallel for
+#endif
   for (long loc = 0; loc < num_images * out_height * out_width; loc++) {
     long i = loc;
     int out_x = i % out_width; i /= out_width;
@@ -164,7 +173,9 @@ void CPUMatrix::ResponseNormCrossMap(
     const float scale_outputs,
     const float scale_targets) {
 
+#ifdef USE_OPENMP
   #pragma omp parallel for
+#endif
   for (int i = 0; i < num_locs; i++) {
     for (int f = 0; f < num_filters; f++) {
       int start = blocked ? ((f / sizeF) * sizeF) : (f - sizeF/2);
@@ -192,52 +203,59 @@ void CPUMatrix::FCUp(
     const int num_images, const int num_outputs, const int num_inputs,
     const float scale_outputs, const float scale_targets) {
 
+#ifdef USE_OPENBLAS
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, num_images,
+              num_outputs, num_inputs, scale_outputs, inputs, num_inputs,
+              weights, num_inputs, scale_targets, targets, num_outputs);
+#else
   for (int i = 0; i < num_images; i++) {
+#ifdef USE_OPENMP
     #pragma omp parallel for
+#endif
     for (int j = 0; j < num_outputs; j++) {
       float res = 0;
       for (int k = 0; k < num_inputs; k++) {
-        /*
-        __m128 a, b;
-        a = _mm_load_ps(inputs + k+ i * num_inputs);
-        b = _mm_load_ps(weights + k+ j * num_inputs);
-        __m128 res128 = _mm_dp_ps(a, b, 0xF1);
-        union { __m128 v; float f[4]; } uf;
-        uf.v = res128;
-        res += uf.f[0];
-        */
         res += inputs[k + i * num_inputs] * weights[k + j * num_inputs];
       }
       int target_ind = j + i * num_outputs;
       targets[target_ind] = scale_targets * targets[target_ind] + scale_outputs * res;
     }
   }
+#endif
 }
 
 void CPUMatrix::AddBias(const float* inputs, const float* bias, float* outputs, const int num_images, const int num_dims) {
   int length = num_dims * num_images;
+#ifdef USE_OPENMP
   #pragma omp parallel for if(length > 10000)
+#endif
   for (int i = 0; i < length; i++) {
     outputs[i] = inputs[i] + bias[i % num_dims];
   }
 }
 
 void CPUMatrix::UpperBound(const float* inputs, float* outputs, const int length, const float limit) {
+#ifdef USE_OPENMP
   #pragma omp parallel for if(length > 10000)
+#endif
   for (int i = 0; i < length; i++) {
     outputs[i] = inputs[i] > limit ? limit : inputs[i];
   }
 }
 
 void CPUMatrix::LowerBound(const float* inputs, float* outputs, const int length, const float limit) {
+#ifdef USE_OPENMP
   #pragma omp parallel for if(length > 10000)
+#endif
   for (int i = 0; i < length; i++) {
     outputs[i] = inputs[i] < limit ? limit : inputs[i];
   }
 }
 
 void CPUMatrix::Argmax(const float* inputs, int* outputs, const int num_images, const int num_dims) {
+#ifdef USE_OPENMP
   #pragma omp parallel for if(num_images > 1000)
+#endif
   for (int i = 0; i < num_images; i++) {
     const float *inp = inputs + i * num_dims;
     float max = -FLT_MAX;
@@ -253,7 +271,9 @@ void CPUMatrix::Argmax(const float* inputs, int* outputs, const int num_images, 
 }
 
 void CPUMatrix::Softmax(const float* inputs, float* outputs, const int num_images, const int num_dims) {
+#ifdef USE_OPENMP
   #pragma omp parallel for if(num_images > 1000)
+#endif
   for (int i = 0; i < num_images; i++) {
     const float *inp = inputs + i * num_dims;
     float *out = outputs + i * num_dims;
@@ -268,7 +288,9 @@ void CPUMatrix::Softmax(const float* inputs, float* outputs, const int num_image
 }
 
 void CPUMatrix::Logistic(const float* inputs, float* outputs, const int length) {
+#ifdef USE_OPENMP
   #pragma omp parallel for if(length > 10000)
+#endif
   for (int i = 0; i < length; i++) outputs[i] = 1 / (1 + exp(-inputs[i]));
 }
 

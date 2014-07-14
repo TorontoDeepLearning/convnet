@@ -220,6 +220,9 @@ int expand_and_add(cudamat* source, cudamat* mat, cudamat* indices, cudamat* tar
 int extract_patches(cudamat* images, cudamat* patches, cudamat* width_offset,
                     cudamat* height_offset, cudamat* flip, int img_width,
                     int img_height, int patch_width, int patch_height);
+int rectify_bounding_boxes(cudamat* boxes, cudamat* width_offset,
+                           cudamat* height_offset, cudamat* flip, int img_width,
+                           int img_height, int patch_width, int patch_height);
 int adagrad(cudamat* w, cudamat* grad, cudamat* sum_grad_sq, float decay, float epsilon);
 int apply_grad_bbox(
     cudamat* mat, cudamat_bbox* bbox, cudamat* indices, cudamat* width_offset,

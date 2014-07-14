@@ -151,6 +151,7 @@ __global__ void kExpandAndAdd(float* source, float* mat, float* indices, float* 
 __global__ void kExpand(float* source, float* indices, float* target, int height, int width, int target_width);
 __global__ void kAccumulateColumns(float* mat, float* indices, float* target, int mat_width, int target_width, int height, float mult, int avg);
 __global__ void kExtractPatches(float* images, float* patches, float* indices, float* width_offset, float* height_offset, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors);
+__global__ void kRectifyBoundingBox(float* boxes, float* width_offset, float* height_offset, float* flip, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_locs);
 __global__ void kExtractPatches2(float* images, float* patches, float* width_offset, float* height_offset, float* flip, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors);
 __global__ void kAdagrad(float *w, float *grad, float *sum_grad_sq, int len, float decay, float epsilon);
 __global__ void kBoundingBoxLogisticGrad(

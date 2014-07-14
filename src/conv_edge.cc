@@ -37,8 +37,17 @@ void ConvEdge::SetImageSize(int image_size) {
   }
 }
 
+void ConvEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
+  *size = kernel_size_ + stride_ * ((*size) - 1);
+  *sep = (*sep) * stride_;
+  *pad1 = (*pad1) * stride_ + padding_;
+  int k = (image_size_ + 2*padding_ - kernel_size_) / stride_;
+  int effective_right_pad = k * stride_ - (image_size_ + padding_ - kernel_size_);
+  *pad2 = (*pad2) * stride_ + effective_right_pad;
+}
+
 void ConvEdge::DisplayWeights() {
-  if (img_display_ != NULL) {
+  if (img_display_ != NULL && display_) {
     weights_.CopyToHost();
     img_display_->DisplayWeights(weights_.GetHostData(), kernel_size_, num_output_channels_, 250, false);
   }

@@ -14,18 +14,21 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   random_access_chunk_size_(config.random_access_chunk_size()),
   dataset_size_(-1),
   start_(0),
+  multiplicity_counter_(0),
   restart_(true),
   nothing_on_gpu_(true),
   fits_on_gpu_(false),
   pipeline_loads_(config.pipeline_loads()),
   randomize_cpu_(config.randomize_cpu()),
-  randomize_gpu_(config.randomize_gpu()) {
+  randomize_gpu_(config.randomize_gpu()),
+  multiplicity_(config.multiplicity()) {
 
   // Create data streams.
   for (const config::DataStreamConfig& dsc:config.data_config()) {
     const string& layer_name = dsc.layer_name();
     layer_names_.push_back(layer_name);
     data_it_[layer_name] = DataIterator::ChooseDataIterator(dsc);
+    data_it_[layer_name]->SetMaxDataSetSize(config.max_dataset_size());
     int dataset_size = data_it_[layer_name]->GetDataSetSize();
     if (dataset_size_ == -1) {
       dataset_size_ = dataset_size;
@@ -48,8 +51,12 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     distribution_ = new uniform_int_distribution<int>(0, dataset_size_ - 1);
   }
   Seek(0);
+}
+
+void DataHandler::AllocateMemory() {
   for (const string& layer_name : layer_names_) {
     DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
     int num_dims = it->GetDims();
     Matrix::SetDevice(it->GetGPUId());
     Matrix& data = data_[layer_name];
@@ -76,6 +83,7 @@ void DataHandler::Seek(int row) {
   Sync();
   start_ = row;
   reuse_counter_ = 0;
+  multiplicity_counter_ = 0;
   restart_ = true;
   for (auto it : data_it_) {
     it.second->Seek(row);
@@ -116,6 +124,20 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
     start_ = 0;
     end = batch_size_;
   }
+
+  // Sample jitter/noise.
+  // This is done for all layers first because some layers may need the noise
+  // from other layers to set their data. For example, if jitter is added to
+  // the input, the bounding boxes in the output need to change accordingly.
+  for (Layer* l : data_layers) {
+    const string& layer_name = l->GetName();
+    DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
+    Matrix::SetDevice(it->GetGPUId());
+    Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
+    it->SampleNoise(dest.GetRows(), dest.GetCols(), multiplicity_counter_);
+  }
+
   for (Layer* l : data_layers) {
     const string& layer_name = l->GetName();
     DataIterator* it = data_it_[layer_name];
@@ -125,11 +147,22 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
     data_[layer_name].GetSlice(data_slice, start_, end);
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     
-    // Add noise, if asked for, and copy to dest.
-    it->AddNoise(data_slice, dest);
+    if (it->NeedsNoiseFromLayer()) {
+      const string& noise_layer_name = it->GetNoiseLayerName();
+      DataIterator* noise_it = data_it_[noise_layer_name];
+      it->AddNoise(data_slice, dest, *noise_it);
+    } else {
+      // Add noise, if asked for, and copy to dest.
+      it->AddNoise(data_slice, dest);
+    }
+
     dest.SetReady();
   }
-  start_ = end;
+  multiplicity_counter_++;
+  if (multiplicity_counter_ == multiplicity_) {
+    multiplicity_counter_ = 0;
+    start_ = end;
+  }
 }
 
 void DataHandler::PipelinedDiskAccess() {
@@ -142,6 +175,7 @@ void DataHandler::PipelinedDiskAccess() {
   for (const string& layer_name: layer_names_) {
     Matrix& data = data_[layer_name];
     DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
     data.CopyToDevice();
     it->Preprocess(data);  // Does centering, normalization etc.
   }
@@ -172,11 +206,20 @@ void DataHandler::DiskAccess() {
   }
   for (const string& layer_name: layer_names_) {
     DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
     Matrix& data = data_[layer_name];
     if (randomize_cpu_) {
-      LoadChunk(*it, data, random_rows);
+      if (it->DoParallelDiskAccess()) {
+        LoadChunkParallel(*it, data, random_rows);
+      } else {
+        LoadChunk(*it, data, random_rows);
+      }
     } else {
-      LoadChunk(*it, data);
+      if (it->DoParallelDiskAccess()) {
+        LoadChunkParallel(*it, data);
+      } else {
+        LoadChunk(*it, data);
+      }
     }
   }
 }
@@ -184,6 +227,7 @@ void DataHandler::DiskAccess() {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
+  it.Prep(chunk_size_);
   for (int i = 0; i < chunk_size_; i++) {
     it.GetNext(data_ptr);
     data_ptr += num_dims;
@@ -193,6 +237,7 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
+  it.Prep(chunk_size_);
   int j = 0;
   for (int i = 0; i < chunk_size_; i++) {
     if (i % random_access_chunk_size_ == 0) {
@@ -200,6 +245,41 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_r
     } 
     it.GetNext(data_ptr);
     data_ptr += num_dims;
+  }
+}
+
+void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat) {
+  float* data_ptr = mat.GetHostData();
+  int num_dims = it.GetDims();
+  it.Prep(chunk_size_);
+  int row = it.Tell();
+  #pragma omp parallel for
+  for (int i = 0; i < chunk_size_; i++) {
+    it.Get(data_ptr + i * num_dims, (row + i) % dataset_size_);
+  }
+  it.Seek((row + chunk_size_) % dataset_size_);
+}
+
+
+void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
+  float* data_ptr = mat.GetHostData();
+  int num_dims = it.GetDims();
+  it.Prep(chunk_size_);
+  #pragma omp parallel for
+  for (int i = 0; i < chunk_size_; i++) {
+    int row = (random_rows[i / random_access_chunk_size_] + i % random_access_chunk_size_) % dataset_size_;
+    it.Get(data_ptr + i * num_dims, row);
+  }
+}
+
+void DataHandler::SetFOV(const float size, const float stride,
+                         const float pad1, const float pad2,
+                         const int num_fov_x, const int num_fov_y) {
+
+  for (const string& layer_name : layer_names_) {
+    DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
+    it->SetFOV(size, stride, pad1, pad2, num_fov_x, num_fov_y);
   }
 }
 
@@ -249,6 +329,9 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
     case config::DataStreamConfig::TXT:
       it = new TextDataIterator(config);
       break;
+    case config::DataStreamConfig::BOUNDING_BOX:
+      it = new BoundingBoxIterator(config);
+      break;
     default:
       cerr << "Unknown data type " << config.data_type() << endl;
       exit(1);
@@ -259,6 +342,7 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
 DataIterator::DataIterator(const config::DataStreamConfig& config):
   num_dims_(0), dataset_size_(0), row_(0),
   file_pattern_(config.file_pattern()),
+  noise_layer_name_(config.file_pattern()),
   num_colors_(config.num_colors()),
   gpu_id_(config.gpu_id()),
   translate_(config.can_translate()),
@@ -266,8 +350,16 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   normalize_(config.normalize() || config.pixelwise_normalize()),
   pixelwise_normalize_(config.pixelwise_normalize()),
   add_pca_noise_(config.pca_noise_stddev() > 0),
-  pca_noise_stddev_(config.pca_noise_stddev()) { 
+  parallel_disk_access_(config.parallel_disk_access()),
+  pca_noise_stddev_(config.pca_noise_stddev()),
+  jitter_used_(true) { 
 
+}
+
+void DataIterator::SetMaxDataSetSize(int max_dataset_size) {
+  if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
+    dataset_size_ = max_dataset_size;
+  }
 }
 
 void DataIterator::LoadMeans(const string& data_file) {
@@ -291,7 +383,7 @@ void DataIterator::LoadMeans(const string& data_file) {
     std_.Reshape(-1, 1);
     if (add_pca_noise_) {
       eig_values_.AllocateAndReadHDF5(file, "S");
-      eig_vectors_.AllocateAndReadHDF5(file, "V");
+      eig_vectors_.AllocateAndReadHDF5(file, "U");
     }
   }
   else {
@@ -311,6 +403,13 @@ int DataIterator::GetDataSetSize() const {
 
 void DataIterator::Seek(int row) {
   row_ = row;
+}
+
+int DataIterator::Tell() const {
+  return row_;
+}
+
+void DataIterator::Prep(const int chunk_size) {
 }
 
 // m is on the GPU, stored so that different cases are far apart.
@@ -347,52 +446,72 @@ void DataIterator::AddNoise(Matrix& input, Matrix& output) {
   }
 }
 
-void DataIterator::SetJitterVariables(int max_offset) {
-  if (translate_) {  // Random jitter.
-    width_offset_.FillWithRand();
-    height_offset_.FillWithRand();
-  } else {  // Take center patch.
-    width_offset_.Set(0.5);
-    height_offset_.Set(0.5);
+void DataIterator::AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it) {
+  // no op.
+}
+
+void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id) {
+  if (dest_num_dims != num_dims_ || flip_) {
+    int patch_size = (int)sqrt(dest_num_dims / num_colors_);
+    int image_size = (int)sqrt(num_dims_ / num_colors_);
+    int max_offset = image_size - patch_size;
+    dest_num_dims_ = dest_num_dims;
+
+    if (width_offset_.GetCols() != batch_size) {
+      width_offset_.AllocateGPUMemory(1, batch_size);
+      height_offset_.AllocateGPUMemory(1, batch_size);
+      flip_bit_.AllocateGPUMemory(1, batch_size);
+    }
+
+    if (translate_) {  // Random jitter.
+      width_offset_.FillWithRand();
+      height_offset_.FillWithRand();
+      cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat();
+      mult_by_scalar(wo, max_offset + 1, wo);  // Rounded down.
+      mult_by_scalar(ho, max_offset + 1, ho);
+    } else {  // Take center or corner patch.
+      int w = 0, h = 0;
+      switch (multiplicity_id % 5) {
+        case 0: w = max_offset/2; h = max_offset/2; break;
+        case 1: w = 0; h = 0; break;
+        case 2: w = max_offset; h = 0; break;
+        case 3: w = max_offset; h = max_offset; break;
+        case 4: w = 0; h = max_offset; break;
+      }
+      width_offset_.Set(w);
+      height_offset_.Set(h);
+    }
+    if (flip_) {
+      flip_bit_.FillWithRand();  // flip if > 0.5.
+    } else {
+      flip_bit_.Set(multiplicity_id/5);
+    }
   }
-  if (flip_) {
-    flip_bit_.FillWithRand();  // flip if > 0.5.
-  } else {
-    flip_bit_.Set(0);
-  }
-  cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat();
-  mult_by_scalar(wo, max_offset + 1, wo);  // Rounded down.
-  mult_by_scalar(ho, max_offset + 1, ho);
 }
 
 void DataIterator::Jitter(Matrix& source, Matrix& dest) {
   int patch_size = (int)sqrt(dest.GetCols() / num_colors_);
   int image_size = (int)sqrt(source.GetRows() / num_colors_);
-  int max_offset = image_size - patch_size;
 
-  if (max_offset > 0 || flip_) {
-    if (width_offset_.GetCols() != source.GetCols()) {
-      int batch_size = source.GetCols();
-      width_offset_.AllocateGPUMemory(1, batch_size);
-      height_offset_.AllocateGPUMemory(1, batch_size);
-      flip_bit_.AllocateGPUMemory(1, batch_size);
-    }
-    SetJitterVariables(max_offset);
-    cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat(),
-            *f = flip_bit_.GetMat(), *src_mat = source.GetMat(),
-            *dest_mat = dest.GetMat();
+  cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat(),
+          *f = flip_bit_.GetMat(), *src_mat = source.GetMat(),
+          *dest_mat = dest.GetMat();
 
-    // Extract shifted images.
-    int err_code = extract_patches(src_mat, dest_mat, wo, ho, f, image_size,
-                                   image_size, patch_size, patch_size);
-    if (err_code != 0) {
-      cerr << "Error extracting patches " << GetStringError(err_code) << endl;
-      exit(1);
-    }
-  } else {
-    copy_transpose(source.GetMat(), dest.GetMat());
+  // Extract shifted images.
+  int err_code = extract_patches(src_mat, dest_mat, wo, ho, f, image_size,
+                                 image_size, patch_size, patch_size);
+  if (err_code != 0) {
+    cerr << "Error extracting patches " << GetStringError(err_code) << endl;
+    exit(1);
   }
 }
+
+void DataIterator::SetFOV(const float size, const float stride,
+                          const float pad1, const float pad2,
+                          const int num_fov_x, const int num_fov_y) {
+  // no op.
+}
+
 DummyDataIterator::DummyDataIterator(const config::DataStreamConfig& config):
   DataIterator(config) {
     num_dims_ = 100;
@@ -402,10 +521,14 @@ DummyDataIterator::DummyDataIterator(const config::DataStreamConfig& config):
   }
 }
 
-void DummyDataIterator::GetNext(float* data_out) {
+void DummyDataIterator::Get(float* data_out, const int row) const {
   for (int i = 0; i < num_dims_; i++) {
     data_out[i] = rand();
   }
+}
+
+void DummyDataIterator::GetNext(float* data_out) {
+  Get(data_out, 0);
 }
 
 template <typename T>
@@ -464,8 +587,26 @@ HDF5DataIterator<T>::~HDF5DataIterator() {
 }
 
 template <typename T>
-void HDF5DataIterator<T>::GetNext(float* data_ptr, const int row) {
-  start_[0] = row;
+void HDF5DataIterator<T>::Get(float* data_ptr, const int row) const {
+  hsize_t start[2];
+  start[0] = row;
+  start[1] = 0;
+  T* buf = new T[num_dims_];
+  hid_t f_dataspace = H5Dget_space(dataset_);
+  H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start, NULL, count_, NULL);
+  H5Dread(dataset_, type_, m_dataspace_, f_dataspace, H5P_DEFAULT, buf);
+  H5Sclose(f_dataspace);
+
+  // Copy and type-cast from buf_ to data_ptr.
+  for (int i = 0; i < num_dims_; i++) {
+    data_ptr[i] = static_cast<float>(buf[i]);
+  }
+  delete buf;
+}
+
+template <typename T>
+void HDF5DataIterator<T>::GetNext(float* data_ptr) {
+  start_[0] = row_;
   hid_t f_dataspace = H5Dget_space(dataset_);
   H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start_, NULL, count_, NULL);
   H5Dread(dataset_, type_, m_dataspace_, f_dataspace, H5P_DEFAULT, buf_);
@@ -475,11 +616,7 @@ void HDF5DataIterator<T>::GetNext(float* data_ptr, const int row) {
   for (int i = 0; i < num_dims_; i++) {
     data_ptr[i] = static_cast<float>(buf_[i]);
   }
-}
 
-template <typename T>
-void HDF5DataIterator<T>::GetNext(float* data_ptr) {
-  GetNext(data_ptr, row_);
   row_++;
   if (row_ == dataset_size_) row_ = 0;
 }
@@ -489,7 +626,9 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
   raw_image_size_(config.raw_image_size()),
   image_size_(config.image_size()) {
   it_ = new RawImageFileIterator<unsigned char>(
-      file_pattern_, image_size_, raw_image_size_, flip_, translate_);
+      file_pattern_, image_size_, raw_image_size_, false, false,
+      config.random_rotate_raw_image(), config.random_rotate_max_angle(),
+      config.min_scale());
 
   dataset_size_ = it_->GetDataSetSize();
   num_dims_ = image_size_ * image_size_ * num_colors_;
@@ -508,11 +647,35 @@ void ImageDataIterator::Seek(int row) {
   it_->Seek(row);
 }
 
+int ImageDataIterator::Tell() const {
+  return it_->Tell();
+}
+
+void ImageDataIterator::SetMaxDataSetSize(int max_dataset_size) {
+  if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
+    dataset_size_ = max_dataset_size;
+  }
+  it_->SetMaxDataSetSize(max_dataset_size);
+}
+
+void ImageDataIterator::Prep(const int chunk_size) {
+  it_->SampleNoiseDistributions(chunk_size);
+}
+
 void ImageDataIterator::GetNext(float* data_out) {
   it_->GetNext(buf_);
   for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
     data_out[i] = static_cast<float>(buf_[i]);
   }
+}
+
+void ImageDataIterator::Get(float* data_out, const int row) const {
+  unsigned char* buf = new unsigned char[num_dims_];
+  it_->Get(buf, row, 0);
+  for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
+    data_out[i] = static_cast<float>(buf[i]);
+  }
+  delete buf;
 }
 
 SlidingWindowDataIterator::SlidingWindowDataIterator(
@@ -536,8 +699,24 @@ SlidingWindowDataIterator::~SlidingWindowDataIterator() {
   delete it_;
 }
 
+void SlidingWindowDataIterator::SetMaxDataSetSize(int max_dataset_size) {
+  max_dataset_size *= it_->GetNumWindows();
+  if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
+    dataset_size_ = max_dataset_size;
+  }
+}
+
 void SlidingWindowDataIterator::Seek(int row) {
   file_id_ = row;
+}
+
+int SlidingWindowDataIterator::Tell() const {
+  return file_id_;
+}
+
+void SlidingWindowDataIterator::Get(float* data_out, const int row) const {
+  cerr << "Not implemented" << endl;
+  exit(1);
 }
 
 void SlidingWindowDataIterator::GetNext(float* data_out) {
@@ -557,8 +736,9 @@ TextDataIterator::TextDataIterator(const config::DataStreamConfig& config):
   string line;
   getline(f, line);
   istringstream iss(line);
-  vector<string> tokens{istream_iterator<string>{iss},
-                        istream_iterator<string>{}};
+  vector<string> tokens;
+  copy(istream_iterator<string>(iss), istream_iterator<string>(),
+       back_inserter<vector<string> >(tokens));
   num_dims_ = tokens.size();
   dataset_size_ = 1;
   while (getline(f, line)) dataset_size_++;
@@ -578,127 +758,123 @@ TextDataIterator::~TextDataIterator() {
   delete data_;
 }
 
+void TextDataIterator::Get(float* data_out, const int row) const {
+  memcpy(data_out, data_ + num_dims_ * row, sizeof(float) * num_dims_);
+}
+
 void TextDataIterator::GetNext(float* data_out) {
-  memcpy(data_out, data_ + num_dims_ * row_, sizeof(float) * num_dims_);
+  Get(data_out, row_);
   row_++;
   if (row_ == dataset_size_) row_ = 0;
 }
 
-DataWriter::DataWriter(const string& output_file, const int dataset_size) :
-  output_file_(output_file), dataset_size_(dataset_size), num_streams_(0) {
-  file_ = H5Fcreate(output_file.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT,
-                    H5P_DEFAULT);
-}
-
-DataWriter::~DataWriter(){
-  //for(hid_t d : dataspace_handle_) H5Sclose(d);
-  //for(hid_t d : dataset_handle_) H5Dclose(d);
-  H5Fclose(file_);
-}
-
-void DataWriter::AddStream(const string& name, const int numdims) {
-  hsize_t dimsf[2];
-  dimsf[0] = dataset_size_;
-  dimsf[1] = numdims;
-  cout << "Adding Dataspace " << name << " of size " << dimsf[0]
-       << " " << dimsf[1] << endl;
-  numdims_.push_back(numdims);
-  current_row_.push_back(0);
-  dataspace_handle_.push_back(H5Screate_simple(2, dimsf, NULL));
-  dataset_handle_.push_back(H5Dcreate(file_, name.c_str(), H5T_NATIVE_FLOAT,
-                            dataspace_handle_[num_streams_], H5P_DEFAULT,
-                            H5P_DEFAULT, H5P_DEFAULT));
-  num_streams_++;
-}
-
-// This may not necessarily write to disk, but hold it in a buffer.
-void DataWriter::Write(Matrix& mat, const int data_id, const int rows) {
-  mat.CopyToHost();
-  hsize_t dimsf[2], start[2];
-  dimsf[0] = rows;
-  dimsf[1] = numdims_[data_id];
-  start[0] = current_row_[data_id];
-  start[1] = 0;
-  hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
-  H5Sselect_none(dataspace_handle_[data_id]);
-  H5Sselect_hyperslab(dataspace_handle_[data_id], H5S_SELECT_SET, start, NULL,
-                      dimsf, NULL);
-  H5Dwrite(dataset_handle_[data_id], H5T_NATIVE_FLOAT, mem_dataspace,
-           dataspace_handle_[data_id], H5P_DEFAULT, mat.GetHostData());
-  H5Sclose(mem_dataspace);
-  current_row_[data_id] += rows;
-}
-
-AveragedDataWriter::AveragedDataWriter(
-    const string& output_file, const int dataset_size, const int avg_after,
-    const int max_batchsize):
-  DataWriter(output_file, dataset_size), avg_after_(avg_after),
-  max_batchsize_(max_batchsize) {
-  } 
-
-AveragedDataWriter::~AveragedDataWriter() {
-  //for(Matrix* buf: buf_) delete buf;
-}
-
-void AveragedDataWriter::AddStream(const string& name, const int numdims) {
-  DataWriter::AddStream(name, numdims);
-  Matrix* mat = new Matrix();
-  mat->AllocateGPUMemory(numdims, max_batchsize_);
-  buf_.push_back(mat);
-  mat->Set(0);
-  counter_.push_back(0);
-}
-
-void AveragedDataWriter::Write(Matrix& mat, const int data_id, const int rows) {
-  Matrix* buf = buf_[data_id];
-  buf->Add(mat);
-  if(++counter_[data_id] == avg_after_) {
-    divide_by_scalar(buf->GetMat(), avg_after_, buf->GetMat());
-    DataWriter::Write(*buf, data_id, rows);
-    buf->Set(0);
-    counter_[data_id] = 0;
-  }
-}
-
-SequentialAveragedDataWriter::SequentialAveragedDataWriter(
-    const string& output_file, const int dataset_size, const int avg_after) :
-  DataWriter(output_file, dataset_size), avg_after_(avg_after),
-  dataset_size_(dataset_size), consumed_(0), num_rows_written_(0) {
-  }
-
-SequentialAveragedDataWriter::~SequentialAveragedDataWriter() {
-  //for(Matrix* buf: buf_) delete buf;
-}
-
-void SequentialAveragedDataWriter::AddStream(const string& name, const int numdims) {
-  DataWriter::AddStream(name, numdims);
-  Matrix* mat = new Matrix();
-  mat->AllocateGPUMemory(numdims, 1);
-  buf_.push_back(mat);
-  mat->Set(0);
-}
-
-void SequentialAveragedDataWriter::Write(Matrix& mat, const int data_id, const int rows) {
-  Matrix* buf = buf_[data_id];
-  int numcases = mat.GetCols();
-  int end = 0, start = 0;
-
-  while(start < numcases && num_rows_written_ < dataset_size_) {
-    cudamat slice;
-    end = start + avg_after_ - consumed_;
-    if (end > numcases) end = numcases;
-    int avg_over = end - start;
-    Matrix ones;
-    Matrix::GetOnes(avg_over, 1, ones);
-    get_slice(mat.GetMat(), &slice, start, end);
-    dot(&slice, ones.GetMat(), buf->GetMat(), 1, 1.0 / avg_after_);
-    consumed_ += avg_over;
-    if (consumed_ == avg_after_) {
-      DataWriter::Write(*buf, data_id, 1);
-      num_rows_written_++;
-      buf->Set(0);
-      consumed_ = 0;
+BoundingBoxIterator::BoundingBoxIterator(const config::DataStreamConfig& config):
+  DataIterator(config) {
+  ifstream f(file_pattern_, ios::in);
+  string line;
+  // The format for each line is -
+  // <width> <height> <xmin1> <ymin1> <xmax1> <ymax1> <xmin2> <ymin2> ...
+  while (getline(f, line)) {
+    istringstream iss(line);
+    vector<string> tokens;
+    copy(istream_iterator<string>(iss), istream_iterator<string>(),
+         back_inserter<vector<string> >(tokens));
+    int num_tokens = tokens.size();
+    if (num_tokens <= 2 || (num_tokens - 2) % 4 != 0) {
+      cerr << "Error parsing line " << line << endl;
+      exit(1);
     }
-    start = end;
+    int width = atoi(tokens[0].c_str());
+    int height = atoi(tokens[1].c_str());
+    float image_size = MIN(width, height);
+    int x_crop = (width - image_size) / 2;
+    int y_crop = (height - image_size) / 2;
+    int num_boxes = (num_tokens - 2) / 4;
+    vector<box> b_list (num_boxes);
+    for (int i = 0; i < num_boxes; i++) {
+      b_list[i].xmin = (atoi(tokens[2+4*i  ].c_str()) - x_crop) / image_size;
+      b_list[i].ymin = (atoi(tokens[2+4*i+1].c_str()) - y_crop) / image_size;
+      b_list[i].xmax = (atoi(tokens[2+4*i+2].c_str()) - x_crop) / image_size;
+      b_list[i].ymax = (atoi(tokens[2+4*i+3].c_str()) - y_crop) / image_size;
+    }
+    data_.push_back(b_list);
   }
+  f.close();
+  dataset_size_ = data_.size();
+}
+
+float BoundingBoxIterator::Intersection(const box& b1, const box& b2) {
+  float x_overlap = MAX(0, MAX(b1.xmin, b2.xmin) - MIN(b1.xmax, b2.xmax));
+  float y_overlap = MAX(0, MAX(b1.ymin, b2.ymin) - MIN(b1.ymax, b2.ymax));
+  return x_overlap * y_overlap;
+}
+
+float BoundingBoxIterator::Area(const box& b) {
+  return (b.xmax - b.xmin) * (b.ymax - b.ymin);
+}
+
+float BoundingBoxIterator::VisibleFraction(const box& b, const box& fov) {
+  return Intersection(b, fov) / Area(b);
+}
+
+void BoundingBoxIterator::Get(float* data_out, const int row) const {
+  int num_fovs = num_fov_x_ * num_fov_y_;
+  const vector<box>& b_list = data_[row];
+  for (int i = 0; i < num_fovs; i++) {
+    int r = i % num_fov_x_, c = i / num_fov_x_;
+    box fov;
+    fov.xmin = -fov_pad1_ + fov_stride_ * r;
+    fov.ymin = -fov_pad1_ + fov_stride_ * c;
+    fov.xmax = fov.xmin + fov_size_;
+    fov.ymax = fov.ymin + fov_size_;
+
+    int best_box = 0;
+    if (b_list.size() > 1) {
+      float f_best = VisibleFraction(b_list[0], fov), f;
+      for (int j = 1; j < b_list.size(); j++) {
+        f = VisibleFraction(b_list[j], fov);
+        if (f > f_best) {
+          best_box = j;
+          f_best = f;
+        }
+      }
+    }
+    const box& b = b_list[best_box];
+    data_out[i               ] = b.xmin - fov.xmin;
+    data_out[i +     num_fovs] = b.ymin - fov.ymin;
+    data_out[i + 2 * num_fovs] = b.xmax - fov.xmin;
+    data_out[i + 3 * num_fovs] = b.ymax - fov.ymin;
+  }
+}
+
+void BoundingBoxIterator::GetNext(float* data_out) {
+  Get(data_out, row_);
+  row_++;
+  if (row_ == dataset_size_) row_ = 0;
+}
+
+void BoundingBoxIterator::SetFOV(const float size, const float stride,
+                                 const float pad1, const float pad2,
+                                 const int num_fov_x, const int num_fov_y) {
+  fov_size_ = size;
+  fov_stride_ = stride;
+  fov_pad1_ = pad1;
+  fov_pad2_ = pad2;
+  num_fov_x_ = num_fov_x;
+  num_fov_y_ = num_fov_y;
+  num_dims_ = 4 * num_fov_x * num_fov_y_;
+}
+
+
+void BoundingBoxIterator::AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it) {
+  cudamat *wo = noise_it.GetWidthOffset().GetMat(),
+          *ho = noise_it.GetHeightOffset().GetMat(),
+          *f = noise_it.GetFlipBit().GetMat(),
+          *src_mat = input.GetMat(),
+          *dest_mat = output.GetMat();
+  copy_transpose(src_mat, dest_mat);
+  int num_colors = noise_it.GetNumColors();
+  int big_image_size = (int)sqrt(noise_it.GetDims() / num_colors);
+  int image_size     = (int)sqrt(noise_it.GetDestDims() / num_colors);
+  rectify_bounding_boxes(dest_mat, wo, ho, f, big_image_size, big_image_size, image_size, image_size);
 }

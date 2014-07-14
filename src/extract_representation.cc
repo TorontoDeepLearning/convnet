@@ -1,25 +1,47 @@
-#include "convnet.h"
+#include "multigpu_convnet.h"
 #include <iostream>
+#include <tclap/CmdLine.h>
 using namespace std;
 
-
 int main(int argc, char** argv) {
-  int board = atoi(argv[1]);
-  string model_file(argv[2]);
-  string data_file(argv[3]);
-  string output_file(argv[4]);
-  vector<string> layer_names;
-  for (int i = 5; i < argc; i++) {
-    layer_names.push_back(string(argv[i]));
+  try {
+    TCLAP::CmdLine cmd("ConvNet Feature Extractor", ' ', "1.0");
+    TCLAP::MultiArg<int> board_arg(
+        "b", "board", "GPU board(s)", true, "integer");
+    TCLAP::ValueArg<std::string> model_file_arg(
+        "m", "model", "Model pbtxt file", true, "", "string");
+    TCLAP::ValueArg<std::string> fe_file_arg(
+        "o", "output", "Feature extraction pbtxt file", true, "", "string");
+    
+    cmd.add(board_arg);
+    cmd.add(model_file_arg);
+    cmd.add(fe_file_arg);
+
+    cmd.parse(argc, argv);
+
+    const vector<int>& boards = board_arg.getValue();
+    const string& model_file = model_file_arg.getValue();
+    const string& fe_file = fe_file_arg.getValue();
+    
+    bool multi_gpu = boards.size() > 1; 
+    
+    // Setup GPU boards.
+    if (multi_gpu) {
+      Matrix::SetupCUDADevices(boards);
+    } else {
+      Matrix::SetupCUDADevice(boards[0]);
+      cout << "Using board " << boards[0] << endl;
+    }
+    for (const int &b : boards){
+      cout << "Using board " << b << endl;
+    }
+
+    ConvNet *net = multi_gpu ? new MultiGPUConvNet(model_file) :
+                               new ConvNet(model_file);
+    net->ExtractFeatures(fe_file);
+    delete net;
+  } catch (TCLAP::ArgException &e)  {
+    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
   }
-
-  Matrix::SetupCUDADevice(board);
-  cout << "Using board " << board << endl;
-
-  ConvNet net = ConvNet(model_file);
-  net.SetupDataset(data_file);
-  net.AllocateMemory(true);
-  cout << "Dumping outputs to " << output_file << endl;
-  net.DumpOutputs(output_file, layer_names);
   return 0;
 }

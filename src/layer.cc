@@ -156,9 +156,19 @@ void Layer::BroadcastDeriv() {
   }
 }
 
-void Layer::AllocateMemory(int image_size, int batch_size) {
+void Layer::SetSize(int image_size) {
   image_size_ = image_size;
-  const int num_pixels = image_size * image_size;
+  if (display_) {
+    if (num_channels_ == 3) {
+      img_display_ = new ImageDisplayer(image_size_, image_size_, num_channels_, false, name_);
+    } else {
+      img_display_ = new ImageDisplayer(image_size_, image_size_, num_channels_, true, name_);
+    }
+  }
+}
+
+void Layer::AllocateMemory(int batch_size) {
+  const int num_pixels = image_size_ * image_size_;
   Matrix::SetDevice(gpu_id_);
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
@@ -166,14 +176,6 @@ void Layer::AllocateMemory(int image_size, int batch_size) {
     rand_gaussian_.AllocateGPUMemory(batch_size, num_pixels * num_channels_);
   }
   AllocateMemoryOnOtherGPUs();
-
-  if (display_) {
-    if (num_channels_ == 3) {
-      img_display_ = new ImageDisplayer(image_size, image_size, num_channels_, false, name_);
-    } else {
-      img_display_ = new ImageDisplayer(image_size, image_size, num_channels_, true, name_);
-    }
-  }
 }
 
 void Layer::ApplyDropoutAtTrainTime() {
@@ -282,9 +284,9 @@ float LinearLayer::GetLoss() {
   return res;
 }
 
-void LinearLayer::AllocateMemory(int image_size, int batch_size) {
-  Layer::AllocateMemory(image_size, batch_size);
-  const int num_pixels = image_size * image_size;
+void LinearLayer::AllocateMemory(int batch_size) {
+  Layer::AllocateMemory(batch_size);
+  const int num_pixels = image_size_ * image_size_;
   if (is_output_) data_.AllocateGPUMemory(batch_size, num_pixels * num_channels_);
   //Matrix::RegisterTempMemory(batch_size * num_channels_ * num_pixels); why did I have this?
 }
@@ -309,8 +311,8 @@ void ReLULayer::ApplyDerivativeOfActivation() {
   apply_rectified_linear_deriv(deriv, state, deriv);
 }
 
-void SoftmaxLayer::AllocateMemory(int image_size, int batch_size) {
-  Layer::AllocateMemory(image_size, batch_size);
+void SoftmaxLayer::AllocateMemory(int batch_size) {
+  Layer::AllocateMemory(batch_size);
   if (is_output_) data_.AllocateGPUMemory(batch_size, 1);
   Matrix::RegisterTempMemory(batch_size);
 }
@@ -352,8 +354,8 @@ float SoftmaxLayer::GetLoss2() {
 }
 
 
-void SoftmaxDistLayer::AllocateMemory(int imgsize, int batch_size) {
-  Layer::AllocateMemory(imgsize, batch_size);
+void SoftmaxDistLayer::AllocateMemory(int batch_size) {
+  Layer::AllocateMemory(batch_size);
   const int numdims = state_.GetCols();
   cross_entropy_.AllocateGPUMemory(batch_size, numdims);
   if (is_output_) data_.AllocateGPUMemory(batch_size, numdims);
@@ -373,8 +375,8 @@ float SoftmaxDistLayer::GetLoss() {
   return cross_entropy_.Sum();
 }
 
-void LogisticLayer::AllocateMemory(int image_size, int batch_size) {
-  Layer::AllocateMemory(image_size, batch_size);
+void LogisticLayer::AllocateMemory(int batch_size) {
+  Layer::AllocateMemory(batch_size);
   Matrix::RegisterTempMemory(batch_size);
   if (is_output_) data_.AllocateGPUMemory(batch_size, num_channels_);
 }

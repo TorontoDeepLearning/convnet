@@ -65,7 +65,15 @@ void ReadModelText(const string& model_file, config::Model& model) {
     exit(1);
   }
 }
-
+void ReadFeatureExtractorConfig(const string& config_file, config::FeatureExtractorConfig& config) {
+  stringstream ss;
+  ifstream file(config_file.c_str());
+  ss << file.rdbuf();
+  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &config)) {
+    cerr << "Could not read text proto buffer : " << config_file << endl;
+    exit(1);
+  }
+}
 void ReadDataConfig(const string& data_config_file, config::DatasetConfig& data_config) {
   stringstream ss;
   ifstream file(data_config_file.c_str());
@@ -202,58 +210,52 @@ string GetStringError(int err_code) {
 }
 
 
+void DrawRectange(CImg<float>& img, int xmin, int ymin, int xmax, int ymax, const float* color, int thickness) {
+  for (int i = 0; i < thickness; i++) {
+    img.draw_rectangle(xmin-i, ymin-i, xmax+i, ymax+i, color, 1.0, ~0U);
+  }
+}
 
 ImageDisplayer::ImageDisplayer(int width, int height, int num_colors, bool show_separate, const string& title) :
-  width(width), height(height), num_colors(num_colors), show_separate(show_separate) {
-
-    /*
-  if (show_separate) {
-    main_disp = new CImgDisplay(width * num_colors, height);
-    cout << "Main disp has size: " << width * num_colors << " " << height << endl;
-  } else {
-    main_disp = new CImgDisplay(width, height);
-    cout << "Main disp has size: " << width << " " << height << endl;
-  }
-  */
-  title_ = title;
-  disp = new CImgDisplay();
-  main_disp = new CImgDisplay();
-  disp->set_title(title.c_str());
-  main_disp->set_title(title.c_str());
+  width_(width), height_(height), num_colors_(num_colors),
+  show_separate_(show_separate), title_(title) {
+  disp_.set_title(title_.c_str());
 }
 
 ImageDisplayer::ImageDisplayer() :
-  width(0), height(0), num_colors(3), show_separate(false) {
-  main_disp = NULL;
-  disp = new CImgDisplay();
+  width_(0), height_(0), num_colors_(3), show_separate_(false), title_("") {
 }
 
 void ImageDisplayer::DisplayImage(float* data, int num_images, int image_id) {
-  int num_colors_width = (int)sqrt(num_colors);
-  int num_colors_height = (num_colors + num_colors_width - 1) / num_colors_width;
-  int display_width = show_separate ? width * num_colors_width: width;
-  int display_height = show_separate ? height * num_colors_height: height;
-  int display_colors = show_separate ? 1 : num_colors;
-  CImg<float> img(display_width, display_height, 1, display_colors);
+  CImg<float> img;
+  CreateImage(data, num_images, image_id, img);
+  disp_.set_title(title_.c_str());
+  img.display(disp_);
+}
+
+void ImageDisplayer::CreateImage(const float* data, int num_images, int image_id, CImg<float>& img) {
+  int num_colors_width = (int)sqrt(num_colors_);
+  int num_colors_height = (num_colors_ + num_colors_width - 1) / num_colors_width;
+  int display_width = show_separate_ ? width_ * num_colors_width: width_;
+  int display_height = show_separate_ ? height_ * num_colors_height: height_;
+  int display_colors = show_separate_ ? 1 : num_colors_;
+
+  img.assign(display_width, display_height, 1, display_colors);
   img.fill(0);
   float val;
-  for (int k = 0; k < num_colors; k++) {
-    for (int i = 0; i < height; i++) {
-      for (int j = 0; j < width; j++) {
-        val = data[image_id + num_images * (j + width * (i + k * height))];
-        if (show_separate) {
-          img(j + (k % num_colors_width) * width, i + (k / num_colors_width) * height, 0, 0) = val;
+  for (int k = 0; k < num_colors_; k++) {
+    for (int i = 0; i < height_; i++) {
+      for (int j = 0; j < width_; j++) {
+        val = data[image_id + num_images * (j + width_ * (i + k * height_))];
+        if (show_separate_) {
+          img(j + (k % num_colors_width) * width_, i + (k / num_colors_width) * height_, 0, 0) = val;
         } else {
           img(j, i, 0, k) = val;
         }
       }
     }
   }
-  img.resize(250, 250);
-  main_disp->set_title(title_.c_str());
-  img.display(*main_disp);
 }
-
 
 void ImageDisplayer::YUVToRGB(const float* yuv, float* rgb, int spacing) {
   const float *Y = yuv, *U = &yuv[spacing], *V = &yuv[2 * spacing];
@@ -278,10 +280,6 @@ void ImageDisplayer::RGBToYUV(const float* rgb, float* yuv, int spacing) {
 }
 
 void ImageDisplayer::DisplayWeights(float* data, int size, int num_filters, int display_size, bool yuv) {
-  if (main_disp == NULL) {
-    cout << "Image will not be displayed " << endl;
-    return;
-  }
   int num_filters_w = int(sqrt(num_filters));
   int num_filters_h = num_filters / num_filters_w +  (((num_filters % num_filters_w) > 0) ? 1 : 0);
   int data_pos, row, col;
@@ -299,22 +297,6 @@ void ImageDisplayer::DisplayWeights(float* data, int size, int num_filters, int 
       data[i * num_filters + f] /= norm;
     }
   }
-  /*
-  float min = data[0];
-  float max = min;
-  float val;
-  for (int i = 1; i < num_filters * size * size * 3; i++) {
-    val = data[i];
-    if (val < min) {
-      min = val;
-    }
-    if (val > max) {
-      max = val;
-    }
-  }
-  //float min = -1.0;
-  //float max = 1.0;
-  */
   for (int f = 0; f < num_filters; f++) {
     for (int k = 0; k < 3; k++) {
       for (int h = 0; h < size; h++) {
@@ -337,38 +319,65 @@ void ImageDisplayer::DisplayWeights(float* data, int size, int num_filters, int 
     int pos = (i * img.height()) / num_filters_h;
     img.draw_line(0, pos, img.width(), pos, color);
   }
-  img.display(*main_disp);
+  img.display(disp_);
 }
 
+void ImageDisplayer::SetFOV(float size, float stride, float pad1, float pad2,
+                            int num_fov_x, int num_fov_y) {
+  fov_size_ = size;
+  fov_stride_ = stride;
+  fov_pad1_ = pad1;
+  fov_pad2_ = pad2;
+  num_fov_x_ = num_fov_x;
+  num_fov_y_ = num_fov_y;
+}
 
-/*
-void ImageDisplayer::DisplayMathGL(mglGraph& gr) {
-  const int width = gr.GetWidth();
-  const int height = gr.GetHeight();
-  const unsigned char* raster = gr.GetRGB();
-  CImg<unsigned char> img(width, height, 1, 3);
-  for (int j = 0; j < height; j++) {
-    for (int i = 0; i < width; i++) {
-      for (int c = 0; c < 3; c++) {
-        img(i, j, 0, c) = raster[(j * width + i) * 3 + c];
-      }
-    }
+void ImageDisplayer::DisplayLocalization(float* data, float* preds, float* gt, int num_images) {
+  int image_id = 0;
+
+  int num_fovs = num_fov_y_ * num_fov_x_;
+  
+  CImg<float> img;
+  CreateImage(data, num_images, image_id, img);
+  const int image_size = 250;
+  img.resize(image_size, image_size);
+
+  CImg<float> img2 = CImg<float>(img);
+
+  const float green[] = {0, 1, 0};
+  const float blue[] = {0, 0, 1};
+
+  float fov_x, fov_y;
+  gt += image_id;
+  preds += image_id;
+
+  for (int i = 0; i < num_fovs; i++) {
+    int r = i / num_fov_y_, c = i % num_fov_y_;
+    fov_x = -fov_pad1_ + c * fov_stride_;
+    fov_y = -fov_pad1_ + r * fov_stride_;
+    float xmin_gt = gt[i * num_images];
+    float ymin_gt = gt[(i+num_fovs) * num_images];
+    float xmax_gt = gt[(i+num_fovs*2) * num_images];
+    float ymax_gt = gt[(i+num_fovs*3) * num_images];
+    int xmin_gt2 = (int)((xmin_gt + fov_x) * image_size);
+    int ymin_gt2 = (int)((ymin_gt + fov_y) * image_size);
+    int xmax_gt2 = (int)((xmax_gt + fov_x) * image_size);
+    int ymax_gt2 = (int)((ymax_gt + fov_y) * image_size);
+
+    float xmin_preds = preds[i * num_images];
+    float ymin_preds = preds[(i+num_fovs) * num_images];
+    float xmax_preds = preds[(i+num_fovs*2) * num_images];
+    float ymax_preds = preds[(i+num_fovs*3) * num_images];
+    int xmin_preds2 = (int)((xmin_preds + fov_x) * image_size);
+    int ymin_preds2 = (int)((ymin_preds + fov_y) * image_size);
+    int xmax_preds2 = (int)((xmax_preds + fov_x) * image_size);
+    int ymax_preds2 = (int)((ymax_preds + fov_y) * image_size);
+
+    DrawRectange(img, xmin_gt2, ymin_gt2, xmax_gt2, ymax_gt2, green, 3);
+    DrawRectange(img2, xmin_preds2, ymin_preds2, xmax_preds2, ymax_preds2, blue, 3);
   }
-  img.display(*disp);
-  disp->set_title(title_.c_str());
-}
 
+  CImgList<float> img_list(img, img2);
+  img_list.display(disp_);
 
-void ImageDisplayer::DisplayWeightStats(float* data, int size) {
-  mglGraph gr;
-  mglData x(size, data);
-  mglData xx=x.Hist(100, -1, 1);
-  xx.Norm(0,1);
-  gr.SetRanges(-1, 1, 0, 1);
-  gr.Box();
-  gr.Bars(xx);
-  gr.Axis();
-  //gr.WriteFrame("sample.png");  // save it
-  DisplayMathGL(gr);
 }
-*/

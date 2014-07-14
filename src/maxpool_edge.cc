@@ -21,6 +21,15 @@ void MaxPoolEdge::SetImageSize(int image_size) {
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
 }
 
+void MaxPoolEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
+  *size = kernel_size_ + stride_ * ((*size) - 1);
+  *sep = (*sep) * stride_;
+  *pad1 = (*pad1) * stride_ + padding_;
+  int k = (image_size_ + 2*padding_ - kernel_size_) / stride_;
+  int effective_right_pad = k * stride_ - (image_size_ + padding_ - kernel_size_);
+  *pad2 = (*pad2) * stride_ + effective_right_pad;
+}
+
 void MaxPoolEdge::AllocateMemory(bool fprop_only) {
   
   cout << name_ << " ";

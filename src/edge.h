@@ -94,6 +94,10 @@ class Edge {
   /** Set the spatial size of the input to this edge.*/
   virtual void SetImageSize(int image_size);
 
+  /** Returns the size of the input field of view corresponding to an output
+   * of 'size'.*/
+  virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
+
   /** Returns whether back prop is blocked through this edge.*/
   bool IsBackPropBlocked() const { return block_backprop_; }
 
@@ -129,5 +133,6 @@ class Edge {
   const bool block_backprop_, is_tied_;
   ImageDisplayer *img_display_;
   const int gpu_id_;  /** The GPU on which this edge should do its computation.*/
+  const bool display_;
 };
 #endif

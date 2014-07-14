@@ -1425,6 +1425,34 @@ __global__ void kExtractPatches2(float* images, float* patches, float* width_off
   }
 }
 
+__global__ void kRectifyBoundingBox(
+    float* boxes, float* width_offset, float* height_offset, float* flip,
+    int num_images, int img_width, int img_height, int patch_width,
+    int patch_height, int num_locs) {
+
+  int loc_id = blockIdx.x;
+
+  float *xmin_block = boxes + num_images * loc_id,
+        *ymin_block = boxes + num_images * (loc_id + num_locs),
+        *xmax_block = boxes + num_images * (loc_id + num_locs * 2),
+        *ymax_block = boxes + num_images * (loc_id + num_locs * 3);
+
+  for (int image_id = threadIdx.x; image_id < num_images; image_id += blockDim.x) {
+    float xmin = (flip[image_id] > 0.5) ? (1 - xmax_block[image_id]) : xmin_block[image_id],
+          xmax = (flip[image_id] > 0.5) ? (1 - xmin_block[image_id]) : xmax_block[image_id],
+          ymin = ymin_block[image_id],
+          ymax = ymax_block[image_id],
+          wo = width_offset[image_id],
+          ho = height_offset[image_id];
+
+    xmin_block[image_id] = (xmin * img_width - wo) / patch_width;
+    xmax_block[image_id] = (xmax * img_width - wo) / patch_width;
+
+    ymin_block[image_id] = (ymin * img_height - ho) / patch_height;
+    ymax_block[image_id] = (ymax * img_height - ho) / patch_height;
+  }
+}
+
 __global__ void kAdagrad(float *w, float *grad, float *sum_grad_sq, int len, float decay, float epsilon) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;

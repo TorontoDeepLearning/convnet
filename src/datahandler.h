@@ -19,15 +19,21 @@ class DataHandler {
   void GetBatch(vector<Layer*>& data_layers);
   int GetBatchSize() const { return batch_size_; }
   int GetDataSetSize() const { return dataset_size_; }
+  int GetMultiplicity() const { return multiplicity_; }
   void Seek(int row);
   void Preprocess(Matrix& input, Matrix& output);
   void Sync();
+  void SetFOV(const float size, const float stride, const float pad1,
+              const float pad2, const int num_fov_x, const int num_fov_y);
+  void AllocateMemory();
 
  protected:
   void SetupShuffler();
   void ShuffleIndices();
   void LoadChunk(DataIterator& it, Matrix& mat);
   void LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows);
+  void LoadChunkParallel(DataIterator& it, Matrix& mat);
+  void LoadChunkParallel(DataIterator& it, Matrix& mat, vector<int>& random_rows);
 
   void PipelinedDiskAccess();
   void DiskAccess();
@@ -42,14 +48,15 @@ class DataHandler {
   thread* preload_thread_;
   Matrix rand_perm_indices_;
   int batch_size_, chunk_size_, max_reuse_count_, reuse_counter_,
-      random_access_chunk_size_, dataset_size_, start_;
+      random_access_chunk_size_, dataset_size_, start_, multiplicity_counter_;
   bool restart_, nothing_on_gpu_, fits_on_gpu_;
   const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
+  const int multiplicity_;
 };
 
 /** Base class for implementing data iterators.
  * Each data iterator handles a single stream of data.
- * All derived classes must implement the GetNext() method
+ * All derived classes must implement the GetNext() and Get() methods
  * and override the Seek() method appripriately.
  */ 
 class DataIterator {
@@ -57,27 +64,48 @@ class DataIterator {
   DataIterator(const config::DataStreamConfig& config);
   virtual ~DataIterator() {};
   virtual void GetNext(float* data_out) = 0;
+  virtual void Get(float* data_out, const int row) const = 0;
   virtual void Seek(int row);
-  void Preprocess(Matrix& m);
-  void AddNoise(Matrix& input, Matrix& output);
+  virtual int Tell() const;
+  virtual void Prep(const int chunk_size);
+  virtual void Preprocess(Matrix& m);
+  virtual void AddNoise(Matrix& input, Matrix& output);
+  virtual void AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it);
+  virtual void SetMaxDataSetSize(int max_dataset_size);
+  virtual void SetFOV(const float size, const float stride, const float pad1,
+                      const float pad2, const int num_fov_x,
+                      const int num_fov_y);
+
   int GetDims() const;
   int GetDataSetSize() const;
   void AddPCANoise(Matrix& m);
-  void SetJitterVariables(int max_offset);
+  void SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id);
   void Jitter(Matrix& source, Matrix& dest);
-  static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
   int GetGPUId() const { return gpu_id_;}
+  bool DoParallelDiskAccess() const { return parallel_disk_access_; }
+  bool NeedsNoiseFromLayer() const { return !noise_layer_name_.empty(); }
+  const string& GetNoiseLayerName() const { return noise_layer_name_; }
+  Matrix& GetWidthOffset() { return width_offset_;}
+  Matrix& GetHeightOffset() { return height_offset_;}
+  Matrix& GetFlipBit() { return flip_bit_;}
+  int GetDestDims() const { return dest_num_dims_; }
+  int GetNumColors() const { return num_colors_; }
+
+  static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
+
 
  protected:
   void LoadMeans(const string& data_file);
 
-  int num_dims_, dataset_size_, row_;
+  int num_dims_, dataset_size_, row_, dest_num_dims_;
   Matrix mean_, std_, pca_noise1_, pca_noise2_, eig_values_, eig_vectors_,
          width_offset_, height_offset_, flip_bit_;
-  const string file_pattern_;
+  const string file_pattern_, noise_layer_name_;
   const int num_colors_, gpu_id_;
-  const bool translate_, flip_, normalize_, pixelwise_normalize_, add_pca_noise_;
-  const float pca_noise_stddev_; 
+  const bool translate_, flip_, normalize_, pixelwise_normalize_,
+             add_pca_noise_, parallel_disk_access_;
+  const float pca_noise_stddev_;
+  bool jitter_used_;
 };
 
 /** A dummy iterator.
@@ -87,6 +115,7 @@ class DummyDataIterator : public DataIterator {
  public:
   DummyDataIterator(const config::DataStreamConfig& config);
   void GetNext(float* data_out);
+  void Get(float* data_out, const int row) const;
 };
 
 /** An iterator over a dataset in an HDF5 file.
@@ -97,7 +126,7 @@ class HDF5DataIterator : public DataIterator {
   HDF5DataIterator(const config::DataStreamConfig& config);
   ~HDF5DataIterator();
   void GetNext(float* data_out);
-  void GetNext(float* data_out, const int row);
+  void Get(float* data_out, const int row) const;
 
  protected:
   hid_t file_, dataset_, dapl_id_, m_dataspace_, type_;
@@ -111,7 +140,11 @@ class ImageDataIterator : public DataIterator {
   ImageDataIterator(const config::DataStreamConfig& config);
   ~ImageDataIterator();
   virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
   virtual void Seek(int row);
+  virtual int Tell() const;
+  virtual void Prep(const int chunk_size);
+  virtual void SetMaxDataSetSize(int max_dataset_size);
  
  protected:
   RawImageFileIterator<unsigned char> *it_;
@@ -125,7 +158,10 @@ class SlidingWindowDataIterator : public DataIterator {
   SlidingWindowDataIterator(const config::DataStreamConfig& config);
   ~SlidingWindowDataIterator();
   virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
   virtual void Seek(int row);
+  virtual int Tell() const;
+  virtual void SetMaxDataSetSize(int max_dataset_size);
  
  protected:
   SlidingWindowIterator<unsigned char> *it_;
@@ -144,62 +180,37 @@ class TextDataIterator : public DataIterator {
   TextDataIterator(const config::DataStreamConfig& config);
   ~TextDataIterator();
   virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
 
  protected:
   float* data_;
 };
 
-/** Writes data into an HDF5 file.
- * Handles multiple output streams.
- */ 
-class DataWriter {
+/** An iterator over bounding boxes.*/
+class BoundingBoxIterator : public DataIterator {
  public:
-  DataWriter(const string& output_file, const int dataset_size);
-  ~DataWriter();
-  virtual void AddStream(const string& name, const int numdims);
-  virtual void Write(Matrix& mat, const int data_id, const int rows);
+  BoundingBoxIterator(const config::DataStreamConfig& config);
 
- private:
-  const string output_file_;
-  const int dataset_size_;
-  vector<int> numdims_;
-  vector<hid_t> dataset_handle_, dataspace_handle_;
-  vector<int> current_row_;
-  hid_t file_;
-  int num_streams_;
-};
+  virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
+  virtual void SetFOV(const float size, const float stride, const float pad1,
+                      const float pad2, const int num_fov_x,
+                      const int num_fov_y);
+  virtual void AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it);
 
-/** Buffers a specified number of batches, averages them and then writes
- * the average into an HDF5 file.
- */ 
-class AveragedDataWriter : public DataWriter {
- public:
-  AveragedDataWriter(const string& output_file, const int dataset_size,
-                     const int avg_after, int max_batchsize);
-  ~AveragedDataWriter();
-  virtual void AddStream(const string& name, const int numdims);
-  virtual void Write(Matrix& mat, const int data_id, const int rows);
- private:
-  const int avg_after_, max_batchsize_;
-  vector<Matrix*> buf_;
-  vector<int> counter_;
-};
 
-/** Averages a specified number of consecutive entries and writes the
- * average into an HDF5 file.
- */
-class SequentialAveragedDataWriter : public DataWriter {
- public:
-  SequentialAveragedDataWriter(const string& output_file, const int dataset_size,
-                               const int avg_after);
-  ~SequentialAveragedDataWriter();
-  virtual void AddStream(const string& name, const int numdims);
-  virtual void Write(Matrix& mat, const int data_id, const int rows);
+  typedef struct {
+    float xmin, ymin, xmax, ymax;
+  } box;
 
- private:
-  const int avg_after_, dataset_size_;
-  vector<Matrix*> buf_;
-  int consumed_, num_rows_written_;
+  static float VisibleFraction(const box& b, const box& fov);
+  static float Intersection(const box& b1, const box& b2);
+  static float Area(const box& b);
+
+ protected:
+  vector<vector<box>> data_;
+  float fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
+  int num_fov_x_, num_fov_y_;
 };
 
 #endif

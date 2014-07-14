@@ -15,6 +15,7 @@ class MaxPoolEdge : public Edge {
   virtual int GetNumModules() const { return num_modules_; }
   virtual bool RequiresMemoryForDeriv() const { return true; }
   virtual void SetImageSize(int image_size);
+  virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
 
   int GetKernelSize() const { return kernel_size_; }
   int GetStride() const { return stride_; }

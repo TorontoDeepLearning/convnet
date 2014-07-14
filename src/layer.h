@@ -13,10 +13,9 @@ class Layer {
   ~Layer();
 
   /** Allocate memory for storing the state and derivative at this layer.
-   * @param imgsize The spatial size of the layer (width and height).
    * @param batch_size The mini-batch size.
    */ 
-  virtual void AllocateMemory(int imgsize, int batch_size);
+  virtual void AllocateMemory(int batch_size);
 
   /** Apply the activation function.
    * Derived classes must implement this. This method applies the activation
@@ -92,6 +91,7 @@ class Layer {
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
 
+  void SetSize(int image_size);
   int GetGPUId() const { return gpu_id_; }
   void AllocateMemoryOnOtherGPUs();
   Matrix& GetOtherState(int gpu_id);
@@ -140,7 +140,7 @@ class Layer {
 class LinearLayer : public Layer {
  public:
   LinearLayer(const config::Layer& config) : Layer(config) {};
-  virtual void AllocateMemory(int imgsize, int batch_size);
+  virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
   virtual void ComputeDeriv();
@@ -163,7 +163,7 @@ class ReLULayer : public LinearLayer {
 class SoftmaxLayer : public Layer {
  public:
   SoftmaxLayer(const config::Layer& config) : Layer(config) {};
-  virtual void AllocateMemory(int imgsize, int batch_size);
+  virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
   virtual void ComputeDeriv();
@@ -178,7 +178,7 @@ class SoftmaxLayer : public Layer {
 class SoftmaxDistLayer : public SoftmaxLayer {
  public:
   SoftmaxDistLayer(const config::Layer& config) : SoftmaxLayer(config) {};
-  virtual void AllocateMemory(int imgsize, int batch_size);
+  virtual void AllocateMemory(int batch_size);
   virtual void ComputeDeriv();
   virtual float GetLoss();
 
@@ -191,7 +191,7 @@ class SoftmaxDistLayer : public SoftmaxLayer {
 class LogisticLayer : public Layer {
  public:
   LogisticLayer(const config::Layer& config) : Layer(config) {};
-  virtual void AllocateMemory(int image_size, int batch_size);
+  virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
   virtual void ComputeDeriv();

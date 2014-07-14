@@ -66,7 +66,8 @@ Edge::Edge(const config::Edge& edge_config) :
   block_backprop_(edge_config.block_backprop()),
   is_tied_(!tied_edge_name_.empty()),
   img_display_(NULL),
-  gpu_id_(edge_config.gpu_id()) {}
+  gpu_id_(edge_config.gpu_id()),
+  display_(edge_config.display()) {}
   //if (img_display_ != NULL) img_display_->SetTitle(name_);
 
 Edge::~Edge() {
@@ -191,6 +192,9 @@ bool Edge::IsTied() {
 
 void Edge::SetImageSize(int image_size) {
   image_size_ = image_size;
+}
+
+void Edge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
 }
 
 void Edge::InsertPolyak() {

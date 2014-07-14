@@ -2527,6 +2527,34 @@ int extract_patches(cudamat* images, cudamat* patches, cudamat* width_offset, cu
   return 0;
 }
 
+int rectify_bounding_boxes(cudamat* boxes, cudamat* width_offset, cudamat* height_offset, cudamat* flip, int img_width, int img_height, int patch_width, int patch_height) {
+    int num_images = boxes->size[0];
+
+    if (width_offset->size[0] * width_offset->size[1] != num_images)
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (height_offset->size[0] * height_offset->size[1] != num_images)
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (flip->size[0] * flip->size[1] != num_images)
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    int num_locs = boxes->size[1] / 4;
+    dim3 grid(MIN(NUM_VECTOR_OP_BLOCKS, num_locs));
+    dim3 threads(MIN(NUM_VECTOR_OP_THREADS_PER_BLOCK, num_images));
+
+
+    kRectifyBoundingBox<<<grid, threads>>>(
+        boxes->data_device, width_offset->data_device, height_offset->data_device,
+        flip->data_device, num_images, img_width, img_height,
+        patch_width, patch_height, num_locs);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+    return 0;
+}
+
+
 int blockify(cudamat* source, cudamat* target, int blocksize) {
     dim3 kernelBlockGrid(source->size[1], 1, 1);
     dim3 kernelBlockDim(512, 1, 1);

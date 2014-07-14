@@ -65,7 +65,7 @@ void EdgeWithWeight::LoadParameters(hid_t file) {
 }
 
 void EdgeWithWeight::DisplayWeights() {
-  if (img_display_ != NULL) {
+  if (img_display_ != NULL && display_) {
     weights_.CopyToHost();
     int kernel_size = (int)sqrt(num_input_channels_);
     img_display_->DisplayWeights(weights_.GetHostData(), kernel_size, num_output_channels_, 250, false);

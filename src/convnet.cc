@@ -18,6 +18,7 @@ ConvNet::ConvNet(const string& model_file):
   ReadModel(model_file, model_);
   Matrix::InitRandom(model_.seed());
   srand(model_.seed());
+  localizer_ = model_.localizer();
   model_name_ = model_.name();
   checkpoint_dir_ = model_.checkpoint_dir();
 
@@ -87,27 +88,49 @@ void ConvNet::BuildNet() {
       data_layers_.push_back(l);
     }
   }
-}
 
-void ConvNet::AllocateLayerMemory() {
-  //cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
+
   int image_size;
   for (Layer* l : layers_) {
-    // Find out the spatial size of the layer.
-    if (l->IsInput()) {
-      image_size = model_.patch_size();
-    } else {
-      image_size = 0;
-      for (Edge* e: l->incoming_edge_) {
-        // if (e->IsSpatialBroadcast()) continue;
-        image_size = e->GetNumModules();
-        break;
-      }
-    }
-    l->AllocateMemory(image_size, batch_size_);
+    image_size = l->IsInput() ? model_.patch_size() :
+                                l->incoming_edge_[0]->GetNumModules();
+    l->SetSize(image_size);
     for (Edge* e: l->outgoing_edge_) {
       e->SetImageSize(image_size);
     }
+  }
+
+  if (localizer_) {
+    FieldsOfView();
+  }
+}
+
+void ConvNet::FieldsOfView() {
+  Layer* l = output_layers_[0];
+  int fov_size = 1, fov_stride = 1, fov_pad1 = 0, fov_pad2 = 0;
+  while(!l->IsInput()) {
+    Edge* e = l->incoming_edge_[0];
+    e->FOV(&fov_size, &fov_stride, &fov_pad1, &fov_pad2);
+    l = e->GetSource();
+  }
+  float image_size = (float)model_.patch_size();
+  fov_size_ = fov_size / image_size;
+  fov_stride_ = fov_stride / image_size;
+  fov_pad1_ = fov_pad1 / image_size;
+  fov_pad2_ = fov_pad2 / image_size;
+
+  cout << "FOV: " << fov_size << " " << fov_stride << " " << fov_pad1 << " " << fov_pad2 << endl;
+  cout << "Image size " << image_size << endl;
+  
+  num_fov_x_ = output_layers_[0]->GetSize();
+  num_fov_y_ = output_layers_[0]->GetSize();
+}
+
+
+void ConvNet::AllocateLayerMemory() {
+  //cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
+  for (Layer* l : layers_) {
+    l->AllocateMemory(batch_size_);
   }
 }
 
@@ -233,14 +256,24 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
   config::DatasetConfig train_data_config;
   ReadDataConfig(train_data_config_file, train_data_config);
   train_dataset_ = new DataHandler(train_data_config);
+  if (localizer_) {
+    train_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
+                           num_fov_x_, num_fov_y_);
+  }
   batch_size_ = train_dataset_->GetBatchSize();
   int dataset_size = train_dataset_->GetDataSetSize();
+  train_dataset_->AllocateMemory();
   cout << "Training data set size " << dataset_size << endl;
   if (!val_data_config_file.empty()) {
     config::DatasetConfig val_data_config;
     ReadDataConfig(val_data_config_file, val_data_config);
     val_dataset_ = new DataHandler(val_data_config);
+    if (localizer_) {
+      val_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
+                             num_fov_x_, num_fov_y_);
+    }
     dataset_size = val_dataset_->GetDataSetSize();
+    val_dataset_->AllocateMemory();
     cout << "Validation data set size " << dataset_size << endl;
   }
 }
@@ -270,19 +303,6 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
   dataset->Sync();
 }
 
-void ConvNet::DumpOutputs(const string& output_file, const vector<string>& layer_names) {
-  DumpOutputs(output_file, train_dataset_, layer_names);
-}
-
-void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset,
-                          const vector<string>& layer_names) {
-  vector<Layer*> layers;
-  for (const string& s: layer_names) {
-    layers.push_back(GetLayerByName(s));
-  }
-  DumpOutputs(output_file, dataset, layers);
-}
-
 Layer* ConvNet::GetLayerByName(const string& name) {
   for (Layer* l:layers_) {
     if (l->GetName().compare(name) == 0) return l;
@@ -292,53 +312,47 @@ Layer* ConvNet::GetLayerByName(const string& name) {
   return NULL;
 }
 
-void ConvNet::DumpOutputs(const string& output_file, DataHandler* dataset, vector<Layer*>& layers) {
-  if (dataset == NULL) return;
-  dataset->Seek(0);
-  int dataset_size = dataset->GetDataSetSize(),
-      batch_size = dataset->GetBatchSize(),
+void ConvNet::ExtractFeatures(const string& config_file) {
+  config::FeatureExtractorConfig config;
+  ReadFeatureExtractorConfig(config_file, config);
+  ExtractFeatures(config);
+}
+
+void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
+  DataHandler dataset = DataHandler(config.input());
+  int dataset_size = dataset.GetDataSetSize(),
+      batch_size = dataset.GetBatchSize(),
       num_batches = dataset_size / batch_size,
-      left_overs = dataset_size % batch_size;
-  int i = 0;
-  int max_num_dims = 0;
-  int num_positions = 1; //dataset->GetNumPositions();
+      left_overs = dataset_size % batch_size,
+      multiplicity = dataset.GetMultiplicity();
+  batch_size_ = batch_size;
+  dataset.AllocateMemory();
+  AllocateMemory(true);
  
-  cout << "Dumping dataset of size " << dataset_size
+  cout << "Extracting features for dataset of size " << dataset_size
        << " # batches " << num_batches
        << " # left overs " << left_overs << endl;
   if (left_overs > 0) num_batches++;
+  cout << "Writing to " << config.output_file() << endl;
  
-  DataWriter* data_writer = (num_positions == 1) ?
-    new DataWriter(output_file, dataset_size):
-    new AveragedDataWriter(output_file, dataset_size, num_positions, batch_size);
-    //new SequentialAveragedDataWriter(output_file, dataset_size, num_positions);
-
-  for (Layer* l : layers) {
+  DataWriter* data_writer = new DataWriter(config);
+  data_writer->SetDataSetSize(dataset_size * multiplicity);
+  vector<Layer*> layers;
+  for (const config::FeatureStreamConfig& feature : config.feature()) {
+    Layer* l = GetLayerByName(feature.layer());
     int numdims = l->GetState().GetCols();
-    data_writer->AddStream(l->GetName(), numdims);
-    if (max_num_dims < numdims) max_num_dims = numdims;
+    data_writer->SetNumDims(l->GetName(), numdims);
+    layers.push_back(l);
   }
-  Matrix::RegisterTempMemory(max_num_dims * batch_size, "transpose for data writer");
+  int numcases;
   for (int k = 0; k < num_batches; k++) {
     cout << "\rBatch " << (k+1);
     cout.flush();
-    int numcases = (k == (num_batches - 1) && left_overs > 0) ? left_overs : batch_size;
-    for (int p = 0; p < num_positions; p++) {
-      dataset->GetBatch(data_layers_);
+    numcases = (left_overs > 0 && k == num_batches - 1) ? left_overs : batch_size;
+    for (int m = 0; m < multiplicity; m++) {
+      dataset.GetBatch(data_layers_);
       Fprop(false);
-      if (k % model_.display_after() == 0 && model_.display()) {
-        DisplayLayers();
-        DisplayEdges();
-      }
-      i = 0;
-      for (Layer* l : layers) {
-        Matrix& mat = l->GetState();
-        Matrix mat_t;
-        Matrix::GetTemp(mat.GetCols(), mat.GetRows(), mat_t);
-        copy_transpose_big_matrix(mat.GetMat(), mat_t.GetMat());
-        data_writer->Write(mat_t, i, numcases);
-        i++;
-      }
+      data_writer->Write(layers, numcases);
     }
   }
   cout << endl;
@@ -405,6 +419,7 @@ void ConvNet::DisplayLayers() {
   for (int i = 0; i < layers_.size(); i++){
     layers_[i]->Display(0);
   }
+
 }
 
 void ConvNet::DisplayEdges() {
@@ -495,6 +510,32 @@ void ConvNet::AddVectors(vector<float>& a, vector<float>& b) {
   for (int i = 0; i < a.size(); i++) a[i] += b[i];
 }
 
+void ConvNet::SetupLocalizationDisplay() {
+  int image_size = model_.patch_size();
+  localization_display_ = new ImageDisplayer(image_size, image_size, 3, false,
+                                          "localization");
+  localization_display_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
+                             num_fov_x_, num_fov_y_);
+}
+
+void ConvNet::DisplayLocalization() {
+  Layer *input_layer = input_layers_[0],
+        *output_layer = output_layers_[0];
+  Matrix& input = input_layer->GetState();
+  Matrix& output = output_layer->GetState();
+  Matrix& ground_truth = output_layer->GetData();
+
+  input.CopyToHost();
+  output.CopyToHost();
+  ground_truth.CopyToHost();
+
+  float *data = input.GetHostData(),
+        *gt = ground_truth.GetHostData(),
+        *preds = output.GetHostData();
+  
+  localization_display_->DisplayLocalization(data, preds, gt, input.GetRows());
+}
+
 void ConvNet::Train() {
 
   // Check if train data is available.
@@ -517,8 +558,10 @@ void ConvNet::Train() {
             start_polyak_queue = validate_after - polyak_after * model_.polyak_queue_size();
 
   const bool display = model_.display();
-             //display_spatial_output = model_.display_spatial_output();
 
+  if (display && localizer_) {
+    SetupLocalizationDisplay();
+  }
   const float learning_rate_reduce_factor = model_.reduce_lr_factor();
 
   // Time keeping.
@@ -543,6 +586,7 @@ void ConvNet::Train() {
     if (i % display_after == 0 && display) {
       DisplayLayers();
       DisplayEdges();
+      if (localizer_) DisplayLocalization();
     }
     newline = false;
     if ((i+1) % print_after == 0) {
@@ -600,4 +644,7 @@ void ConvNet::Train() {
     Save();
   }
   cout << "End of training." << endl;
+  if (display && localizer_) {
+    delete localization_display_;
+  }
 }
