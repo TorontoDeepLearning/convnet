@@ -1,0 +1,506 @@
+name: "CLS_net"
+seed: 80638
+max_iter: 10000000
+print_after: 100
+save_after: 2000
+display_after: 1
+validate_after: 2000
+patch_size: 224
+reduce_lr_factor: 0.5
+reduce_lr_num_steps: 4
+reduce_lr_max: 10
+reduce_lr_threshold: 0.0
+checkpoint_dir: "/ais/gobi3/u/nitish/imagenet/models"
+display: false
+
+layer {
+  name: "input"
+  num_channels: 3
+  is_input: true
+  display: true
+}
+
+layer {
+  name: "hidden1_conv"
+  num_channels: 96
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden1_maxpool"
+  num_channels: 96
+}
+
+layer {
+  name: "hidden1_rnorm"
+  num_channels: 96
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden2_conv"
+  num_channels: 256
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden2_conv_nin1"
+  num_channels: 256
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden2_maxpool"
+  num_channels: 256
+}
+
+layer {
+  name: "hidden2_rnorm"
+  num_channels: 256
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden3_conv"
+  num_channels: 384
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden3_conv_nin1"
+  num_channels: 768
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden4_conv"
+  num_channels: 384
+  activation: RECTIFIED_LINEAR
+}
+layer {
+  name: "hidden4_conv_nin1"
+  num_channels: 768
+  activation: RECTIFIED_LINEAR
+  dropprob: 0.1
+}
+layer {
+  name: "hidden4_conv_nin2"
+  num_channels: 384
+  activation: RECTIFIED_LINEAR
+}
+layer {
+  name: "hidden5_conv"
+  num_channels: 512
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden5_conv_nin1"
+  num_channels: 1024
+  activation: RECTIFIED_LINEAR
+  dropprob: 0.3
+}
+
+layer {
+  name: "hidden5_conv_nin2"
+  num_channels: 512
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden5_maxpool"
+  num_channels: 512
+}
+
+layer {
+  name: "hidden6"
+  num_channels: 4096
+  dropprob: 0.5
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "hidden7"
+  num_channels: 4096
+  dropprob: 0.5
+  activation: RECTIFIED_LINEAR
+}
+
+layer {
+  name: "output"
+  num_channels: 1000
+  is_output: true
+  activation: SOFTMAX
+}
+
+edge {
+  source: "input"
+  dest: "hidden1_conv"
+  edge_type: CONVOLUTIONAL
+  kernel_size: 7
+  stride : 2
+  padding: 1
+  shared_bias: true
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  init_bias: 0.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  partial_sum: 4
+}
+
+edge {
+  source: "hidden1_conv"
+  dest: "hidden1_maxpool"
+  edge_type: MAXPOOL
+  kernel_size: 3
+  stride : 2
+  padding: 1
+}
+edge {
+  source: "hidden1_maxpool"
+  dest: "hidden1_rnorm"
+  edge_type: RESPONSE_NORM
+  add_scale: 0.0005
+  pow_scale: 0.75
+  frac_of_filters_response_norm: 0.25
+}
+
+
+edge {
+  source: "hidden1_rnorm"
+  dest: "hidden2_conv"
+  edge_type: CONVOLUTIONAL
+  kernel_size: 5
+  stride : 2
+  padding: 1
+  shared_bias: true
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  init_bias: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  partial_sum: 9
+}
+
+edge {
+  source: "hidden2_conv"
+  dest: "hidden2_conv_nin1"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden2_conv_nin1"
+  dest: "hidden2_maxpool"
+  edge_type: MAXPOOL
+  kernel_size: 3
+  stride : 2
+  padding: 1
+}
+
+edge {
+  source: "hidden2_maxpool"
+  dest: "hidden2_rnorm"
+  edge_type: RESPONSE_NORM
+  add_scale: 0.0005
+  pow_scale: 0.75
+  frac_of_filters_response_norm: 0.25
+}
+
+edge {
+  source: "hidden2_rnorm"
+  dest: "hidden3_conv"
+  edge_type: CONVOLUTIONAL
+  kernel_size: 3
+  stride : 1
+  padding: 1
+  shared_bias: true
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  init_bias: 0.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  partial_sum: 14
+}
+
+edge {
+  source: "hidden3_conv"
+  dest: "hidden3_conv_nin1"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden3_conv_nin1"
+  dest: "hidden4_conv"
+  edge_type: CONVOLUTIONAL
+  kernel_size: 3
+  stride : 1
+  padding: 1
+  shared_bias: true
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  init_bias: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  partial_sum: 14
+}
+
+edge {
+  source: "hidden4_conv"
+  dest: "hidden4_conv_nin1"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden4_conv_nin1"
+  dest: "hidden4_conv_nin2"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden4_conv_nin2"
+  dest: "hidden5_conv"
+  edge_type: CONVOLUTIONAL
+  kernel_size: 3
+  stride : 1
+  padding: 0
+  shared_bias: true
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  init_bias: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+  partial_sum: 4
+}
+
+edge {
+  source: "hidden5_conv"
+  dest: "hidden5_conv_nin1"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden5_conv_nin1"
+  dest: "hidden5_conv_nin2"
+  edge_type: CONV_ONETOONE
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_constraint: 1
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden5_conv_nin2"
+  dest: "hidden5_maxpool"
+  edge_type: MAXPOOL
+  kernel_size: 3
+  stride : 2
+  padding: 1
+}
+
+edge {
+  source: "hidden5_maxpool"
+  dest: "hidden6"
+  edge_type: FC
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_limit: 4
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden6"
+  dest: "hidden7"
+  edge_type: FC
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 1.0
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_limit: 4
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+edge {
+  source: "hidden7"
+  dest: "output"
+  edge_type: FC
+  initialization: DENSE_UNIFORM_SQRT_FAN_IN
+  init_wt: 0.1
+  weight_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+    weight_norm_limit: 4
+    l2_decay: 0.0005
+  }
+  bias_optimizer {
+    epsilon: 0.01
+    initial_momentum : 0.5
+    final_momentum : 0.9
+    momentum_transition_timescale : 2000 
+  }
+}
+
+timestamp : "20140801232522"
