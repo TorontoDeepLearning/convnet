@@ -1,3 +1,8 @@
+Single model validation error rates:
+
+- CLS_net_20140801232522 : 13.5%
+- CLS_net_20140621074703 : 18.4%
+
 ### Running the pre-trained model
 Download the model [476Mb]
 ```
