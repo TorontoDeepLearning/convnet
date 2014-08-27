@@ -10,7 +10,7 @@ reduce_lr_factor: 0.5
 reduce_lr_num_steps: 4
 reduce_lr_max: 10
 reduce_lr_threshold: 0.0
-checkpoint_dir: "/ais/gobi3/u/nitish/imagenet/models"
+checkpoint_dir: "./"
 display: false
 
 layer {
