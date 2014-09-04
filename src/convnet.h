@@ -19,7 +19,7 @@ class ConvNet {
   */ 
   ConvNet(const string& model_file);
   ~ConvNet();
-  void SetupDataset(const string& train_data_config_file);
+  virtual void SetupDataset(const string& train_data_config_file);
   virtual void SetupDataset(const string& train_data_config_file, const string& val_data_config_file);
 
   /** Start training.*/
@@ -69,12 +69,26 @@ class ConvNet {
    */ 
   void AllocateMemory(bool fprop_only);
 
+  void SetBatchsize(const int batch_size);
+  
+  Layer* GetLayerByName(const string& name);
+
+  /** Forward propagate through the network.
+   * @param train If true, this forward prop is being done during training,
+   * otherwise during test/validation. Used for determining whether to use drop
+   * units stochastcially or use all of them.
+   */ 
+  virtual void Fprop(bool train);
+
  protected:
   /** Creates layers and edges.*/ 
   void BuildNet();
 
   /** Release all memory held by the model.*/
   void DestroyNet();
+
+  /** Add a sub-network into this network.*/
+  void AddSubnet(config::Model& model, const config::Subnet& subnet);
 
   /** Allocate layer memory for using mini-batches of batch_size_.*/
   void AllocateLayerMemory();
@@ -114,12 +128,6 @@ class ConvNet {
    */ 
   virtual void Bprop(Layer& output, Layer& input, Edge& edge, bool overwrite, bool update_weights);
 
-  /** Forward propagate through the network.
-   * @param train If true, this forward prop is being done during training,
-   * otherwise during test/validation. Used for determining whether to use drop
-   * units stochastcially or use all of them.
-   */ 
-  virtual void Fprop(bool train);
 
   /** Backpropagate through the network and update weights.*/ 
   virtual void Bprop(bool update_weights);
@@ -140,7 +148,6 @@ class ConvNet {
   void WriteLog(int current_iter, float time, float training_error);
   void WriteLog(int current_iter, float time, const vector<float>& training_error);
   void WriteValLog(int current_iter, const vector<float>& error);
-  Layer* GetLayerByName(const string& name);
   
   /** Decides if learning rate should be reduced.*/
   bool CheckReduceLearningRate(const vector<float>& val_error);
@@ -163,7 +170,7 @@ class ConvNet {
   ImageDisplayer displayer_;
   string model_filename_, timestamp_, log_file_, val_log_file_;
 
-  float fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
+  int fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
   int num_fov_x_, num_fov_y_;
   bool localizer_;
 
