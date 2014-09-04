@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
     const string& output_dir = output_arg.getValue();
 
 
-    ConvNetCPU net(model, param, mean_file, 1);
-    vector<Layer*> layers;
+    cpu::ConvNetCPU net(model, param, mean_file, 1);
+    vector<cpu::Layer*> layers;
     int big_image_size = 256;
     int image_size = 224;
     int position = 0;
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
       fprop_t = chrono::system_clock::now();
 
       int k = 0;
-      for (Layer* l : layers) {
+      for (cpu::Layer* l : layers) {
         const float* state = l->GetState();
         const int num_dims = l->GetDims();
         for (int i = 0; i < num_dims; i++) {

@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 using namespace std;
+namespace cpu {
+
 class Edge;
 class Layer {
  public:
@@ -93,4 +95,5 @@ class ConvNetCPU {
   vector<Edge*> edges_;
   CPUMatrix mean_, std_;
 };
+}  // end namespace.
 #endif

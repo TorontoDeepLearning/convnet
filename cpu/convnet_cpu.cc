@@ -5,7 +5,7 @@
 #include <iostream>
 #include <stack>
 using namespace std;
-
+namespace cpu {
 ConvNetCPU::ConvNetCPU(
     const string& model_structure, const string& model_parameters,
     const string& mean_file, int batch_size) {
@@ -94,6 +94,9 @@ void ConvNetCPU::SetMean(const string& mean_file) {
 
 void ConvNetCPU::Normalize(const unsigned char* i_data, float* o_data, int num_dims, int num_colors) {
   float* mean = mean_.GetData(), *std = std_.GetData();
+#ifdef USE_OPENMP
+  #pragma omp parallel for if(num_dims > 10000)
+#endif
   for (int i = 0; i < num_dims; i++) {
     o_data[i] = (static_cast<float>(i_data[i]) - mean[i % num_colors]) / std[i % num_colors];
   }
@@ -110,7 +113,7 @@ void ConvNetCPU::Fprop(const unsigned char* data, int batch_size) {
     if (!l->IsInput()) {
       l->ApplyActivation();
     } else {
-      Normalize(data, l->GetState(), l->GetDims(), l->GetNumChannels());
+      Normalize(data, l->GetState(), l->GetDims() * batch_size, l->GetNumChannels());
     }
   }
 }
@@ -240,6 +243,11 @@ void Edge::AllocateMemory() {
       cols = num_input_channels_ * image_size_ * image_size_; 
       bias_size = num_output_channels_;
       break;
+    case config::Edge::CONV_ONETOONE :
+      rows = num_output_channels_;
+      cols = num_input_channels_; 
+      bias_size = num_output_channels_;
+      break;
     case config::Edge::CONVOLUTIONAL :
       rows = num_output_channels_;
       cols = num_input_channels_ * kernel_size_ * kernel_size_;
@@ -308,6 +316,10 @@ void Edge::ComputeUp(const float* input, float* output, bool overwrite, int batc
       CPUMatrix::FCUp(input, weight, output, batch_size, num_output_channels_, input_dims, 1, scale_targets);
       CPUMatrix::AddBias(output, bias, output, batch_size, num_output_channels_);
       break;
+    case config::Edge::CONV_ONETOONE :
+      CPUMatrix::FCUp(input, weight, output, batch_size * image_size * image_size, num_output_channels_, num_input_channels_, 1, scale_targets);
+      CPUMatrix::AddBias(output, bias, output, batch_size * image_size * image_size, num_output_channels_);
+      break;
     case config::Edge::CONVOLUTIONAL :
       CPUMatrix::ConvUp(input, weight, output, batch_size, num_input_channels_, num_output_channels_,
           image_size, image_size, kernel_size_, kernel_size_, stride_, stride_, padding_, padding_, 1, scale_targets);
@@ -355,4 +367,5 @@ void Edge::LoadParameters(hid_t file) {
       CPUMatrix::ReadHDF5(file, bias_.GetData(), bias_.GetSize(), ss.str());
     }
   }
+}
 }

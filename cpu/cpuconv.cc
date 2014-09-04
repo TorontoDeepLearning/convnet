@@ -3,7 +3,9 @@
 #include <cfloat>
 #include <cmath>
 #include <chrono>
-
+#ifdef USE_OPENMP
+#include <omp.h>
+#endif
 #ifdef USE_OPENBLAS
 #include <cblas.h>
 #include <common.h>
