@@ -1,6 +1,4 @@
 #include "edge.h"
-#include "matrix.h"
-#include "util.h"
 #include <iostream>
 #include "edge_with_weight.h"
 #include "fc_edge.h"

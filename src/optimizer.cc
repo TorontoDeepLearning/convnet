@@ -41,11 +41,10 @@ void Optimizer::ReduceLearningRate(float factor) {
 }
 
 void Optimizer::ApplyConstraints(Matrix& parameter) {
-  cudamat* w = parameter.GetMat();
   if (weight_norm_constraint_ > 0) {  // Make the norm of the incoming weights have this value.
-    normlimit_by_axis(w, w, 1, weight_norm_constraint_, 1);
+    parameter.NormLimitByAxis(1, weight_norm_constraint_, true);
   } else if (weight_norm_limit_ > 0) {  // Limit the norm of the incoming weights to this value.
-    normlimit_by_axis(w, w, 1, weight_norm_limit_, 0);
+    parameter.NormLimitByAxis(1, weight_norm_limit_, false);
   }
 }
 
@@ -113,24 +112,18 @@ void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
   if (step_ >= start_optimization_after_) {
     float epsilon = GetDecayedEpsilon(), momentum = GetMomentum();
 
-    cudamat *dw_history = gradient_history_.GetMat(),
-            *w = parameter.GetMat(),
-            *dw = gradient.GetMat();
-
-    mult_by_scalar(dw_history, momentum, dw_history);
+    gradient_history_.Mult(momentum);
    
     // L2 decay.
-    if (l2_decay_ > 0) add_mult(dw_history, w, l2_decay_);
+    if (l2_decay_ > 0) gradient_history_.Add(parameter, l2_decay_);
    
     // Clip gradients to prevent explosions.
-    if (gradient_clip_ > 0) upper_bound_mod_scalar(dw, gradient_clip_, dw);
+    if (gradient_clip_ > 0) gradient.UpperBoundMod(gradient_clip_);
 
-    add_mult(dw_history, dw, 1.0);
-    add_mult(w, dw_history, -epsilon);
-
+    gradient_history_.Add(gradient, 1.0);
+    parameter.Add(gradient_history_, -epsilon);
     ApplyConstraints(parameter);
   }
-
   step_++;
 }
 
@@ -147,7 +140,6 @@ LBFGSOptimizer::LBFGSOptimizer(const config::Optimizer& optimizer_config) :
   beta_.resize(m_);
   s_.resize(m_);
   y_.resize(m_);
-
 }
 
 void LBFGSOptimizer::AllocateMemory(const int rows, const int cols) {
@@ -196,17 +188,15 @@ void LBFGSOptimizer::LoadParameters(hid_t file, const string& prefix) {
 // Modifies parameter.
 void LBFGSOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
   q_.Set(gradient);
-  cudamat *q = q_.GetMat(), *w = parameter.GetMat();
-  int err, i;
 
-  if (l2_decay_ > 0) add_mult(q, w, l2_decay_);
+  if (l2_decay_ > 0) q_.Add(parameter, l2_decay_);
 
   // Update memory.
-  subtract_elementwise(w, last_w_.GetMat(), s_[start_].GetMat());
-  subtract_elementwise(q, last_q_.GetMat(), y_[start_].GetMat());
-  float norm = vdot(s_[start_].GetMat(), y_[start_].GetMat(), &err);
+  parameter.Subtract(last_w_, s_[start_]);
+  q_.Subtract(last_q_, y_[start_]);
+  float norm = s_[start_].VDot(y_[start_]);
   if (norm == 0) {
-    cerr<< "Norm was 0 err " << err << endl;
+    cerr<< "Error: Norm was 0." << endl;
     exit(1);
   }
   rho_[start_] = 1 / norm;
@@ -214,86 +204,26 @@ void LBFGSOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
   last_q_.Set(q_);
 
   // Compute update.
+  int i;
   for (int j = 0; j < m_; j++) {
     i = start_ - j;
     if (i < 0) i += m_;
-    alpha_[i] = rho_[i] * vdot(s_[i].GetMat(), q, &err);
-    add_mult(q, y_[i].GetMat(), -alpha_[i]);
+    alpha_[i] = rho_[i] * q_.VDot(s_[i]);
+    q_.Add(y_[i], -alpha_[i]);
   }
-  float h = vdot(y_[start_].GetMat(), s_[start_].GetMat(), &err) / vdot(y_[start_].GetMat(), y_[start_].GetMat(), &err);
-  mult_by_scalar(q, h, q);
+  float h = y_[start_].VDot(s_[start_]) / y_[start_].VDot(y_[start_]);
+  q_.Mult(h);
   for (int j = m_ - 1; j >= 0; j--) {
     i = start_ - j;
     if (i < 0) i += m_;
-    beta_[i] = rho_[i] * vdot(y_[i].GetMat(), q, &err);
-    add_mult(q, s_[i].GetMat(), alpha_[i] - beta_[i]);
+    beta_[i] = rho_[i] * y_[i].VDot(q_);
+    q_.Add(s_[i], alpha_[i] - beta_[i]);
   }
   float epsilon = GetDecayedEpsilon();  // TODO:line search here.
-  add_mult(w, q, -epsilon);
-  //add_mult(w, q, -1);
+  parameter.Add(q_, -epsilon);
+  //w.Add(q_, -1);
   ApplyConstraints(parameter);
-
-  if (err != 0) {
-    cerr << "Something bad happened" << endl;
-    exit(1);
-  }
 
   start_ = (start_ + 1) % m_;
   step_++;
 }
-
-
-/*  float epsilon = GetDecayedEpsilon(epsilon_),
-        epsilon_b = GetDecayedEpsilon(epsilon_b_),
-        momentum = GetMomentum();
- 
-  cudamat *dw_history = grad_history_weights_.GetMat(),
-          *db_history = grad_history_bias_.GetMat(),
-          *w = weights_.GetMat(),
-          *b = bias_.GetMat(),
-          *dw = grad_weights_.GetMat(),
-          *db = grad_bias_.GetMat();
-
-  mult_by_scalar(dw_history, momentum, dw_history);
-  mult_by_scalar(db_history, momentum, db_history);
-  
-  if (l2_decay_ > 0) add_mult(dw_history, w, l2_decay_);
- 
-  // Clip gradients to prevent explosions.
-  if (gradient_clip_ > 0) {
-    upper_bound_mod_scalar(dw, gradient_clip_, dw);
-    upper_bound_mod_scalar(db, gradient_clip_, db);
-  }
-
-  add_mult(dw_history, dw, 1.0);
-  add_mult(db_history, db, 1.0);
-
-  if (step_ == 0) {
-    // Initialize adagrad history to avoid jerk.
-    copy_on_device(&grad_history_weights_, &adagrad_history_weights_);
-    copy_on_device(&grad_history_bias_, &adagrad_history_bias_);
-    apply_pow(&adagrad_history_weights_, 2, &adagrad_history_weights_);
-    apply_pow(&adagrad_history_bias_, 2, &adagrad_history_bias_);
-  }
-
-  if (adagrad_decay_ > 0) {
-    int err_code;
-    err_code = adagrad(&weights_, &grad_history_weights_, &adagrad_history_weights_, adagrad_decay_, -epsilon);
-    if (err_code != 0) {
-      cout << "Error in adagrad : " << GetStringError(err_code) << endl;
-    }
-    err_code = adagrad(&bias_, &grad_history_bias_, &adagrad_history_bias_, adagrad_decay_, -epsilon_b);
-    if (err_code != 0) {
-      cout << "Error in adagrad : " << GetStringError(err_code) << endl;
-    }
-  } else {
-    add_mult(w, dw_history, -epsilon);
-    add_mult(b, db_history, -epsilon_b);
-  // }
-
-  if (weight_norm_constraint_ > 0) {  // Make the norm of the incoming weights have this value.
-    normlimit_by_axis(w, w, 1, weight_norm_constraint_, 1);
-  } else if (weight_norm_limit_ > 0) {  // Limit the norm of the incoming weights to this value.
-    normlimit_by_axis(w, w, 1, weight_norm_limit_, 0);
-  }
-*/

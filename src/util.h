@@ -12,7 +12,6 @@
 #define cimg_use_jpeg
 #define cimg_use_lapack
 #include "CImg/CImg.h"
-#include "cudamat.cuh"
 #include <stdio.h>
 #include <google/protobuf/text_format.h>
 #include "convnet_config.pb.h"
@@ -68,7 +67,7 @@ class ImageDisplayer {
   void CreateImage(const float* data, int num_images, int image_id, CImg<float>& img);
   void DisplayWeights(float* data, int size, int num_filters, int display_size, bool yuv = false);
   void DisplayLocalization(float* data, float* preds, float* gt, int num_images);
-  void SetFOV(float size, float stride, float pad1, float pad2, int num_fov_x, int num_fov_y);
+  void SetFOV(int size, int stride, int pad1, int pad2, int patch_size, int num_fov_x, int num_fov_y);
   
 
   static void YUVToRGB(const float* yuv, float* rgb, int spacing);

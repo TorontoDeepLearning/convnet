@@ -50,16 +50,13 @@ void ConvOneToOneEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) 
   input.Reshape(-1, num_input_channels_);
   output.Reshape(-1, num_output_channels_);
 
-  cudamat *input_mat = input.GetMat(),
-          *output_mat = output.GetMat(),
-          *w_mat_t = is_tied_? tied_edge_->GetWeight().GetMatTranspose()
-                               : weights_.GetMatTranspose();
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  dot(input_mat, w_mat_t, output_mat, scale_targets, 1);
+  Matrix::Dot(input, w, output, scale_targets, 1, false, true);
 
   if (!has_no_bias_) {
-    cudamat* b_mat = is_tied_? tied_edge_->GetBias().GetMat() : bias_.GetMat();
-    add_row_vec(output_mat, b_mat, output_mat);
+    Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
+    output.AddRowVec(b);
   }
 
   input.Reshape(batch_size, -1);
@@ -71,15 +68,9 @@ void ConvOneToOneEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   int batch_size = input.GetRows();
   deriv_output.Reshape(-1, num_output_channels_);
   deriv_input.Reshape(-1, num_input_channels_);
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  // Deriv w.r.t input of this edge (which is to be computed).
-  cudamat* deriv_input_mat = deriv_input.GetMat();
-  
-  cudamat* w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  dot(deriv_output_mat, w_mat, deriv_input_mat, scale_targets, 1);
+  Matrix::Dot(deriv_output, w, deriv_input, scale_targets, 1);
   deriv_output.Reshape(batch_size, -1);
   deriv_input.Reshape(batch_size, -1);
 }
@@ -88,23 +79,14 @@ void ConvOneToOneEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
   int batch_size = input.GetRows();
   input.Reshape(-1, num_input_channels_);
   deriv_output.Reshape(-1, num_output_channels_);
-  // Input to this edge.
-  cudamat* input_mat = input.GetMat();
   
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-  cudamat* deriv_output_t_mat = deriv_output.GetMatTranspose();
-  
-  cudamat* dw_mat = is_tied_ ? tied_edge_->GetGradWeight().GetMat() : grad_weights_.GetMat();
+  Matrix& dw = is_tied_ ? tied_edge_->GetGradWeight() : grad_weights_;
   int scale_targets = GetNumGradsReceived() > 0 ? 1 : 0;
-
-  dot(deriv_output_t_mat, input_mat, dw_mat, scale_targets, scale_gradients_ / batch_size);
+  Matrix::Dot(deriv_output, input, dw, scale_targets, scale_gradients_ / batch_size, true, false);
 
   if (!has_no_bias_) {
-    cudamat* db_mat = is_tied_ ? tied_edge_->GetGradBias().GetMat() : grad_bias_.GetMat();
-    Matrix ones;
-    Matrix::GetOnes(1, deriv_output.GetRows(), ones);
-    dot(ones.GetMat(), deriv_output_mat, db_mat, scale_targets, scale_gradients_ / batch_size);
+    Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
+    deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
   }
   input.Reshape(batch_size, -1);
   deriv_output.Reshape(batch_size, -1);

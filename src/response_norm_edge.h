@@ -12,7 +12,6 @@ class ResponseNormEdge : public Edge {
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
-  virtual bool RequiresMemoryForDeriv() const { return true; }
   virtual void SetImageSize(int image_size);
 
   bool Blocked() const { return blocked_; }
@@ -21,7 +20,6 @@ class ResponseNormEdge : public Edge {
   float FracOfFilters() const { return frac_of_filters_response_norm_; }
 
  private:
-  Matrix denoms_;
   int num_filters_response_norm_;
   bool blocked_;
   float add_scale_, pow_scale_, frac_of_filters_response_norm_;

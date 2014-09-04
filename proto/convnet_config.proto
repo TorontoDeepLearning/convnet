@@ -9,23 +9,25 @@ message Layer {
   optional int32 num_channels = 2;
   optional int32 size = 3 [default = -1]; 
   optional float dropprob = 4 [default=0];
-  optional bool is_input = 5 [default=false];
+  optional bool is_input = 5 [default=false]; // DEPRECATED
   enum Activation {
     LINEAR = 0;
     LOGISTIC = 1;
     RECTIFIED_LINEAR = 2;
     SOFTMAX = 3;
     SOFTMAX_DIST = 4;  // not one-of-K, but a distribution over K.
+    HINGE_LINEAR = 5;
+    HINGE_QUADRATIC = 6;
   }
   optional Activation activation = 6 [default=LINEAR];
   optional bool is_spatial_output = 7 [default=false];
   optional bool is_classifier_output = 8 [default=false];
   optional bool display = 9 [default=false];
-  optional bool is_output = 10 [default=false];
+  optional bool is_output = 10 [default=false];  // DEPRECATED
   optional bool gaussian_dropout = 11 [default=false];
   optional float max_act_gaussian_dropout = 12 [default = -1];
-
   optional int32 gpu_id = 13 [default = 0];
+  optional float hinge_margin = 14 [default=0];
 }
 
 message Optimizer {
@@ -152,6 +154,22 @@ message Edge {
   optional bool display = 27 [default=false];
 }
 
+message Subnet {
+  required string name = 1;
+  required string model_file = 2;
+  optional string parameters_file = 3;
+  message MergeLayer {
+    required string subnet_layer = 1;
+    required string net_layer = 2;
+  }
+  repeated MergeLayer merge_layer = 4;
+  optional bool block_backprop = 5 [default=false];
+  optional int32 start_optimization_after = 6 [default=0];
+  optional int32 gpu_id_offset = 7 [default=0];
+  optional int32 num_channels_multiplier = 8 [default=1];
+  repeated string remove_layer = 9;
+}
+
 message Model {
   required string name = 1;
   repeated Layer layer = 2;
@@ -168,10 +186,8 @@ message Model {
   optional bool localizer = 11 [default = false];
 
   optional string checkpoint_dir = 12;
-  optional bool has_spatial_outputs = 13 [default=false];
-  optional bool display_spatial_output = 14 [default=false];
+  optional bool print_weights = 13 [default=false];
   repeated string timestamp = 15;
-  optional bool det_classifier = 16 [default=false];
   optional bool display = 17 [default=false];
   optional int32 validate_after = 18 [default = -1];
   
@@ -185,8 +201,11 @@ message Model {
   // Polyak averaging.
   optional int32 polyak_after = 24 [default=0];
   optional int32 polyak_queue_size = 25 [default = 0];
-}
 
+  // Include other networks.
+  repeated Subnet subnet = 26;
+
+}
 message DataStreamConfig {
   required string file_pattern = 1;
   required string layer_name = 2;
@@ -202,6 +221,7 @@ message DataStreamConfig {
     SLIDING_WINDOW = 3;
     TXT = 4;
     BOUNDING_BOX = 5;
+    CROPS = 6;
   }
   optional DataType data_type = 4 [default=HDF5];
 
@@ -240,6 +260,12 @@ message DataStreamConfig {
   // This layer needs the noise added to 'noise_layer_name'.
   // Used for communicating jitter noise to bounding box outputs.
   optional string noise_layer_name = 20;
+
+  optional bool avg10_full_image = 21;  // Applicable to IMAGE_RAW.
+  optional string bbox_file = 22;  // Applicable to IMAGE_RAW.
+  optional float context_factor = 23 [default=1.0];  // Applicable to IMAGE_RAW.
+  optional bool center_on_bbox = 24 [default=false];  // Applicable to IMAGE_RAW.
+  optional bool warp_bbox = 25 [default=false];
 }
 
 message DatasetConfig {

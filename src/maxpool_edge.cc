@@ -1,5 +1,4 @@
 #include "maxpool_edge.h"
-#include "cudamat_conv.cuh"
 
 MaxPoolEdge::MaxPoolEdge(const config::Edge& edge_config) :
   Edge(edge_config),
@@ -43,24 +42,12 @@ void MaxPoolEdge::AllocateMemory(bool fprop_only) {
 }
 
 void MaxPoolEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  cudamat* input_mat = input.GetMat();
-  cudamat* output_mat = output.GetMat();
-  MaxPool(input_mat, output_mat, num_input_channels_, kernel_size_, -padding_,
-          stride_, num_modules_);
+  Matrix::ConvMaxPool(input, output, num_input_channels_, kernel_size_,
+                      -padding_, stride_, num_modules_);
 }
 
 void MaxPoolEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                               Matrix& output, Matrix& deriv_input, bool overwrite) {
-  cudamat* input_mat = input.GetMat();
-  cudamat* output_mat = output.GetMat();
-  
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  // Deriv w.r.t input of this edge (which is to be computed).
-  cudamat* deriv_input_mat = deriv_input.GetMat();
-  
-  MaxPoolUndo(input_mat, deriv_output_mat, output_mat, deriv_input_mat,
-              kernel_size_, -padding_, stride_, num_modules_);
+  Matrix::ConvMaxPoolUndo(input, deriv_output, output, deriv_input, kernel_size_,
+                          -padding_, stride_, num_modules_);
 }
-

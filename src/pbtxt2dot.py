@@ -8,6 +8,7 @@ import re
 from google.protobuf import text_format
 import convnet_config_pb2
 
+
 def ReadModel(proto_file):
   protoname, ext = os.path.splitext(proto_file)
   proto = convnet_config_pb2.Model()
@@ -15,6 +16,49 @@ def ReadModel(proto_file):
   txt = proto_pbtxt.read().replace(';', '')
   text_format.Merge(txt, proto)
   return proto
+
+def AddSubnet(model, subnet):
+  submodel = ReadModel(subnet.model_file)
+  for s in submodel.subnet:
+    AddSubnet(submodel, s)
+  name = subnet.name
+  merge_layers = {}
+  remove_layers = []
+  for merged_layer in subnet.merge_layer:
+    merge_layers[merged_layer.subnet_layer] = merged_layer.net_layer
+  for l in subnet.remove_layer:
+    remove_layers.append(l)
+  for layer in submodel.layer:
+    if layer.name not in merge_layers and layer.name not in remove_layers:
+      l = model.layer.add()
+      l.CopyFrom(layer)
+      l.name = name + "_" + layer.name
+      l.num_channels = layer.num_channels * subnet.num_channels_multiplier  
+      l.gpu_id = layer.gpu_id + subnet.gpu_id_offset
+  for edge in submodel.edge:
+    if edge.source in remove_layers or edge.dest in remove_layers:
+      continue
+    e = model.edge.add()
+    e.CopyFrom(edge)
+    e.gpu_id = e.gpu_id + subnet.gpu_id_offset
+    if edge.source in merge_layers:
+      e.source = merge_layers[edge.source]
+    else:
+      e.source = name + "_" + edge.source
+    if edge.dest in merge_layers:
+      e.dest = merge_layers[edge.dest]
+    else:
+      e.dest = name + "_" + edge.dest
+
+def SetIO(model):
+  dest_layers = []
+  source_layers = []
+  for edge in model.edge:
+    dest_layers.append(edge.dest)
+    source_layers.append(edge.source)
+  for layer in model.layer:
+    layer.is_input = layer.name not in dest_layers
+    layer.is_output = layer.name not in source_layers
 
 def GetSizes(model):
   size_dict = {}
@@ -32,6 +76,9 @@ def GetSizes(model):
       elif e.edge_type == convnet_config_pb2.Edge.RESPONSE_NORM:
         input_size = size_dict[source_name]
         size = input_size
+      elif e.edge_type == convnet_config_pb2.Edge.CONV_ONETOONE:
+        input_size = size_dict[source_name]
+        size = input_size
       elif e.edge_type == convnet_config_pb2.Edge.DOWNSAMPLE:
         input_size = size_dict[source_name]
         size = input_size / e.sample_factor
@@ -46,6 +93,9 @@ def GetSizes(model):
 
 def main():
   model = ReadModel(sys.argv[1])
+  for subnet in model.subnet:
+    AddSubnet(model, subnet)
+  SetIO(model)
   output = open(sys.argv[2], 'w')
   size_dict = GetSizes(model)
   output.write('digraph G {\n')

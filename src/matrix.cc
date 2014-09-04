@@ -2,6 +2,7 @@
 #include "util.h"
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 
 vector<rnd_struct> Matrix::rnd_;
@@ -17,13 +18,20 @@ Matrix::Matrix() {
   mat_.is_trans = 0;
   mat_.size[0] = 0;
   mat_.size[1] = 0;
+  mat_.owns_data = 0;
   mat_t_ = mat_;
   mat_t_.is_trans = 1;
+  mat_.tex_obj = 0;
+  mat_t_.tex_obj = 0;
 }
 
 
 Matrix::~Matrix() {
-  //if (mat_.data_host != NULL) free(mat_.data_host);
+  destroy_tex(&mat_);  // Does a check for texture creation.
+  if (mat_.owns_data == 1) {
+    if(mat_.data_host != NULL) free(mat_.data_host);
+    free_device_memory(&mat_);
+  }
 }
 
 Matrix::Matrix(const int rows, const int cols, const bool on_gpu) {
@@ -44,6 +52,7 @@ void Matrix::Tie(Matrix &m) {
 void Matrix::AllocateGPUMemory(const int rows, const int cols) {
   AllocateGPUMemory(rows, cols, "");
 }
+
 void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& name) {
   if (rows != mat_.size[0] || cols != mat_.size[1]) {
     name_ = name;
@@ -55,6 +64,7 @@ void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& nam
     if (GetNumEls() > 0) free_device_memory(&mat_);
     AllocateMainMemory(rows, cols);
     CopyToDevice();
+    mat_.owns_data = 1;
     mat_t_ = mat_;
     mat_t_.is_trans = 1;
     //const int size = (rows * cols * sizeof(float)) >> 20;
@@ -117,8 +127,6 @@ void Matrix::CopyP2PAsync(Matrix& val) {
   }
 }
 
-
-
 void Matrix::FillWithRandn() {
   if (gpu_id_ != current_gpu_id_) {
     cerr << "GPU mismatch " << endl;
@@ -160,6 +168,38 @@ void Matrix::Add(Matrix& m) {
   add_elementwise(&mat_, m.GetMat(), &mat_);
 }
 
+// self += alpha * m
+void Matrix::Add(Matrix& m, float alpha) {
+  add_mult(&mat_, m.GetMat(), alpha);
+}
+
+void Matrix::CopyTransposeBig(Matrix& m) {
+  copy_transpose_big_matrix(&mat_, m.GetMat());
+}
+
+void Matrix::CopyTranspose(Matrix& m) {
+  copy_transpose(&mat_, m.GetMat());
+}
+
+float Matrix::VDot(Matrix& m) {
+  int err;
+  return vdot(&mat_, m.GetMat(), &err);
+}
+
+float Matrix::EuclidNorm() {
+  int err_code;
+  float res = euclid_norm(&mat_, &err_code);
+  return res;
+}
+
+void Matrix::Subtract(Matrix& m, Matrix& target) {
+  int err_code = subtract_elementwise(&mat_, m.GetMat(), target.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in compute deriv of linear unit." << endl;
+    exit(1);
+  }
+}
+
 void Matrix::CopyToDeviceSlice(const int start, const int end) {
   int err_code = copy_to_device_slice(&mat_, start, end);
   if (err_code != 0) {
@@ -191,10 +231,24 @@ void Matrix::Reshape(int rows, int cols) {
   mat_t_.is_trans = 1;
 }
 
+void Matrix::PrintToFile(const string& filename) {
+  int err_code = copy_to_host(&mat_);
+  if (err_code != 0) {
+    cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+  ofstream f(filename, ios::out);
+  for (int i = 0; i < mat_.size[0]; i++) {
+    for (int j = 0; j < mat_.size[1]; j++) {
+      f << mat_.data_host[j * mat_.size[0] + i] << " ";
+    }
+    f << '\n';
+  }
+  f.close();
+}
+
 void Matrix::Print() {
-  Matrix::SetDevice(gpu_id_);
-  WaitTillReady();
-  cuda_sync_threads();
+  cout << "Printing matrix on gpu " << gpu_id_ << " current gpu " << current_gpu_id_ << endl;
   int err_code = copy_to_host(&mat_);
   if (err_code != 0) {
     cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
@@ -204,7 +258,7 @@ void Matrix::Print() {
     if (i < 10) {
       for (int j = 0; j < mat_.size[1]; j++) {
         if (j < 10) {
-          printf("%.5f ", mat_.data_host[j * mat_.size[0] + i]);
+          printf("%.12f ", mat_.data_host[j * mat_.size[0] + i]);
         } else {
           printf(". . . ");
           break;
@@ -271,7 +325,7 @@ void Matrix::GetOnes(int rows, int cols, Matrix& ones) {
          << rows << " * " << cols << endl;
     exit(1);
   }
-  get_slice(o.GetMat(), ones.GetMat(), 0, rows * cols);
+  o.GetSlice(ones, 0, rows * cols);
   ones.Reshape(rows, cols);
 }
 
@@ -288,7 +342,7 @@ void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
     temp_size_[current_gpu_id_] = length;
     //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
-  get_slice(t.GetMat(), temp.GetMat(), 0, length);
+  t.GetSlice(temp, 0, length);
   reshape(temp.GetMat(), rows, cols);
 }
 
@@ -390,7 +444,6 @@ void Matrix::SyncDevice(int gpu_id) {
 */
 
 void Matrix::SyncAllDevices() {
-  if (num_boards_ < 2) return;
   int current_gpu_backup = current_gpu_id_;
   for (int i = 0; i < num_boards_; i++) {
     SetDevice(i);
@@ -414,7 +467,7 @@ void Matrix::InitRandom(int seed){
 void Matrix::RegisterTempMemory(int size, const string& why) {
   if (size > temp_size_[current_gpu_id_]) {
     temp_size_[current_gpu_id_] = size;
-    //cout << "Max for " << why << " " << size << endl;
+    cout << "Max for " << why << " " << size << endl;
   }
 }
 
@@ -430,6 +483,7 @@ void Matrix::RegisterOnes(int size) {
 
 void Matrix::SetReady() {
   if (num_boards_ < 2) return;
+
   int err_code;
   if (current_gpu_id_ != gpu_id_) {
     cerr << "Error: Current gpu " << current_gpu_id_ << " must be same as the"
@@ -445,9 +499,281 @@ void Matrix::SetReady() {
 
 void Matrix::WaitTillReady() {
   if (num_boards_ < 2) return;
+
   int err_code = cuda_synchronize_event(&ready_);
   if (err_code != 0) {
     cerr << "Error: Could not synchronize." << endl;
+    exit(1);
+  }
+}
+
+
+void Matrix::AddRowVec(Matrix& v) {
+  add_row_vec(&mat_, v.GetMat(), &mat_);
+}
+
+void Matrix::AddRowVec(Matrix& v, float alpha) {
+  add_row_mult(&mat_, v.GetMat(), &mat_, alpha);
+}
+
+void Matrix::AddColVec(Matrix& v, float alpha) {
+  add_col_mult(&mat_, v.GetMat(), &mat_, alpha);
+}
+
+void Matrix::DivideByColVec(Matrix& v) {
+  div_by_col_vec(&mat_, v.GetMat(), &mat_);
+}
+
+// self *= val
+void Matrix::Mult(float val) {
+  mult_by_scalar(&mat_, val, &mat_);
+}
+void Matrix::Mult(Matrix& val) {
+  mult_elementwise(&mat_, val.GetMat(), &mat_);
+}
+void Matrix::MultByRowVec(Matrix& val) {
+  mult_by_row_vec(&mat_, val.GetMat(), &mat_);
+}
+void Matrix::Divide(float val) {
+  divide_by_scalar(&mat_, val, &mat_);
+}
+void Matrix::Divide(Matrix& val) {
+  divide_elementwise(&mat_, val.GetMat(), &mat_);
+}
+
+void Matrix::Add(float val) {
+  add_scalar(&mat_, val, &mat_);
+}
+
+void Matrix::Sqrt() {
+  apply_sqrt(&mat_, &mat_);
+}
+// c = alpha * c + beta * a * b
+void Matrix::Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta) {
+  dot(a.GetMat(), b.GetMat(), c.GetMat(), alpha, beta);
+}
+
+// c = alpha * c + beta * T(a) * T(b)
+void Matrix::Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta,
+                 bool transpose_a, bool transpose_b) {
+  cudamat* a_mat = transpose_a ? a.GetMatTranspose() : a.GetMat();
+  cudamat* b_mat = transpose_b ? b.GetMatTranspose() : b.GetMat();
+  dot(a_mat, b_mat, c.GetMat(), alpha, beta);
+}
+
+void Matrix::Dropout(float dropprob, float fill_value, float scale_factor) {
+  dropout(&Matrix::rnd_[gpu_id_], &mat_, dropprob, fill_value, scale_factor);
+}
+
+void Matrix::UpperBoundMod(float val) {
+  upper_bound_mod_scalar(&mat_, val, &mat_);
+}
+
+void Matrix::LowerBound(float val) {
+  lower_bound_scalar(&mat_, val, &mat_);
+}
+
+void Matrix::ApplyDerivativeOfReLU(Matrix& state) {
+  apply_rectified_linear_deriv(&mat_, state.GetMat(), &mat_);
+}
+
+void Matrix::ApplySoftmax() {
+  softmax_row_major_multi(&mat_, GetCols());
+}
+
+void Matrix::ApplyLogistic() {
+  apply_sigmoid(&mat_, &mat_);
+}
+
+void Matrix::ApplyDerivativeOfLogistic(Matrix& state) {
+  apply_logistic_deriv(&mat_, state.GetMat(), &mat_);
+}
+
+void Matrix::LogisticCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv) {
+  apply_logistic_grad(state.GetMat(), gt.GetMat(), deriv.GetMat());
+}
+
+void Matrix::LogisticCorrect(Matrix& state, Matrix& gt, Matrix& output) {
+  get_logistic_correct_normalized(state.GetMat(), gt.GetMat(), output.GetMat());
+}
+
+void Matrix::SoftmaxCorrect(Matrix& state, Matrix& gt, Matrix& output) {
+  get_softmax_correct_row_major(state.GetMat(), gt.GetMat(), output.GetMat());
+}
+
+void Matrix::SoftmaxCE(Matrix& state, Matrix& gt, Matrix& output) {
+  get_softmax_cross_entropy_row_major(state.GetMat(), gt.GetMat(), output.GetMat(), 1e-10);
+}
+
+void Matrix::SoftmaxCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv) {
+  apply_softmax_grad_row_major(state.GetMat(), gt.GetMat(), deriv.GetMat());
+}
+
+void Matrix::SoftmaxDistCE(Matrix& state, Matrix& gt, Matrix& output) {
+  int err = compute_cross_entropy(gt.GetMat(), state.GetMat(), output.GetMat(), 1e-10);
+  if (err != 0) {
+    cerr << "SoftmaxDistCE Error : " << GetStringError(err) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::HingeLossDeriv(Matrix& state, Matrix& gt, Matrix& deriv, bool quadratic, float margin) {
+  int err_code = hinge_loss_row_major(state.GetMat(), gt.GetMat(), deriv.GetMat(), quadratic, margin);
+  if (err_code != 0) {
+    cerr << "Error in hinge loss " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+// target = alpha * target + beta * sum_rows(self)
+void Matrix::SumRows(Matrix& target, float alpha, float beta) {
+  Matrix ones;
+  Matrix::GetOnes(1, GetRows(), ones);
+  dot(ones.GetMat(), &mat_, target.GetMat(), alpha, beta);
+}
+
+// target = alpha * target + beta * sum_cols(self)
+void Matrix::SumCols(Matrix& target, float alpha, float beta) {
+  Matrix ones;
+  Matrix::GetOnes(GetCols(), 1, ones);
+  dot(&mat_, ones.GetMat(), target.GetMat(), alpha, beta);
+}
+
+// target = alpha * target + beta * sum_cols(self**2)
+void Matrix::SqSumAxis(Matrix& target, int axis, float beta, float alpha) {
+  sqsum_by_axis(&mat_, target.GetMat(), axis, beta, alpha);
+}
+
+void Matrix::NormLimitByAxis(int axis, float val, bool constraint) {
+  normlimit_by_axis(&mat_, &mat_, axis, val, constraint);
+}
+
+void Matrix::ShuffleColumns(Matrix& rand_perm_indices) {
+  shuffleColumns(&mat_, rand_perm_indices.GetMat());
+}
+
+void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
+                    int num_modules_y, int num_modules_x, int padding,
+                    int stride, int num_input_channels, float scale_targets) {
+  convUp(input.GetMat(), w.GetMat(), output.GetMat(), image_size,
+         num_modules_y, num_modules_x, -padding, stride, num_input_channels, 1,
+         scale_targets);
+}
+
+void Matrix::ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
+                      int image_size_y, int image_size_x, int num_modules_y,
+                      int padding, int stride, int num_input_channels, float scale_targets) {
+  convDown(deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(), image_size_y, image_size_x,
+           num_modules_y, -padding, stride, num_input_channels, 1,
+           scale_targets);
+}
+
+void Matrix::ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
+                      int image_size_y, int num_modules_y, int num_modules_x,
+                      int kernel_size, int padding, int stride,
+                      int num_input_channels, int partial_sum,
+                      float scale_targets, float scale_outputs) {
+  convOutp(input.GetMat(), deriv_output.GetMat(), dw.GetMat(), image_size_y,
+           num_modules_y, num_modules_x, kernel_size, -padding, stride,
+           num_input_channels, 1, partial_sum, scale_targets, scale_outputs);
+}
+
+void Matrix::LocalUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
+                    int num_modules_y, int num_modules_x, int padding,
+                    int stride, int num_input_channels, float scale_targets) {
+  localUp(input.GetMat(), w.GetMat(), output.GetMat(), image_size,
+         num_modules_y, num_modules_x, -padding, stride, num_input_channels, 1,
+         scale_targets);
+}
+
+void Matrix::LocalDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
+                       int image_size_y, int image_size_x, int num_modules_y,
+                       int padding, int stride, int num_input_channels,
+                       float scale_targets) {
+  localDown(deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(),
+            image_size_y, image_size_x, num_modules_y, -padding, stride,
+            num_input_channels, 1, scale_targets);
+}
+
+void Matrix::LocalOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
+                       int image_size_y, int num_modules_y, int num_modules_x,
+                       int kernel_size, int padding, int stride,
+                       int num_input_channels,
+                       float scale_targets, float scale_outputs) {
+  localOutp(input.GetMat(), deriv_output.GetMat(), dw.GetMat(), image_size_y,
+           num_modules_y, num_modules_x, kernel_size, -padding, stride,
+           num_input_channels, 1, scale_targets, scale_outputs);
+}
+
+void Matrix::ConvMaxPool(Matrix& input, Matrix& output, int num_input_channels,
+                     int kernel_size, int padding, int stride, int num_modules) {
+  MaxPool(input.GetMat(), output.GetMat(), num_input_channels, kernel_size,
+          -padding, stride, num_modules);
+}
+
+void Matrix::ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
+                         Matrix& deriv_input, int kernel_size, int padding,
+                         int stride, int num_modules) {
+  MaxPoolUndo(input.GetMat(), deriv_output.GetMat(), output.GetMat(),
+              deriv_input.GetMat(), kernel_size, -padding, stride, num_modules);
+}
+
+void Matrix::ConvResponseNormCrossMap(
+    Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
+    float powScale, bool blocked) {
+  ResponseNormCrossMap(input.GetMat(), output.GetMat(), numFilters, sizeF,
+                       addScale, powScale, blocked);
+}
+
+void Matrix::ConvResponseNormCrossMapUndo(
+    Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
+    int sizeF, float addScale, float powScale, bool blocked) {
+  ResponseNormCrossMapUndo(outGrads.GetMat(), inputs.GetMat(), acts.GetMat(),
+                           targets.GetMat(), numFilters, sizeF, addScale, powScale,
+                           blocked);
+}
+
+void Matrix::ConvUpSample(Matrix& input, Matrix& output, int factor,
+                          int input_image_size, float scaleTargets) {
+  UpSample(input.GetMat(), output.GetMat(), factor, input_image_size, scaleTargets);
+}
+
+void Matrix::ConvDownSample(Matrix& input, Matrix& output, int factor,
+                            int input_image_size) {
+  DownSample(input.GetMat(), output.GetMat(), factor, input_image_size);
+}
+
+void Matrix::ConvRGBToYUV(Matrix& input, Matrix& output) {
+  RGBToYUV(input.GetMat(), output.GetMat());
+}
+
+void Matrix::ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
+                            Matrix& height_offset, Matrix& flip_bit,
+                            int image_width, int image_height, int patch_width,
+                            int patch_height) {
+  int err_code = extract_patches(source.GetMat(), dest.GetMat(),
+                                 width_offset.GetMat(), height_offset.GetMat(),
+                                 flip_bit.GetMat(), image_width, image_height,
+                                 patch_width, patch_height);
+  if (err_code != 0) {
+    cerr << "Error extracting patches " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::AddToEachPixel(Matrix& v, float mult) {
+  add_to_each_pixel(&mat_, v.GetMat(), &mat_, mult);
+}
+
+void Matrix::RectifyBBox(Matrix& width_offset, Matrix& height_offset,
+                         Matrix& flip, int patch_width, int patch_height) {
+
+  int err_code = rectify_bounding_boxes(
+      &mat_, width_offset.GetMat(), height_offset.GetMat(), flip.GetMat(),
+      patch_width, patch_height);
+
+  if (err_code != 0) {
+    cerr << "Error rectifying boxes " << GetStringError(err_code) << endl;
     exit(1);
   }
 }

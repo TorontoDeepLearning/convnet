@@ -322,12 +322,12 @@ void ImageDisplayer::DisplayWeights(float* data, int size, int num_filters, int 
   img.display(disp_);
 }
 
-void ImageDisplayer::SetFOV(float size, float stride, float pad1, float pad2,
-                            int num_fov_x, int num_fov_y) {
-  fov_size_ = size;
-  fov_stride_ = stride;
-  fov_pad1_ = pad1;
-  fov_pad2_ = pad2;
+void ImageDisplayer::SetFOV(int size, int stride, int pad1, int pad2,
+                            int patch_size, int num_fov_x, int num_fov_y) {
+  fov_size_ = (float)size / patch_size;
+  fov_stride_ = (float)stride / patch_size;
+  fov_pad1_ = (float)pad1 / patch_size;
+  fov_pad2_ = (float)pad2 / patch_size;
   num_fov_x_ = num_fov_x;
   num_fov_y_ = num_fov_y;
 }

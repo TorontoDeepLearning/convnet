@@ -1,5 +1,4 @@
 #include "response_norm_edge.h"
-#include "cudamat_conv.cuh"
 
 ResponseNormEdge::ResponseNormEdge(const config::Edge& edge_config) :
   Edge(edge_config),
@@ -33,34 +32,17 @@ void ResponseNormEdge::AllocateMemory(bool fprop_only) {
   // first time.
 }
 
-void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  cudamat* input_mat = input.GetMat();
-  cudamat* output_mat = output.GetMat();
-  if (denoms_.GetNumEls() != input.GetNumEls()) {
-    denoms_.AllocateGPUMemory(input.GetRows(), input.GetCols());
-  }
-  cudamat* denoms_mat = denoms_.GetMat();
-  ResponseNormCrossMap(input_mat, denoms_mat, output_mat, num_input_channels_,
-                       num_filters_response_norm_, add_scale_, pow_scale_,
-                       blocked_);
+void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite){
+  Matrix::ConvResponseNormCrossMap(
+      input, output, num_input_channels_, num_filters_response_norm_,
+      add_scale_, pow_scale_, blocked_);
 }
 
 void ResponseNormEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
-                                   Matrix& output, Matrix& deriv_input, bool overwrite) {
-  cudamat* input_mat = input.GetMat();
-  cudamat* output_mat = output.GetMat();
-
-  cudamat* denoms_mat = denoms_.GetMat();
-  
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  // Deriv w.r.t input of this edge (which is to be computed).
-  cudamat* deriv_input_mat = deriv_input.GetMat();
-
+                                   Matrix& output, Matrix& deriv_input,
+                                   bool overwrite) {
   // OVERWRITES output_mat
-  ResponseNormCrossMapUndo(deriv_output_mat, denoms_mat, input_mat, output_mat,
-                           deriv_input_mat, num_input_channels_,
-                           num_filters_response_norm_, add_scale_, pow_scale_,
-                           blocked_);
+  Matrix::ConvResponseNormCrossMapUndo(
+      deriv_output, input, output, deriv_input, num_input_channels_,
+      num_filters_response_norm_, add_scale_, pow_scale_, blocked_);
 }

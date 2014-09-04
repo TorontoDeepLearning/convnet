@@ -11,5 +11,7 @@ class MultiGPUConvNet : public ConvNet {
   virtual void ComputeDeriv();
   virtual void GetLoss(vector<float>& error);
   virtual void Bprop(bool update_weights);
+
+  bool broadcast_;
 };
 #endif

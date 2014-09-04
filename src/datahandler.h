@@ -23,8 +23,9 @@ class DataHandler {
   void Seek(int row);
   void Preprocess(Matrix& input, Matrix& output);
   void Sync();
-  void SetFOV(const float size, const float stride, const float pad1,
-              const float pad2, const int num_fov_x, const int num_fov_y);
+  void SetFOV(const int size, const int stride, const int pad1,
+              const int pad2, const int patch_size, const int num_fov_x,
+              const int num_fov_y);
   void AllocateMemory();
 
  protected:
@@ -70,11 +71,11 @@ class DataIterator {
   virtual void Prep(const int chunk_size);
   virtual void Preprocess(Matrix& m);
   virtual void AddNoise(Matrix& input, Matrix& output);
-  virtual void AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it);
   virtual void SetMaxDataSetSize(int max_dataset_size);
-  virtual void SetFOV(const float size, const float stride, const float pad1,
-                      const float pad2, const int num_fov_x,
-                      const int num_fov_y);
+  virtual void SetFOV(const int size, const int stride, const int pad1,
+                      const int pad2, const int patch_size,
+                      const int num_fov_x, const int num_fov_y);
+  virtual void SetNoiseSource(DataIterator* it);
 
   int GetDims() const;
   int GetDataSetSize() const;
@@ -90,7 +91,6 @@ class DataIterator {
   Matrix& GetFlipBit() { return flip_bit_;}
   int GetDestDims() const { return dest_num_dims_; }
   int GetNumColors() const { return num_colors_; }
-
   static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
 
 
@@ -106,6 +106,7 @@ class DataIterator {
              add_pca_noise_, parallel_disk_access_;
   const float pca_noise_stddev_;
   bool jitter_used_;
+  DataIterator* noise_source_;
 };
 
 /** A dummy iterator.
@@ -145,11 +146,30 @@ class ImageDataIterator : public DataIterator {
   virtual int Tell() const;
   virtual void Prep(const int chunk_size);
   virtual void SetMaxDataSetSize(int max_dataset_size);
- 
+  void RectifyBBox(box& b, int width, int height, int row) const;
+
  protected:
   RawImageFileIterator<unsigned char> *it_;
   unsigned char* buf_;
   const int raw_image_size_, image_size_;
+};
+
+class CropDataIterator : public DataIterator {
+ public:
+  CropDataIterator(const config::DataStreamConfig& config);
+  ~CropDataIterator();
+  virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
+  virtual void Seek(int row);
+  virtual int Tell() const;
+
+ protected:
+  CropIterator<unsigned char> *it_;
+  vector<string> file_names_;
+  vector<vector<box>> crops_;
+  unsigned char* buf_;
+  const int image_size_;
+  int file_id_;
 };
 
 /** An iterator over sliding windows of an image dataset.*/
@@ -193,15 +213,11 @@ class BoundingBoxIterator : public DataIterator {
 
   virtual void GetNext(float* data_out);
   virtual void Get(float* data_out, const int row) const;
-  virtual void SetFOV(const float size, const float stride, const float pad1,
-                      const float pad2, const int num_fov_x,
-                      const int num_fov_y);
-  virtual void AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it);
-
-
-  typedef struct {
-    float xmin, ymin, xmax, ymax;
-  } box;
+  virtual void SetFOV(const int size, const int stride, const int pad1,
+                      const int pad2, const int patch_size,
+                      const int num_fov_x, const int num_fov_y);
+  virtual void AddNoise(Matrix& input, Matrix& output);
+  virtual void SetNoiseSource(DataIterator* it);
 
   static float VisibleFraction(const box& b, const box& fov);
   static float Intersection(const box& b1, const box& b2);
@@ -209,8 +225,11 @@ class BoundingBoxIterator : public DataIterator {
 
  protected:
   vector<vector<box>> data_;
-  float fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
-  int num_fov_x_, num_fov_y_;
+  vector<int> img_width_, img_height_;
+  int patch_size_;
+  Matrix fovs_;
+  vector<box> fov_box_;
+  ImageDataIterator* jitter_source_;
 };
 
 #endif

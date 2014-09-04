@@ -10,6 +10,7 @@ DataWriter::DataWriter(const config::FeatureExtractorConfig config) :
     s.average_online = feature.average_online();
     s.counter = 0;
     s.current_row = 0;
+    s.consumed = 0;
   }
 }
 
@@ -21,25 +22,42 @@ DataWriter::~DataWriter(){
   H5Fclose(file_);
 }
 
+void DataWriter::SetDataSetSize(int dataset_size) {
+  dataset_size_ = dataset_size;
+}
+
 void DataWriter::SetNumDims(const string& name, const int num_dims) {
   stream& s = streams_[name];
   s.num_dims = num_dims;
   hsize_t dimsf[2];
-  dimsf[0] = dataset_size_/s.average_batches;
+  dimsf[0] = dataset_size_/(s.average_online * s.average_batches);
   dimsf[1] = num_dims;
   cout << "Adding Dataspace " << name << " of size " << dimsf[0]
        << " " << dimsf[1] << endl;
   s.dataspace = H5Screate_simple(2, dimsf, NULL);
+  bool uchar_output = false;
+  if (uchar_output) {
+  s.dataset = H5Dcreate(file_, name.c_str(), H5T_NATIVE_UCHAR, s.dataspace,
+                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  } else {
   s.dataset = H5Dcreate(file_, name.c_str(), H5T_NATIVE_FLOAT, s.dataspace,
                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  }
 }
 
 // This may not necessarily write to disk, but hold it in a buffer.
-void DataWriter::WriteHDF5(Matrix& m, const string& dataset, int numcases) {
+void DataWriter::WriteHDF5(Matrix& m, const string& dataset, int numcases, bool transpose) {
+  float* data;
   Matrix m_t;
-  Matrix::GetTemp(m.GetCols(), m.GetRows(), m_t);
-  copy_transpose_big_matrix(m.GetMat(), m_t.GetMat());
-  m_t.CopyToHost();
+  if (transpose) {
+    Matrix::GetTemp(m.GetCols(), m.GetRows(), m_t);
+    m.CopyTransposeBig(m_t);
+    m_t.CopyToHost();
+    data = m_t.GetHostData();
+  } else {
+    m.CopyToHost();
+    data = m.GetHostData();
+  }
   stream& s = streams_[dataset];
 
   hsize_t dimsf[2], start[2];
@@ -50,10 +68,60 @@ void DataWriter::WriteHDF5(Matrix& m, const string& dataset, int numcases) {
   hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
   H5Sselect_none(s.dataspace);
   H5Sselect_hyperslab(s.dataspace, H5S_SELECT_SET, start, NULL, dimsf, NULL);
-  H5Dwrite(s.dataset, H5T_NATIVE_FLOAT, mem_dataspace, s.dataspace,
-           H5P_DEFAULT, m_t.GetHostData());
+
+  bool uchar_output = false;
+  if (uchar_output) {
+    unsigned char *uchar_buf = new unsigned char[numcases * s.num_dims];
+    for (int i = 0; i < numcases * s.num_dims; i++) {
+      float val = floor(data[i] + 0.5);
+      if (val < 0 || val > 255) {
+        cout << "outside range: " << val << endl;
+      }
+      uchar_buf[i] = val;
+    }
+    H5Dwrite(s.dataset, H5T_NATIVE_UCHAR, mem_dataspace, s.dataspace, H5P_DEFAULT,
+             uchar_buf);
+    delete uchar_buf;
+  } else {
+    H5Dwrite(s.dataset, H5T_NATIVE_FLOAT, mem_dataspace, s.dataspace, H5P_DEFAULT,
+            data);
+  }
   H5Sclose(mem_dataspace);
   s.current_row += numcases;
+}
+
+void DataWriter::WriteHDF5SeqBuf(Matrix& m, const string& dataset, int numcases) {
+  stream& s = streams_[dataset];
+  if (s.average_online == 1) {
+    WriteHDF5(m, dataset, numcases, true);
+  } else {
+    Matrix m_t;
+    Matrix::GetTemp(m.GetCols(), m.GetRows(), m_t);
+    m.CopyTransposeBig(m_t);
+    
+    Matrix& buf = s.seq_buf;
+    if (buf.GetNumEls() == 0) {
+      buf.AllocateGPUMemory(m_t.GetRows(), 1);
+      buf.Set(0);
+    }
+    int numcases = m_t.GetCols();
+    int end = 0, start = 0;
+
+    while(start < numcases && s.current_row * s.average_online < dataset_size_) {
+      Matrix slice;
+      end = start + s.average_online - s.consumed;
+      if (end > numcases) end = numcases;
+      m_t.GetSlice(slice, start, end);
+      slice.SumCols(buf, 1, 1.0 / s.average_online);
+      s.consumed += end - start;
+      if (s.consumed == s.average_online) {
+        WriteHDF5(buf, dataset, 1, false);
+        buf.Set(0);
+        s.consumed = 0;
+      }
+      start = end;
+    }
+  }
 }
 
 void DataWriter::Write(vector<Layer*>& layers, int numcases) {
@@ -62,94 +130,20 @@ void DataWriter::Write(vector<Layer*>& layers, int numcases) {
     const string& dataset = l->GetName();
     stream& s = streams_[dataset];
     if(s.average_batches == 1) {
-      WriteHDF5(m, dataset, numcases);
+      WriteHDF5SeqBuf(m, dataset, numcases);
     } else {
-      if (s.buf.GetNumEls() == 0) {
-        s.buf.AllocateGPUMemory(m.GetRows(), m.GetCols());
-        s.buf.Set(0);
+      Matrix& buf = s.buf;
+      if (buf.GetNumEls() == 0) {
+        buf.AllocateGPUMemory(m.GetRows(), m.GetCols());
+        buf.Set(0);
       }
-      s.buf.Add(m);
+      buf.Add(m);
       if(++s.counter == s.average_batches) {
-        divide_by_scalar(s.buf.GetMat(), s.average_batches, s.buf.GetMat());
-        WriteHDF5(s.buf, dataset, numcases);
-        s.buf.Set(0);
+        buf.Divide(s.average_batches);
+        WriteHDF5SeqBuf(buf, dataset, numcases);
+        buf.Set(0);
         s.counter = 0;
       }
     }
   }
 }
-/*
-AveragedDataWriter::AveragedDataWriter(
-    const string& output_file, const int dataset_size, const int avg_after,
-    const int max_batchsize):
-  DataWriter(output_file, dataset_size), avg_after_(avg_after),
-  max_batchsize_(max_batchsize) {
-  } 
-
-AveragedDataWriter::~AveragedDataWriter() {
-  //for(Matrix* buf: buf_) delete buf;
-}
-
-void AveragedDataWriter::AddStream(const string& name, const int numdims) {
-  DataWriter::AddStream(name, numdims);
-  Matrix* mat = new Matrix();
-  mat->AllocateGPUMemory(numdims, max_batchsize_);
-  buf_.push_back(mat);
-  mat->Set(0);
-  counter_.push_back(0);
-}
-
-void AveragedDataWriter::Write(Matrix& mat, const int data_id, const int rows) {
-  Matrix* buf = buf_[data_id];
-  buf->Add(mat);
-  if(++counter_[data_id] == avg_after_) {
-    divide_by_scalar(buf->GetMat(), avg_after_, buf->GetMat());
-    DataWriter::Write(*buf, data_id, rows);
-    buf->Set(0);
-    counter_[data_id] = 0;
-  }
-}
-
-SequentialAveragedDataWriter::SequentialAveragedDataWriter(
-    const string& output_file, const int dataset_size, const int avg_after) :
-  DataWriter(output_file, dataset_size), avg_after_(avg_after),
-  dataset_size_(dataset_size), consumed_(0), num_rows_written_(0) {
-  }
-
-SequentialAveragedDataWriter::~SequentialAveragedDataWriter() {
-  //for(Matrix* buf: buf_) delete buf;
-}
-
-void SequentialAveragedDataWriter::AddStream(const string& name, const int numdims) {
-  DataWriter::AddStream(name, numdims);
-  Matrix* mat = new Matrix();
-  mat->AllocateGPUMemory(numdims, 1);
-  buf_.push_back(mat);
-  mat->Set(0);
-}
-
-void SequentialAveragedDataWriter::Write(Matrix& mat, const int data_id, const int rows) {
-  Matrix* buf = buf_[data_id];
-  int numcases = mat.GetCols();
-  int end = 0, start = 0;
-
-  while(start < numcases && num_rows_written_ < dataset_size_) {
-    cudamat slice;
-    end = start + avg_after_ - consumed_;
-    if (end > numcases) end = numcases;
-    int avg_over = end - start;
-    Matrix ones;
-    Matrix::GetOnes(avg_over, 1, ones);
-    get_slice(mat.GetMat(), &slice, start, end);
-    dot(&slice, ones.GetMat(), buf->GetMat(), 1, 1.0 / avg_after_);
-    consumed_ += avg_over;
-    if (consumed_ == avg_after_) {
-      DataWriter::Write(*buf, data_id, 1);
-      num_rows_written_++;
-      buf->Set(0);
-      consumed_ = 0;
-    }
-    start = end;
-  }
-}
-*/

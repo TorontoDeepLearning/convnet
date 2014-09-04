@@ -1,5 +1,4 @@
 #include "local_edge.h"
-#include "cudamat_conv.cuh"
 #include <iostream>
 
 LocalEdge::LocalEdge(const config::Edge& edge_config) :
@@ -87,53 +86,38 @@ void LocalEdge::AllocateMemory(bool fprop_only) {
 }
 
 void LocalEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  cudamat *input_mat = input.GetMat(),
-          *output_mat = output.GetMat(),
-          *w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  localUp(input_mat, w_mat, output_mat, num_modules_, -padding_, stride_,
-          num_input_channels_, 1, scale_targets);
+  Matrix::LocalUp(input, w, output, image_size_, num_modules_, num_modules_,
+                  padding_, stride_, num_input_channels_, scale_targets);
   if (!has_no_bias_) {
-    cudamat* b_mat = is_tied_? tied_edge_->GetBias().GetMat() : bias_.GetMat();
-    add_row_vec(output_mat, b_mat, output_mat);
+    Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
+    output.AddRowVec(b);
   }
 }
 
 void LocalEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  // Deriv w.r.t input of this edge (which is to be computed).
-  cudamat* deriv_input_mat = deriv_input.GetMat();
-  
-  cudamat* w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  localDown(deriv_output_mat, w_mat, deriv_input_mat, image_size_, -padding_,
-            stride_, num_input_channels_, 1, scale_targets);
+  Matrix::LocalDown(deriv_output, w, deriv_input, image_size_, image_size_,
+                    num_modules_, padding_, stride_, num_input_channels_,
+                    scale_targets);
 }
 
 void LocalEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
-  // Input to this edge.
-  cudamat* input_mat = input.GetMat();
-  
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  cudamat* dw_mat = is_tied_ ? tied_edge_->GetGradWeight().GetMat() : grad_weights_.GetMat();
-  const int batch_size = input.GetRows();
-
+  Matrix& dw = is_tied_? tied_edge_->GetGradWeight() : grad_weights_;
+  int batch_size = input.GetRows();
   int scale_targets = GetNumGradsReceived() > 0 ? 1 : 0;
 
-  localOutp(input_mat, deriv_output_mat, dw_mat, num_modules_, kernel_size_,
-            -padding_, stride_, num_input_channels_, 1,
-            scale_targets, scale_gradients_ / batch_size);
+  Matrix::LocalOutp(input, deriv_output, dw, image_size_, num_modules_,
+                    num_modules_, kernel_size_, padding_, stride_,
+                    num_input_channels_, scale_targets,
+                    scale_gradients_ / batch_size);
 
   if (!has_no_bias_) {
-    cudamat* db_mat = is_tied_ ? tied_edge_->GetGradBias().GetMat() : grad_bias_.GetMat();
-    Matrix ones;
-    Matrix::GetOnes(1, batch_size, ones);
-    dot(ones.GetMat(), deriv_output_mat, db_mat, scale_targets, scale_gradients_ / batch_size);
+    Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
+    deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
   }
 
   IncrementNumGradsReceived();

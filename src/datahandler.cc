@@ -51,6 +51,14 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     distribution_ = new uniform_int_distribution<int>(0, dataset_size_ - 1);
   }
   Seek(0);
+    
+  for (const string& layer_name : layer_names_) {
+    DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
+    if (it->NeedsNoiseFromLayer()) {
+      it->SetNoiseSource(data_it_[it->GetNoiseLayerName()]);
+    }
+  }
 }
 
 void DataHandler::AllocateMemory() {
@@ -118,7 +126,7 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
       for (Layer* l : data_layers) {
         const string& layer_name = l->GetName();
         Matrix& data = data_[layer_name];
-        shuffleColumns(data.GetMat(), rand_perm_indices_.GetMat());
+        data.ShuffleColumns(rand_perm_indices_);
       }
     }
     start_ = 0;
@@ -147,17 +155,8 @@ void DataHandler::GetBatch(vector<Layer*>& data_layers) {
     data_[layer_name].GetSlice(data_slice, start_, end);
     Matrix& dest = l->IsInput() ? l->GetState() : l->GetData();
     
-    if (it->NeedsNoiseFromLayer()) {
-      cout << "Needs noise from layer" << endl;
-      const string& noise_layer_name = it->GetNoiseLayerName();
-      DataIterator* noise_it = data_it_[noise_layer_name];
-      it->AddNoise(data_slice, dest, *noise_it);
-    } else {
-      // Add noise, if asked for, and copy to dest.
-      it->AddNoise(data_slice, dest);
-    }
-
-    dest.SetReady();
+    // Add noise, if asked for, and copy to dest.
+    it->AddNoise(data_slice, dest);
   }
   multiplicity_counter_++;
   if (multiplicity_counter_ == multiplicity_) {
@@ -177,6 +176,7 @@ void DataHandler::PipelinedDiskAccess() {
     Matrix& data = data_[layer_name];
     DataIterator* it = data_it_[layer_name];
     if (it == NULL) continue;
+    Matrix::SetDevice(it->GetGPUId());
     data.CopyToDevice();
     it->Preprocess(data);  // Does centering, normalization etc.
   }
@@ -208,6 +208,11 @@ void DataHandler::DiskAccess() {
   for (const string& layer_name: layer_names_) {
     DataIterator* it = data_it_[layer_name];
     if (it == NULL) continue;
+    it->Prep(chunk_size_);
+  }
+  for (const string& layer_name: layer_names_) {
+    DataIterator* it = data_it_[layer_name];
+    if (it == NULL) continue;
     Matrix& data = data_[layer_name];
     if (randomize_cpu_) {
       if (it->DoParallelDiskAccess()) {
@@ -228,7 +233,6 @@ void DataHandler::DiskAccess() {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  it.Prep(chunk_size_);
   for (int i = 0; i < chunk_size_; i++) {
     it.GetNext(data_ptr);
     data_ptr += num_dims;
@@ -238,7 +242,6 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  it.Prep(chunk_size_);
   int j = 0;
   for (int i = 0; i < chunk_size_; i++) {
     if (i % random_access_chunk_size_ == 0) {
@@ -252,7 +255,6 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_r
 void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  it.Prep(chunk_size_);
   int row = it.Tell();
   #pragma omp parallel for
   for (int i = 0; i < chunk_size_; i++) {
@@ -265,7 +267,6 @@ void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat) {
 void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  it.Prep(chunk_size_);
   #pragma omp parallel for
   for (int i = 0; i < chunk_size_; i++) {
     int row = (random_rows[i / random_access_chunk_size_] + i % random_access_chunk_size_) % dataset_size_;
@@ -273,14 +274,15 @@ void DataHandler::LoadChunkParallel(DataIterator& it, Matrix& mat, vector<int>& 
   }
 }
 
-void DataHandler::SetFOV(const float size, const float stride,
-                         const float pad1, const float pad2,
+void DataHandler::SetFOV(const int size, const int stride,
+                         const int pad1, const int pad2,
+                         const int patch_size,
                          const int num_fov_x, const int num_fov_y) {
 
   for (const string& layer_name : layer_names_) {
     DataIterator* it = data_it_[layer_name];
     if (it == NULL) continue;
-    it->SetFOV(size, stride, pad1, pad2, num_fov_x, num_fov_y);
+    it->SetFOV(size, stride, pad1, pad2, patch_size, num_fov_x, num_fov_y);
   }
 }
 
@@ -327,6 +329,9 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
     case config::DataStreamConfig::SLIDING_WINDOW:
       it = new SlidingWindowDataIterator(config);
       break;
+    case config::DataStreamConfig::CROPS:
+      it = new CropDataIterator(config);
+      break;
     case config::DataStreamConfig::TXT:
       it = new TextDataIterator(config);
       break;
@@ -353,12 +358,17 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   add_pca_noise_(config.pca_noise_stddev() > 0),
   parallel_disk_access_(config.parallel_disk_access()),
   pca_noise_stddev_(config.pca_noise_stddev()),
-  jitter_used_(true) {}
+  jitter_used_(true),
+  noise_source_(NULL) {}
 
 void DataIterator::SetMaxDataSetSize(int max_dataset_size) {
   if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
     dataset_size_ = max_dataset_size;
   }
+}
+
+void DataIterator::SetNoiseSource(DataIterator* it) {
+  noise_source_ = it;
 }
 
 void DataIterator::LoadMeans(const string& data_file) {
@@ -375,8 +385,8 @@ void DataIterator::LoadMeans(const string& data_file) {
     mean_.AllocateGPUMemory(num_pixels, num_channels);
     std_.AllocateGPUMemory(num_pixels, num_channels);
 
-    add_row_vec(mean_.GetMat(), pixel_mean.GetMat(), mean_.GetMat());
-    add_row_vec(std_.GetMat(), pixel_std.GetMat(), std_.GetMat());
+    mean_.AddRowVec(pixel_mean);
+    std_.AddRowVec(pixel_std);
 
     mean_.Reshape(-1, 1);
     std_.Reshape(-1, 1);
@@ -414,9 +424,8 @@ void DataIterator::Prep(const int chunk_size) {
 // m is on the GPU, stored so that different cases are far apart.
 void DataIterator::Preprocess(Matrix& m) {
   if (normalize_) {
-    cudamat* mat = m.GetMat();
-    add_col_mult(mat, mean_.GetMat(), mat, -1);
-    div_by_col_vec(mat, std_.GetMat(), mat);
+    m.AddColVec(mean_, -1);
+    m.DivideByColVec(std_);
   }
 }
 
@@ -426,11 +435,9 @@ void DataIterator::AddPCANoise(Matrix& m) {
     pca_noise2_.AllocateGPUMemory(m.GetRows(), eig_vectors_.GetCols());
   }
   pca_noise1_.FillWithRandn();
-  cudamat* rand_mat = pca_noise1_.GetMat();
-  cudamat* pca_noise_mat = pca_noise2_.GetMat();
-  mult_by_row_vec(rand_mat, eig_values_.GetMat(), rand_mat);
-  dot(rand_mat, eig_vectors_.GetMat(), pca_noise_mat, 0, 1);
-  add_to_each_pixel(m.GetMat(), pca_noise_mat, m.GetMat(), pca_noise_stddev_);
+  pca_noise1_.MultByRowVec(eig_values_);
+  Matrix::Dot(pca_noise1_, eig_vectors_, pca_noise2_, 0, 1);
+  m.AddToEachPixel(pca_noise2_, pca_noise_stddev_);
 }
 
 
@@ -438,15 +445,11 @@ void DataIterator::AddNoise(Matrix& input, Matrix& output) {
   if (flip_ || translate_ || (output.GetCols() <  input.GetRows())) {
     Jitter(input, output);
   } else {
-    copy_transpose(input.GetMat(), output.GetMat());
+    input.CopyTranspose(output);
   }
   if (add_pca_noise_) {
     AddPCANoise(output);
   }
-}
-
-void DataIterator::AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it) {
-  // no op.
 }
 
 void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id) {
@@ -465,9 +468,8 @@ void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplici
     if (translate_) {  // Random jitter.
       width_offset_.FillWithRand();
       height_offset_.FillWithRand();
-      cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat();
-      mult_by_scalar(wo, max_offset + 1, wo);  // Rounded down.
-      mult_by_scalar(ho, max_offset + 1, ho);
+      width_offset_.Mult(max_offset + 1);  // Rounded down.
+      height_offset_.Mult(max_offset + 1);  // Rounded down.
     } else {  // Take center or corner patch.
       int w = 0, h = 0;
       switch (multiplicity_id % 5) {
@@ -492,21 +494,12 @@ void DataIterator::Jitter(Matrix& source, Matrix& dest) {
   int patch_size = (int)sqrt(dest.GetCols() / num_colors_);
   int image_size = (int)sqrt(source.GetRows() / num_colors_);
 
-  cudamat *wo = width_offset_.GetMat(), *ho = height_offset_.GetMat(),
-          *f = flip_bit_.GetMat(), *src_mat = source.GetMat(),
-          *dest_mat = dest.GetMat();
-
-  // Extract shifted images.
-  int err_code = extract_patches(src_mat, dest_mat, wo, ho, f, image_size,
-                                 image_size, patch_size, patch_size);
-  if (err_code != 0) {
-    cerr << "Error extracting patches " << GetStringError(err_code) << endl;
-    exit(1);
-  }
+  // Extract jittered images.
+  Matrix::ExtractPatches(source, dest, width_offset_, height_offset_, flip_bit_, image_size, image_size, patch_size, patch_size);
 }
 
-void DataIterator::SetFOV(const float size, const float stride,
-                          const float pad1, const float pad2,
+void DataIterator::SetFOV(const int size, const int stride,
+                          const int pad1, const int pad2, const int patch_size,
                           const int num_fov_x, const int num_fov_y) {
   // no op.
 }
@@ -624,10 +617,20 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
   DataIterator(config),
   raw_image_size_(config.raw_image_size()),
   image_size_(config.image_size()) {
-  it_ = new RawImageFileIterator<unsigned char>(
-      file_pattern_, image_size_, raw_image_size_, false, false,
-      config.random_rotate_raw_image(), config.random_rotate_max_angle(),
-      config.min_scale());
+  
+  bool avg10_full_image = config.avg10_full_image();
+ 
+  if (config.bbox_file().empty()) {
+    it_ = new RawImageFileIterator<unsigned char>(
+        file_pattern_, image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        config.random_rotate_raw_image(), config.random_rotate_max_angle(),
+        config.min_scale());
+  } else {
+    it_ = new BBoxImageFileIterator<unsigned char>(
+        file_pattern_, config.bbox_file(), image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        config.random_rotate_raw_image(), config.random_rotate_max_angle(),
+        config.min_scale(), config.context_factor(), config.center_on_bbox());
+  }
 
   dataset_size_ = it_->GetDataSetSize();
   num_dims_ = image_size_ * image_size_ * num_colors_;
@@ -651,14 +654,16 @@ int ImageDataIterator::Tell() const {
 }
 
 void ImageDataIterator::SetMaxDataSetSize(int max_dataset_size) {
-  if (max_dataset_size > 0 && dataset_size_ > max_dataset_size) {
-    dataset_size_ = max_dataset_size;
-  }
   it_->SetMaxDataSetSize(max_dataset_size);
+  dataset_size_ = it_->GetDataSetSize();
 }
 
 void ImageDataIterator::Prep(const int chunk_size) {
   it_->SampleNoiseDistributions(chunk_size);
+}
+
+void ImageDataIterator::RectifyBBox(box& b, int width, int height, int row) const {
+  it_->RectifyBBox(b, width, height, row);
 }
 
 void ImageDataIterator::GetNext(float* data_out) {
@@ -729,6 +734,78 @@ void SlidingWindowDataIterator::GetNext(float* data_out) {
   }
 }
 
+CropDataIterator::CropDataIterator(const config::DataStreamConfig& config):
+  DataIterator(config), image_size_(config.image_size()), file_id_(0) {
+  num_dims_ = image_size_ * image_size_ * num_colors_;
+  it_ = new CropIterator<unsigned char>(image_size_, config.context_factor(), config.warp_bbox());
+  buf_ = new unsigned char[num_dims_];
+  ReadLines(file_pattern_, file_names_);
+
+
+  ifstream f(config.bbox_file(), ios::in);
+  string line;
+  dataset_size_ = 0;
+  // The format for each line is -
+  // <width> <height> <xmin1> <ymin1> <xmax1> <ymax1> <xmin2> <ymin2> ...
+  while (getline(f, line)) {
+    istringstream iss(line);
+    vector<string> tokens;
+    copy(istream_iterator<string>(iss), istream_iterator<string>(),
+         back_inserter<vector<string> >(tokens));
+    int num_tokens = tokens.size();
+    if (num_tokens == 0 || num_tokens % 5 != 0) {
+      cerr << "Error parsing line " << line << endl;
+      exit(1);
+    }
+    int num_boxes = num_tokens / 5;
+    vector<box> b_list (num_boxes);
+    for (int i = 0; i < num_boxes; i++) {
+      b_list[i].xmin = atoi(tokens[5*i  ].c_str());
+      b_list[i].ymin = atoi(tokens[5*i+1].c_str());
+      b_list[i].xmax = atoi(tokens[5*i+2].c_str());
+      b_list[i].ymax = atoi(tokens[5*i+3].c_str());
+      // 5th number is the box weight, not relevant here.
+    }
+    crops_.push_back(b_list);
+    dataset_size_ += b_list.size();
+  }
+  f.close();
+
+  if (normalize_) {
+    LoadMeans(config.mean_file());
+  }
+}
+
+CropDataIterator::~CropDataIterator() {
+  delete buf_;
+  delete it_;
+}
+
+void CropDataIterator::Seek(int row) {
+  file_id_ = row;
+}
+
+int CropDataIterator::Tell() const {
+  return file_id_;
+}
+
+void CropDataIterator::Get(float* data_out, const int row) const {
+  cerr << "Not implemented" << endl;
+  exit(1);
+}
+
+void CropDataIterator::GetNext(float* data_out) {
+  if (it_->Done()) {
+    it_->SetImage(file_names_[file_id_], crops_[file_id_]);
+    file_id_++;
+    if (file_id_ == crops_.size()) file_id_ = 0;
+  }
+  it_->GetNext(buf_);
+  for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
+    data_out[i] = static_cast<float>(buf_[i]);
+  }
+}
+
 TextDataIterator::TextDataIterator(const config::DataStreamConfig& config):
   DataIterator(config) {
   ifstream f(file_pattern_, ios::in);
@@ -768,7 +845,7 @@ void TextDataIterator::GetNext(float* data_out) {
 }
 
 BoundingBoxIterator::BoundingBoxIterator(const config::DataStreamConfig& config):
-  DataIterator(config) {
+  DataIterator(config), jitter_source_(NULL) {
   ifstream f(file_pattern_, ios::in);
   string line;
   // The format for each line is -
@@ -785,18 +862,17 @@ BoundingBoxIterator::BoundingBoxIterator(const config::DataStreamConfig& config)
     }
     int width = atoi(tokens[0].c_str());
     int height = atoi(tokens[1].c_str());
-    float image_size = MIN(width, height);
-    int x_crop = (width - image_size) / 2;
-    int y_crop = (height - image_size) / 2;
     int num_boxes = (num_tokens - 2) / 4;
     vector<box> b_list (num_boxes);
     for (int i = 0; i < num_boxes; i++) {
-      b_list[i].xmin = (atoi(tokens[2+4*i  ].c_str()) - x_crop) / image_size;
-      b_list[i].ymin = (atoi(tokens[2+4*i+1].c_str()) - y_crop) / image_size;
-      b_list[i].xmax = (atoi(tokens[2+4*i+2].c_str()) - x_crop) / image_size;
-      b_list[i].ymax = (atoi(tokens[2+4*i+3].c_str()) - y_crop) / image_size;
+      b_list[i].xmin = atoi(tokens[2+4*i  ].c_str());
+      b_list[i].ymin = atoi(tokens[2+4*i+1].c_str());
+      b_list[i].xmax = atoi(tokens[2+4*i+2].c_str());
+      b_list[i].ymax = atoi(tokens[2+4*i+3].c_str());
     }
     data_.push_back(b_list);
+    img_width_.push_back(width);
+    img_height_.push_back(height);
   }
   f.close();
   dataset_size_ = data_.size();
@@ -817,16 +893,23 @@ float BoundingBoxIterator::VisibleFraction(const box& b, const box& fov) {
 }
 
 void BoundingBoxIterator::Get(float* data_out, const int row) const {
-  int num_fovs = num_fov_x_ * num_fov_y_;
-  const vector<box>& b_list = data_[row];
+  int num_fovs = num_dims_ / 4;
+  vector<box> b_list(data_[row]);
+  int width = img_width_[row];
+  int height = img_height_[row];
+  for (box& b: b_list) {
+    if (jitter_source_ != NULL) {
+      jitter_source_->RectifyBBox(b, width, height, row);
+    }
+    b.xmin /= patch_size_;
+    b.xmax /= patch_size_;
+    b.ymin /= patch_size_;
+    b.ymax /= patch_size_;
+  }
   for (int i = 0; i < num_fovs; i++) {
-    int r = i % num_fov_x_, c = i / num_fov_x_;
-    box fov;
-    fov.xmin = -fov_pad1_ + fov_stride_ * r;
-    fov.ymin = -fov_pad1_ + fov_stride_ * c;
-    fov.xmax = fov.xmin + fov_size_;
-    fov.ymax = fov.ymin + fov_size_;
-
+    const box &fov = fov_box_[i];
+    
+    // Find the bounding box that is most visible from this field of view.
     int best_box = 0;
     if (b_list.size() > 1) {
       float f_best = VisibleFraction(b_list[0], fov), f;
@@ -839,10 +922,10 @@ void BoundingBoxIterator::Get(float* data_out, const int row) const {
       }
     }
     const box& b = b_list[best_box];
-    data_out[i               ] = b.xmin - fov.xmin;
-    data_out[i +     num_fovs] = b.ymin - fov.ymin;
-    data_out[i + 2 * num_fovs] = b.xmax - fov.xmin;
-    data_out[i + 3 * num_fovs] = b.ymax - fov.ymin;
+    data_out[i               ] = b.xmin;
+    data_out[i +     num_fovs] = b.ymin;
+    data_out[i + 2 * num_fovs] = b.xmax;
+    data_out[i + 3 * num_fovs] = b.ymax;
   }
 }
 
@@ -852,28 +935,51 @@ void BoundingBoxIterator::GetNext(float* data_out) {
   if (row_ == dataset_size_) row_ = 0;
 }
 
-void BoundingBoxIterator::SetFOV(const float size, const float stride,
-                                 const float pad1, const float pad2,
-                                 const int num_fov_x, const int num_fov_y) {
-  fov_size_ = size;
-  fov_stride_ = stride;
-  fov_pad1_ = pad1;
-  fov_pad2_ = pad2;
-  num_fov_x_ = num_fov_x;
-  num_fov_y_ = num_fov_y;
-  num_dims_ = 4 * num_fov_x * num_fov_y_;
+void BoundingBoxIterator::SetFOV(
+    const int size, const int stride, const int pad1, const int pad2,
+    const int patch_size, const int num_fov_x, const int num_fov_y) {
+  patch_size_ = patch_size;
+
+  float fov_size   = (float)size / patch_size;
+  float fov_stride = (float)stride / patch_size;
+  float fov_pad1   = (float)pad1 / patch_size;
+  
+  int num_fovs = num_fov_y * num_fov_x;
+  num_dims_ = 4 * num_fovs;
+  fovs_.AllocateGPUMemory(1, num_dims_);
+
+  float* fov = fovs_.GetHostData();
+  fov_box_.resize(num_fovs);
+
+  for (int i = 0; i < num_fovs; i++) {
+    box &b = fov_box_[i];
+    
+    int r = i / num_fov_x, c = i % num_fov_x;
+    b.xmin = -fov_pad1 + fov_stride * c;
+    b.ymin = -fov_pad1 + fov_stride * r;
+    b.xmax = b.xmin + fov_size;
+    b.ymax = b.ymin + fov_size;
+    
+    fov[i]                = b.xmin;
+    fov[i + num_fovs]     = b.ymin;
+    fov[i + 2 * num_fovs] = b.xmin;
+    fov[i + 3 * num_fovs] = b.ymin;
+  }
+  fovs_.CopyToDevice();
 }
 
-
-void BoundingBoxIterator::AddNoise(Matrix& input, Matrix& output, DataIterator& noise_it) {
-  cudamat *wo = noise_it.GetWidthOffset().GetMat(),
-          *ho = noise_it.GetHeightOffset().GetMat(),
-          *f = noise_it.GetFlipBit().GetMat(),
-          *src_mat = input.GetMat(),
-          *dest_mat = output.GetMat();
-  copy_transpose(src_mat, dest_mat);
-  int num_colors = noise_it.GetNumColors();
-  int big_image_size = (int)sqrt(noise_it.GetDims() / num_colors);
-  int image_size     = (int)sqrt(noise_it.GetDestDims() / num_colors);
-  rectify_bounding_boxes(dest_mat, wo, ho, f, big_image_size, big_image_size, image_size, image_size);
+void BoundingBoxIterator::AddNoise(Matrix& input, Matrix& output) {
+  if (noise_source_ != NULL) {
+    input.CopyTranspose(output);
+    output.RectifyBBox(noise_source_->GetWidthOffset(),
+                       noise_source_->GetHeightOffset(),
+                       noise_source_->GetFlipBit(),
+                       patch_size_, patch_size_);
+    output.AddRowVec(fovs_, -1);
+  }
+}
+void BoundingBoxIterator::SetNoiseSource(DataIterator* it) {
+  DataIterator::SetNoiseSource(it);
+  jitter_source_ = dynamic_cast<ImageDataIterator*>(it);
+  // It's fine if this turns out to be NULL. 
 }

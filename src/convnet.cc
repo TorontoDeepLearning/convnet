@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <sstream>
 #include <stack>
+#include <queue>
 #include <chrono>
 #include <csignal>
 
@@ -16,6 +17,9 @@ ConvNet::ConvNet(const string& model_file):
   train_dataset_(NULL), val_dataset_(NULL),
   model_filename_(model_file) {
   ReadModel(model_file, model_);
+  for (const config::Subnet& subnet : model_.subnet()) {
+    AddSubnet(model_, subnet);
+  }
   Matrix::InitRandom(model_.seed());
   srand(model_.seed());
   localizer_ = model_.localizer();
@@ -38,6 +42,61 @@ ConvNet::~ConvNet() {
 void ConvNet::DestroyNet() {
   for (Layer* l: layers_) delete l;
   for (Edge* e: edges_) delete e;
+}
+
+void ConvNet::AddSubnet(config::Model& model, const config::Subnet& subnet) {
+  config::Model submodel;
+  ReadModel(subnet.model_file(), submodel);
+
+  // Recursively add subnets.
+  for (const config::Subnet& s : submodel.subnet()) {
+    AddSubnet(submodel, s);
+  }
+
+  const string& name = subnet.name();
+  int gpu_offset = subnet.gpu_id_offset();
+  int num_channels_multiplier = subnet.num_channels_multiplier();
+  cout << "Adding subnet " << name << endl;
+  map<string, string> merge_layers;
+  set<string> remove_layers;
+  for (const config::Subnet_MergeLayer& ml : subnet.merge_layer()) {
+    merge_layers[ml.subnet_layer()] = ml.net_layer();
+  }
+  for (const string& l : subnet.remove_layer()) {
+    remove_layers.insert(l);
+  }
+  for (const config::Layer& layer : submodel.layer()) {
+    if (merge_layers.find(layer.name()) == merge_layers.end() &&
+        remove_layers.find(layer.name()) == remove_layers.end()) {
+      config::Layer* l = model.add_layer();
+      l->MergeFrom(layer);
+      l->set_name(name + "_" + l->name());
+      l->set_gpu_id(gpu_offset + l->gpu_id());
+      l->set_num_channels(num_channels_multiplier * l->num_channels());
+    }
+  }
+  int soa = subnet.start_optimization_after(); 
+  for (const config::Edge& edge : submodel.edge()) {
+    if (remove_layers.find(edge.source()) != remove_layers.end() ||
+        remove_layers.find(edge.dest()) != remove_layers.end()) continue;
+    config::Edge* e = model.add_edge();
+    e->MergeFrom(edge);
+    e->set_gpu_id(gpu_offset + e->gpu_id());
+    if (!subnet.parameters_file().empty()) {
+      e->set_initialization(config::Edge::PRETRAINED);
+      e->set_pretrained_model(subnet.parameters_file());
+      e->set_pretrained_edge_name(edge.source() + ":" + edge.dest());
+    }
+    map<string, string>::iterator it1 = merge_layers.find(edge.source());
+    map<string, string>::iterator it2 = merge_layers.find(edge.dest());
+    e->set_source((it1 == merge_layers.end()) ? (name + "_" + e->source()):
+                                                it1->second);
+    e->set_dest((it2 == merge_layers.end()) ? (name + "_" + e->dest()):
+                                               it2->second);
+    e->set_block_backprop(edge.block_backprop() | subnet.block_backprop());
+    e->mutable_weight_optimizer()->set_start_optimization_after(soa);
+    e->mutable_bias_optimizer()->set_start_optimization_after(soa);
+  }
 }
 
 void ConvNet::BuildNet() {
@@ -89,7 +148,6 @@ void ConvNet::BuildNet() {
     }
   }
 
-
   int image_size;
   for (Layer* l : layers_) {
     image_size = l->IsInput() ? model_.patch_size() :
@@ -107,28 +165,22 @@ void ConvNet::BuildNet() {
 
 void ConvNet::FieldsOfView() {
   Layer* l = output_layers_[0];
-  int fov_size = 1, fov_stride = 1, fov_pad1 = 0, fov_pad2 = 0;
+  fov_size_ = 1, fov_stride_ = 1, fov_pad1_ = 0, fov_pad2_ = 0;
   while(!l->IsInput()) {
     Edge* e = l->incoming_edge_[0];
-    e->FOV(&fov_size, &fov_stride, &fov_pad1, &fov_pad2);
+    e->FOV(&fov_size_, &fov_stride_, &fov_pad1_, &fov_pad2_);
     l = e->GetSource();
   }
   float image_size = (float)model_.patch_size();
-  fov_size_ = fov_size / image_size;
-  fov_stride_ = fov_stride / image_size;
-  fov_pad1_ = fov_pad1 / image_size;
-  fov_pad2_ = fov_pad2 / image_size;
 
-  cout << "FOV: " << fov_size << " " << fov_stride << " " << fov_pad1 << " " << fov_pad2 << endl;
+  cout << "FOV: " << fov_size_ << " " << fov_stride_ << " " << fov_pad1_ << " " << fov_pad2_ << endl;
   cout << "Image size " << image_size << endl;
   
   num_fov_x_ = output_layers_[0]->GetSize();
   num_fov_y_ = output_layers_[0]->GetSize();
 }
 
-
 void ConvNet::AllocateLayerMemory() {
-  //cout << "Allocating layer memory for batchsize " << batch_size_ << endl;
   for (Layer* l : layers_) {
     l->AllocateMemory(batch_size_);
   }
@@ -149,7 +201,11 @@ void ConvNet::AllocateEdgeMemory(bool fprop_only) {
 void ConvNet::Sort() {
   Layer *m, *n;
   vector<Layer*> L;
-  stack<Layer*> S;
+  //stack<Layer*> S;  // Depth-first sort.
+  queue<Layer*> S;  // Breadth-first sort.
+  // Breadth-first usually works well for multi-gpu multi-column nets where
+  // each column has roughly the same amount of work.
+  
   for (Layer* l : layers_) if (l->IsInput()) S.push(l);
   if (S.empty()) {
     cerr << "Error: No layer is set to be input!" << endl;
@@ -158,7 +214,8 @@ void ConvNet::Sort() {
   bool x;
 
   while (!S.empty()) {
-    n = S.top();
+    //n = S.top();
+    n = S.front();
     S.pop();
     L.push_back(n);
     for (Edge* e : n->outgoing_edge_) {
@@ -250,6 +307,10 @@ void ConvNet::SetupDataset(const string& train_data_config_file) {
   SetupDataset(train_data_config_file, "");
 }
 
+void ConvNet::SetBatchsize(const int batch_size) {
+  batch_size_ = batch_size;
+}
+
 void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
 
@@ -258,9 +319,9 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
   train_dataset_ = new DataHandler(train_data_config);
   if (localizer_) {
     train_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
-                           num_fov_x_, num_fov_y_);
+                           model_.patch_size(), num_fov_x_, num_fov_y_);
   }
-  batch_size_ = train_dataset_->GetBatchSize();
+  SetBatchsize(train_dataset_->GetBatchSize());
   int dataset_size = train_dataset_->GetDataSetSize();
   train_dataset_->AllocateMemory();
   cout << "Training data set size " << dataset_size << endl;
@@ -270,7 +331,7 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
     val_dataset_ = new DataHandler(val_data_config);
     if (localizer_) {
       val_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
-                             num_fov_x_, num_fov_y_);
+                           model_.patch_size(), num_fov_x_, num_fov_y_);
     }
     dataset_size = val_dataset_->GetDataSetSize();
     val_dataset_->AllocateMemory();
@@ -325,9 +386,16 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
       num_batches = dataset_size / batch_size,
       left_overs = dataset_size % batch_size,
       multiplicity = dataset.GetMultiplicity();
-  batch_size_ = batch_size;
+  SetBatchsize(batch_size);
   dataset.AllocateMemory();
   AllocateMemory(true);
+
+  const int display_after = model_.display_after();
+  const bool display = model_.display();
+  if (display && localizer_) {
+    SetupLocalizationDisplay();
+  }
+
  
   cout << "Extracting features for dataset of size " << dataset_size
        << " # batches " << num_batches
@@ -351,6 +419,10 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
     numcases = (left_overs > 0 && k == num_batches - 1) ? left_overs : batch_size;
     for (int m = 0; m < multiplicity; m++) {
       dataset.GetBatch(data_layers_);
+      if (display && k % display_after == 0) {
+        DisplayLayers();
+        if (localizer_) DisplayLocalization();
+      }
       Fprop(false);
       data_writer->Write(layers, numcases);
     }
@@ -373,6 +445,7 @@ void ConvNet::Save(const string& output_file) {
   WriteHDF5IntAttr(file, "__lr_reduce_counter__", &lr_reduce_counter_);
   WriteHDF5IntAttr(file, "__current_iter__", &current_iter_);
   H5Fclose(file);
+  cout << " .. Done" << endl;
   // Move to original file.
   int result = rename(output_file_temp.c_str(), output_file.c_str());
   if (result != 0) {
@@ -515,7 +588,7 @@ void ConvNet::SetupLocalizationDisplay() {
   localization_display_ = new ImageDisplayer(image_size, image_size, 3, false,
                                           "localization");
   localization_display_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
-                             num_fov_x_, num_fov_y_);
+                                image_size, num_fov_x_, num_fov_y_);
 }
 
 void ConvNet::DisplayLocalization() {
@@ -544,9 +617,6 @@ void ConvNet::Train() {
     exit(1);
   }
 
-  // If timestamp is present, then initialize model at that timestamp.
-  //if (!timestamp_.empty()) Load();
-
   // Before starting the training, mark this model with a timestamp.
   TimestampModel();
 
@@ -557,7 +627,7 @@ void ConvNet::Train() {
             polyak_after = model_.polyak_after(),
             start_polyak_queue = validate_after - polyak_after * model_.polyak_queue_size();
 
-  const bool display = model_.display();
+  const bool display = model_.display(), print_weights = model_.print_weights();
 
   if (display && localizer_) {
     SetupLocalizationDisplay();
@@ -596,10 +666,12 @@ void ConvNet::Train() {
       for (float& err : train_error) err /= print_after * batch_size_;
       for (const float& err : train_error) printf(" %.5f", err);
       WriteLog(current_iter_, time_diff.count(), train_error);
-      printf(" Weight length: " );
-      for (Edge* e : edges_) {
-        if (e->HasNoParameters() || e->IsTied()) continue;
-        printf(" %.5f", e->GetRMSWeight());
+      if (print_weights) {
+        printf(" Weight length: " );
+        for (Edge* e : edges_) {
+          if (e->HasNoParameters() || e->IsTied()) continue;
+          printf(" %.3f", e->GetRMSWeight());
+        }
       }
       train_error.clear();
       start_t = end_t;

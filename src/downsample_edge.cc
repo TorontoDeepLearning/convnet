@@ -1,5 +1,4 @@
 #include "downsample_edge.h"
-#include "cudamat_conv.cuh"
 
 DownSampleEdge::DownSampleEdge(const config::Edge& edge_config) :
   Edge(edge_config),
@@ -11,17 +10,12 @@ void DownSampleEdge::SetImageSize(int image_size) {
 }
 
 void DownSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  cudamat *input_mat = input.GetMat(),
-          *output_mat = output.GetMat();
-  DownSample(input_mat, output_mat, sample_factor_, image_size_);
+  Matrix::ConvDownSample(input, output, sample_factor_, image_size_);
 }
 
 void DownSampleEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                                  Matrix& output, Matrix& deriv_input, bool overwrite) {
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-  cudamat* deriv_input_mat = deriv_input.GetMat();
-
   int scale_targets = overwrite ? 0 : 1;
-  UpSample(deriv_output_mat, deriv_input_mat, sample_factor_,
-           sample_factor_ * image_size_, scale_targets);
+  Matrix::ConvUpSample(deriv_output, deriv_input, sample_factor_,
+                       sample_factor_ * image_size_, scale_targets);
 }

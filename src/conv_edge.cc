@@ -1,5 +1,4 @@
 #include "conv_edge.h"
-#include "cudamat_conv.cuh"
 #include <iostream>
 
 ConvEdge::ConvEdge(const config::Edge& edge_config) :
@@ -25,16 +24,6 @@ void ConvEdge::SetTiedTo(Edge* e) {
 void ConvEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
-  if (partial_sum_ > 0) {
-    int num_locs = num_modules_ * num_modules_;
-    int partial_sums = num_locs / partial_sum_;
-    cout << "Num locs " << num_locs << " Partial sum " << partial_sum_ << endl;
-    if (partial_sum_ * partial_sums != num_locs) {
-      cout << "Partial sum must divide number of locations." <<
-              " Setting to 1. If this crashes set partial sum to 0." << endl;
-      partial_sum_ = 1;
-    }
-  }
 }
 
 void ConvEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
@@ -54,6 +43,7 @@ void ConvEdge::DisplayWeights() {
 }
 
 void ConvEdge::AllocateMemory(bool fprop_only) {
+  fprop_only |= block_backprop_;
   Edge::AllocateMemory(fprop_only);
   if (is_tied_) {
     if (!fprop_only) AllocateMemoryBprop();  // For partial sums.
@@ -96,7 +86,7 @@ void ConvEdge::AllocateMemoryBprop() {
   }
 
   if (partial_sum_ > 0) {
-    int partial_sums = num_locs / partial_sum_;
+    int partial_sums = DIVUP(num_modules_, partial_sum_) * DIVUP(num_modules_, partial_sum_);
     Matrix::RegisterTempMemory(num_output_channels_ * input_size * partial_sums,
                                "partial sums " + GetName());
     Matrix::RegisterOnes(partial_sums);
@@ -123,52 +113,34 @@ void ConvEdge::AllocateMemoryFprop() {
 }
 
 void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
-  cudamat *input_mat = input.GetMat(),
-          *output_mat = output.GetMat(),
-          *w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
-  int scale_targets = overwrite ? 0 : 1;
-  convUp(input_mat, w_mat, output_mat, num_modules_, -padding_, stride_,
-         num_input_channels_, 1, scale_targets);
-
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
+  float scale_targets = overwrite ? 0 : 1;
+  Matrix::ConvUp(input, w, output, image_size_, num_modules_, num_modules_,
+                 padding_, stride_, num_input_channels_, scale_targets);
   if (!has_no_bias_) {
-    cudamat* b_mat = is_tied_? tied_edge_->GetBias().GetMat() : bias_.GetMat();
+    Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
     if (shared_bias_) {
-      reshape(output_mat, -1, num_output_channels_);
-      add_row_vec(output_mat, b_mat, output_mat);
-      reshape(output_mat, -1, num_output_channels_ * num_modules_ * num_modules_);
+      output.Reshape(-1, num_output_channels_);
+      output.AddRowVec(b);
+      output.Reshape(-1, num_output_channels_ * num_modules_ * num_modules_);
     } else {
-      add_row_vec(output_mat, b_mat, output_mat);
+      output.AddRowVec(b);
     }
   }
 }
 
 void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  // Deriv w.r.t input of this edge (which is to be computed).
-  cudamat* deriv_input_mat = deriv_input.GetMat();
   
-  cudamat* w_mat = is_tied_? tied_edge_->GetWeight().GetMat() : weights_.GetMat();
-
-  //cout << "Target rows " << deriv_input.GetRows() << " cols " << deriv_input.GetCols() << endl;
-  //cout << "NumImgColors " << num_input_channels_ << endl;
-  // cout << "Image size " << image_size__ << endl;
-
-  int scale_targets = overwrite ? 0 : 1;
-  convDown(deriv_output_mat, w_mat, deriv_input_mat, image_size_, -padding_,
-           stride_, num_input_channels_, 1, scale_targets);
+  Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
+  float scale_targets = overwrite ? 0 : 1;
+  Matrix::ConvDown(deriv_output, w, deriv_input, image_size_, image_size_,
+                   num_modules_, padding_, stride_, num_input_channels_,
+                   scale_targets);
 }
 
 void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
-  // Input to this edge.
-  cudamat* input_mat = input.GetMat();
-  
-  // Deriv w.r.t output of this edge.
-  cudamat* deriv_output_mat = deriv_output.GetMat();
-
-  cudamat* dw_mat = is_tied_ ? tied_edge_->GetGradWeight().GetMat() : grad_weights_.GetMat();
+  Matrix& dw = is_tied_ ? tied_edge_->GetGradWeight() : grad_weights_;
   const int batch_size = input.GetRows();
 
   int scale_targets = GetNumGradsReceived() > 0 ? 1 : 0;
@@ -177,46 +149,35 @@ void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
     Matrix dw_temp;
 
     int filter_input_size = num_input_channels_ * kernel_size_ * kernel_size_;
-    int partial_sums = (num_modules_ * num_modules_) / partial_sum_;
+    int partial_sums = DIVUP(num_modules_, partial_sum_) * DIVUP(num_modules_, partial_sum_);
     Matrix::GetTemp(num_output_channels_, filter_input_size * partial_sums, dw_temp);
-    cudamat* dw_temp_mat = dw_temp.GetMat();
-    convOutp(input_mat, deriv_output_mat, dw_temp_mat, num_modules_, kernel_size_,
-             -padding_, stride_, num_input_channels_, 1, partial_sum_, 0, 1);
-    reshape(dw_temp_mat, num_output_channels_ * filter_input_size, partial_sums);
-    reshape(dw_mat, -1, 1);
-    Matrix ones;
-    Matrix::GetOnes(partial_sums, 1, ones);
-    dot(dw_temp_mat, ones.GetMat(), dw_mat, scale_targets, scale_gradients_ / batch_size);
-    reshape(dw_mat, num_output_channels_, filter_input_size);
+    
+    Matrix::ConvOutp(input, deriv_output, dw_temp, image_size_, num_modules_,
+                     num_modules_, kernel_size_, padding_, stride_,
+                     num_input_channels_, partial_sum_, 0, 1);
+
+    dw_temp.Reshape(num_output_channels_ * filter_input_size, partial_sums);
+    dw.Reshape(-1, 1);
+    dw_temp.SumCols(dw, scale_targets, scale_gradients_ / batch_size);
+    dw.Reshape(num_output_channels_, filter_input_size);
   } else {
-    convOutp(input_mat, deriv_output_mat, dw_mat, num_modules_, kernel_size_,
-             -padding_, stride_, num_input_channels_, 1, partial_sum_,
-             scale_targets, scale_gradients_ / batch_size);
+    Matrix::ConvOutp(input, deriv_output, dw, image_size_, num_modules_,
+                     num_modules_, kernel_size_, padding_, stride_,
+                     num_input_channels_, num_modules_, scale_targets,
+                     scale_gradients_ / batch_size);
   }
 
   if (!has_no_bias_) {
-    cudamat* db_mat = is_tied_ ? tied_edge_->GetGradBias().GetMat() : grad_bias_.GetMat();
+    Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
     if (shared_bias_) {
-      /*
-      reshape(deriv_output_mat, -1, num_output_channels_);
-      Matrix ones;
-      Matrix::GetOnes(1, batch_size * num_modules_ * num_modules_, ones);
-      dot(ones.GetMat(), deriv_output_mat, db_mat, scale_targets_, 1.0 / batch_size);
-      reshape(deriv_output_mat, batch_size, -1);
-      */
       // 2 step addition is SIGNFICANTLY faster (Why ?)
-      Matrix ones, db_temp;
-      Matrix::GetOnes(1, batch_size, ones);
+      Matrix db_temp;
       Matrix::GetTemp(1, deriv_output.GetCols(), db_temp);
-      cudamat* db_temp_mat = db_temp.GetMat();
-      dot(ones.GetMat(), deriv_output_mat, db_temp_mat, 0, 1);
-      reshape(db_temp_mat, -1, num_output_channels_);
-      Matrix::GetOnes(1, num_modules_ * num_modules_, ones);
-      dot(ones.GetMat(), db_temp_mat, db_mat, scale_targets, scale_gradients_ / batch_size);
+      deriv_output.SumRows(db_temp, 0, 1);
+      db_temp.Reshape(-1, num_output_channels_);
+      db_temp.SumRows(db, scale_targets, scale_gradients_ / batch_size);
     } else {
-      Matrix ones;
-      Matrix::GetOnes(1, batch_size, ones);
-      dot(ones.GetMat(), deriv_output_mat, db_mat, scale_targets, scale_gradients_ / batch_size);
+      deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
     }
   }
   IncrementNumGradsReceived();

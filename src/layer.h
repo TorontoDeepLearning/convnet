@@ -101,6 +101,10 @@ class Layer {
   void AccumulateDeriv();
   void BroadcastState();
   void BroadcastDeriv();
+  void CopyStateToGPU(int dest_gpu);
+  void CopyDerivToGPU(int dest_gpu);
+  void ResetStateCopies();
+  void ResetDerivCopies();
 
   static Layer* ChooseLayerClass(const config::Layer& layer_config);
 
@@ -114,7 +118,7 @@ class Layer {
 
   const string name_;
   const int num_channels_;
-  const bool is_input_, is_output_;
+  bool is_input_, is_output_;
   const float dropprob_;
   const bool display_, dropout_scale_up_at_train_time_, gaussian_dropout_;
 
@@ -130,7 +134,8 @@ class Layer {
   Matrix rand_gaussian_;  /** Need to store random variates when doing gaussian dropout. */
   map<int, Matrix> other_states_; /** Copies of this layer's state on other gpus.*/
   map<int, Matrix> other_derivs_; /** Copies of this layer's deriv on other gpus.*/
-
+  map<int, bool> state_copied_;
+  map<int, bool> deriv_copied_;
   ImageDisplayer *img_display_;
   const int gpu_id_;
   set<int> other_incoming_gpu_ids_, other_outgoing_gpu_ids_;
@@ -139,7 +144,7 @@ class Layer {
 /** Implements a layer with a linear activation function.*/
 class LinearLayer : public Layer {
  public:
-  LinearLayer(const config::Layer& config) : Layer(config) {};
+  LinearLayer(const config::Layer& config);
   virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
@@ -197,4 +202,24 @@ class LogisticLayer : public Layer {
   virtual void ComputeDeriv();
   virtual float GetLoss();
 };
+
+/** Implements a layer with a linear activation and hinge loss.*/
+class HingeQuadraticLayer : public SoftmaxLayer {
+ public:
+  HingeQuadraticLayer(const config::Layer& config);
+  virtual void ApplyActivation(bool train);
+  virtual void ApplyDerivativeOfActivation();
+  virtual void ComputeDeriv();
+ protected:
+  const float margin_;
+};
+
+/** Implements a layer with a linear activation and hinge loss.*/
+class HingeLinearLayer : public HingeQuadraticLayer {
+ public:
+  HingeLinearLayer(const config::Layer& config);
+  virtual void ComputeDeriv();
+};
+
+
 #endif

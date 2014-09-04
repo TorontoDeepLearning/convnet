@@ -17,9 +17,12 @@ EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
   num_shares_(1),
   scale_gradients_(edge_config.scale_gradients()),
   pretrained_model_(edge_config.pretrained_model()),
-  pretrained_edge_name_(edge_config.has_pretrained_edge_name() ? edge_config.pretrained_edge_name() : name_) {
-    polyak_weights_.resize(polyak_queue_size_);
+  pretrained_edge_name_(edge_config.has_pretrained_edge_name() ?
+                        edge_config.pretrained_edge_name() : name_) {
+  polyak_weights_.resize(polyak_queue_size_);
+  if (!has_no_bias_) {
     polyak_bias_.resize(polyak_queue_size_);
+  }
 }
 
 EdgeWithWeight::~EdgeWithWeight() {
@@ -33,10 +36,12 @@ void EdgeWithWeight::SaveParameters(hid_t file) {
   ss << source_node_ << ":" << dest_node_ << ":" << "weight";
   weights_.WriteHDF5(file, ss.str());
   weight_optimizer_->SaveParameters(file, ss.str());
-  ss.str("");
-  ss << source_node_ << ":" << dest_node_ << ":" << "bias";
-  bias_.WriteHDF5(file, ss.str());
-  bias_optimizer_->SaveParameters(file, ss.str());
+  if (!has_no_bias_) {
+    ss.str("");
+    ss << source_node_ << ":" << dest_node_ << ":" << "bias";
+    bias_.WriteHDF5(file, ss.str());
+    bias_optimizer_->SaveParameters(file, ss.str());
+  }
 }
 
 void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
@@ -49,12 +54,14 @@ void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
   if (weight_optimizer_->IsAllocated()) {
     weight_optimizer_->LoadParameters(file, ss.str());
   }
-  ss.str("");
-  ss << edge_name << ":" << "bias";
-  cout << "Loading " << ss.str() << endl;
-  bias_.ReadHDF5(file, ss.str());
-  if (bias_optimizer_->IsAllocated()) {
-    bias_optimizer_->LoadParameters(file, ss.str());
+  if (!has_no_bias_) {
+    ss.str("");
+    ss << edge_name << ":" << "bias";
+    cout << "Loading " << ss.str() << endl;
+    bias_.ReadHDF5(file, ss.str());
+    if (bias_optimizer_->IsAllocated()) {
+      bias_optimizer_->LoadParameters(file, ss.str());
+    }
   }
 }
 
@@ -89,7 +96,6 @@ void EdgeWithWeight::DisplayWeightStats() {
   */
 }
 
-
 void EdgeWithWeight::ReduceLearningRate(float factor) {
   weight_optimizer_->ReduceLearningRate(factor);
   bias_optimizer_->ReduceLearningRate(factor);
@@ -113,24 +119,22 @@ void EdgeWithWeight::Initialize() {
   if (initialization_ == config::Edge::DENSE_GAUSSIAN_SQRT_FAN_IN ||
       initialization_ == config::Edge::DENSE_GAUSSIAN) {
     weights_.FillWithRandn();
-    cudamat* w = weights_.GetMat();
     float init_wt = init_wt_;
     if (initialization_ == config::Edge::DENSE_GAUSSIAN_SQRT_FAN_IN) {
       init_wt /= sqrt(weights_.GetCols());
     }
-    mult_by_scalar(w, init_wt, w);
-    cout << "Initialized weight: Dense Gaussian. Initial scale " << GetRMSWeight() << endl;
+    weights_.Mult(init_wt);
+    //cout << "Initialized weight: Dense Gaussian. Initial scale " << GetRMSWeight() << endl;
   } else if (initialization_ == config::Edge::DENSE_UNIFORM_SQRT_FAN_IN ||
              initialization_ == config::Edge::DENSE_UNIFORM) {
     weights_.FillWithRand();
-    cudamat* w = weights_.GetMat();
-    add_scalar(w, -0.5, w);
+    weights_.Add(-0.5);
     float init_wt = 2 * init_wt_;
     if (initialization_ == config::Edge::DENSE_UNIFORM_SQRT_FAN_IN) {
       init_wt /= sqrt(weights_.GetCols() / 3.0f);
     }
-    mult_by_scalar(w, init_wt, w);
-    cout << "Initialized weight: Dense Uniform. Initial scale " << GetRMSWeight() << endl;
+    weights_.Mult(init_wt);
+    //cout << "Initialized weight: Dense Uniform. Initial scale " << GetRMSWeight() << endl;
   } else if (initialization_ == config::Edge::CONSTANT) {
     weights_.Set(init_wt_);
   } else if (initialization_ == config::Edge::PRETRAINED) {
@@ -141,23 +145,20 @@ void EdgeWithWeight::Initialize() {
     cerr << "Unknown weight initialization type." << endl;
     exit(1);
   }
-  if (initialization_ != config::Edge::PRETRAINED) {
+  if (initialization_ != config::Edge::PRETRAINED && !has_no_bias_) {
     bias_.Set(init_bias_);
   }
 }
 
 float EdgeWithWeight::GetRMSWeight() {
-  //return weights_.Norm() / sqrt(weights_.GetNumEls());
   Matrix temp;
   const int num_hid = weights_.GetRows();
   Matrix::GetTemp(num_hid, 1, temp);
-  cudamat* temp_mat = temp.GetMat();
-  sqsum_by_axis(weights_.GetMat(), temp_mat, 1, 1, 0);
-  apply_sqrt(temp_mat, temp_mat);
+  weights_.SqSumAxis(temp, 1, 1, 0);
+  temp.Sqrt();
   float res = temp.Sum() / num_hid;
   return res;
 }
-
 
 bool EdgeWithWeight::HasNoParameters() const {
   return false;
@@ -169,63 +170,77 @@ int EdgeWithWeight::GetNumModules() const {
 
 void EdgeWithWeight::InsertPolyak() {
   if (polyak_queue_size_ == 0) return;
+  
   Matrix& w = polyak_weights_[polyak_index_];
-  Matrix& b = polyak_bias_[polyak_index_];
   if (w.GetNumEls() == 0) {
     w.AllocateMainMemory(weights_.GetRows(), weights_.GetCols());
   }
-  if (b.GetNumEls() == 0) {
-    b.AllocateMainMemory(bias_.GetRows(), bias_.GetCols());
-  }
   weights_.CopyToHost();
-  bias_.CopyToHost();
   w.CopyFromMainMemory(weights_);
-  b.CopyFromMainMemory(bias_);
+
+  if (!has_no_bias_) {
+    Matrix& b = polyak_bias_[polyak_index_];
+    if (b.GetNumEls() == 0) {
+      b.AllocateMainMemory(bias_.GetRows(), bias_.GetCols());
+    }
+    bias_.CopyToHost();
+    b.CopyFromMainMemory(bias_);
+  }
   polyak_index_++;
   if (polyak_index_ == polyak_queue_size_) {
     polyak_index_ = 0;
     polyak_queue_full_ = true;
   }
-
 }
 
 void EdgeWithWeight::BackupCurrent() {
   if (weights_backup_.GetNumEls() == 0) {
     weights_backup_.AllocateMainMemory(weights_.GetRows(), weights_.GetCols());
   }
-  if (bias_backup_.GetNumEls() == 0) {
-    bias_backup_.AllocateMainMemory(bias_.GetRows(), bias_.GetCols());
-  }
   weights_.CopyToHost();
-  bias_.CopyToHost();
   weights_backup_.CopyFromMainMemory(weights_);
-  bias_backup_.CopyFromMainMemory(bias_);
+
+  if (!has_no_bias_) {
+    if (bias_backup_.GetNumEls() == 0) {
+      bias_backup_.AllocateMainMemory(bias_.GetRows(), bias_.GetCols());
+    }
+    bias_.CopyToHost();
+    bias_backup_.CopyFromMainMemory(bias_);
+  }
 }
 
 void EdgeWithWeight::LoadCurrentOnGPU() {
   weights_.CopyFromMainMemory(weights_backup_);
-  bias_.CopyFromMainMemory(bias_backup_);
   weights_.CopyToDevice();
-  bias_.CopyToDevice();
+  if (!has_no_bias_) {
+    bias_.CopyFromMainMemory(bias_backup_);
+    bias_.CopyToDevice();
+  }
 }
 
 void EdgeWithWeight::LoadPolyakOnGPU() {
   if (polyak_queue_size_ == 0) return;
   int max_ind = polyak_queue_full_ ? polyak_queue_size_: polyak_index_;
-  float *weight_avg = weights_.GetHostData(),
-        *bias_avg = bias_.GetHostData(), *w, *b;
+
+  float *weight_avg = weights_.GetHostData(), *w;
   for (int j = 0; j < weights_.GetNumEls(); j++) weight_avg[j] = 0;
-  for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] = 0;
   for (int i = 0; i < max_ind; i++) {
-    w = polyak_weights_[i].GetHostData(),
-    b = polyak_bias_[i].GetHostData();
+    w = polyak_weights_[i].GetHostData();
     for (int j = 0; j < weights_.GetNumEls(); j++) weight_avg[j] += w[j];
-    for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] += b[j];
   }
   for (int j = 0; j < weights_.GetNumEls(); j++) weight_avg[j] /= max_ind;
-  for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] /= max_ind;
   weights_.CopyToDevice();
-  bias_.CopyToDevice();
+
+  if (!has_no_bias_) {
+    float *bias_avg = bias_.GetHostData(), *b;
+    for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] = 0;
+    for (int i = 0; i < max_ind; i++) {
+      b = polyak_bias_[i].GetHostData();
+      for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] += b[j];
+    }
+    for (int j = 0; j < bias_.GetNumEls(); j++) bias_avg[j] /= max_ind;
+    bias_.CopyToDevice();
+  }
 }
 
 void EdgeWithWeight::SetTiedTo(Edge* e) {

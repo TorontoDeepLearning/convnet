@@ -1,7 +1,15 @@
 #include "image_iterators.h"
 #include <fstream>
-#define INTERPOLATION_TYPE 3
+#include <sstream>
+#include <iterator>
 #define PI 3.14159265
+#define INTERPOLATION_TYPE 3
+#ifndef MIN
+#define MIN(x,y) ((x < y) ? x : y)
+#endif
+#ifndef MAX
+#define MAX(x,y) ((x > y) ? x : y)
+#endif
 // 3 -> LINEAR
 // 5 -> BICUBIC
 template <typename T>
@@ -38,6 +46,11 @@ RawImageFileIterator<T>::~RawImageFileIterator() {
     delete distribution_;
   }
   delete disp_;
+}
+
+template<typename T>
+int RawImageFileIterator<T>::GetDataSetSize() const {
+  return num_positions_ * dataset_size_;
 }
 
 template<typename T>
@@ -118,6 +131,26 @@ void RawImageFileIterator<T>::SampleNoiseDistributions(const int chunk_size) {
     scale_[i] = min_scale_ + (1 - min_scale_) * (*distribution_)(generator_);
   }
 }
+template<typename T>
+void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row) const {
+  float trans_x = 0.5, trans_y = 0.5, scale = 1;
+  if (random_jitter_) {
+    int ind = row % angles_.size();
+    //float angle = angles_[ind];
+    trans_x = trans_x_[ind];
+    trans_y = trans_y_[ind];
+    scale = 1; //scale_[ind];
+  }
+
+  int size = (int)(scale * ((width < height) ? width : height));
+  int left = (int)((width - size) * trans_x);
+  int top = (int)((height - size) * trans_y);
+  float resize_scale = (float)raw_image_size_ / size;
+  b.xmin = (b.xmin - left) * resize_scale;
+  b.ymin = (b.ymin - top) * resize_scale;
+  b.xmax = (b.xmax - left) * resize_scale;
+  b.ymax = (b.ymax - top) * resize_scale;
+}
 
 template<typename T>
 void RawImageFileIterator<T>::AddRandomJitter(CImg<T>& image, int row) const {
@@ -150,9 +183,14 @@ void RawImageFileIterator<T>::AddRandomJitter(CImg<T>& image, int row) const {
 }
 
 template <typename T>
+void RawImageFileIterator<T>::LoadImageFile(const int row, CImg<T>& image) const {
+  image.assign(filenames_[row].c_str());
+}
+
+template <typename T>
 void RawImageFileIterator<T>::Get(T* data_ptr, const int row, const int position) const {
-  const string& filename = filenames_[row];
-  CImg<T> image(filename.c_str());
+  CImg<T> image;
+  LoadImageFile(row, image);
   if (random_jitter_) {
     AddRandomJitter(image, row);
   }
@@ -164,8 +202,7 @@ template <typename T>
 void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int position) {
   if (image_id_ != row) {  // Load a new image from disk.
     image_id_ = row;
-    string& filename = filenames_[row];
-    image_.assign(filename.c_str());
+    LoadImageFile(row, image_);
     
     if (random_jitter_) {
       AddRandomJitter(image_, row);
@@ -260,3 +297,182 @@ void SlidingWindowIterator<T>::GetNext(T* data_ptr, int center_x, int center_y) 
 template class SlidingWindowIterator<float>;
 template class SlidingWindowIterator<unsigned char>;
 
+template <typename T>
+BBoxImageFileIterator<T>::BBoxImageFileIterator(
+  const string& filelist, const string& bbox_file, const int image_size,
+  const int raw_image_size, const bool flip, const bool translate,
+  const bool random_jitter, const int max_angle, const float min_scale,
+  const float context_factor, const bool center_on_bbox) :
+  RawImageFileIterator<T>(filelist, image_size, raw_image_size, flip, translate, random_jitter, max_angle, min_scale),
+  context_factor_(context_factor), center_on_bbox_(center_on_bbox) {
+  ifstream f(bbox_file, ios::in);
+  string line;
+  // The format for each line is -
+  // <width> <height> <xmin1> <ymin1> <xmax1> <ymax1> <xmin2> <ymin2> ...
+  while (getline(f, line)) {
+    istringstream iss(line);
+    vector<string> tokens;
+    copy(istream_iterator<string>(iss), istream_iterator<string>(),
+         back_inserter<vector<string> >(tokens));
+    int num_tokens = tokens.size();
+    if (num_tokens <= 2 || (num_tokens - 2) % 4 != 0) {
+      cerr << "Error parsing line " << line << endl;
+      exit(1);
+    }
+    int num_boxes = (num_tokens - 2) / 4;
+    vector<box> b_list (num_boxes);
+    for (int i = 0; i < num_boxes; i++) {
+      b_list[i].xmin = atoi(tokens[2+4*i  ].c_str());
+      b_list[i].ymin = atoi(tokens[2+4*i+1].c_str());
+      b_list[i].xmax = atoi(tokens[2+4*i+2].c_str());
+      b_list[i].ymax = atoi(tokens[2+4*i+3].c_str());
+    }
+    data_.push_back(b_list);
+  }
+  f.close();
+  distribution_ = new uniform_real_distribution<float>(0, 1);
+}
+
+template<typename T>
+BBoxImageFileIterator<T>::~BBoxImageFileIterator() {
+  delete distribution_;
+}
+
+template<typename T>
+void BBoxImageFileIterator<T>::SampleNoiseDistributions(const int chunk_size) {
+  RawImageFileIterator<T>::SampleNoiseDistributions(chunk_size);
+  box_rv_.resize(chunk_size);
+  for (int i = 0; i < chunk_size; i++) {
+    box_rv_[i] = (*distribution_)(generator_);
+  }
+}
+
+template <typename T>
+void BBoxImageFileIterator<T>::GetCropCoordinates(int row, int width, int height, int* xmin, int* xmax, int* ymin, int* ymax) const {
+  int box_id = (int)(box_rv_[row % box_rv_.size()] * data_[row].size());  // Choose a random box.
+  const box& b = data_[row][box_id];
+  int box_width = b.xmax - b.xmin;
+  int box_height = b.ymax - b.ymin;
+  int image_size = MAX(box_width, box_height) * context_factor_;
+
+  int width_slack = (image_size - box_width) / 2;
+  if (center_on_bbox_) {
+    width_slack = MIN(width_slack, b.xmin);
+    width_slack = MIN(width_slack, width - b.xmax);
+  }
+
+  int height_slack = (image_size - box_height) / 2;
+  if (center_on_bbox_) {
+    height_slack = MIN(height_slack, b.ymin);
+    height_slack = MIN(height_slack, height - b.ymax);
+  }
+
+  *xmin = MAX(0, b.xmin - width_slack);
+  *ymin = MAX(0, b.ymin - height_slack);
+  *xmax = MIN(width, b.xmax + width_slack);
+  *ymax = MIN(height, b.ymax + height_slack);
+}
+
+/** Crop the bounding box region. */
+template <typename T>
+void BBoxImageFileIterator<T>::LoadImageFile(const int row, CImg<T>& image) const {
+  RawImageFileIterator<T>::LoadImageFile(row, image);
+  int xmin, ymin, xmax, ymax;
+  GetCropCoordinates(row, image.width(), image.height(), &xmin, &xmax, &ymin, &ymax);
+  image.crop(xmin, ymin, xmax-1, ymax-1, true);
+}
+
+
+template<typename T>
+void BBoxImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row) const {
+  int xmin, ymin, xmax, ymax;
+  GetCropCoordinates(row, width, height, &xmin, &xmax, &ymin, &ymax);
+  b.xmin -= xmin; 
+  b.xmax -= xmin; 
+  b.ymin -= ymin; 
+  b.ymax -= ymin; 
+  RawImageFileIterator<T>::RectifyBBox(b, xmax - xmin, ymax - ymin, row);
+}
+
+template class BBoxImageFileIterator<float>;
+template class BBoxImageFileIterator<unsigned char>;
+
+
+template <typename T>
+CropIterator<T>::CropIterator(const int image_size, const float context_factor, const bool warp_bbox):
+  image_size_(image_size), done_(true), index_(0), context_factor_(context_factor), warp_bbox_(warp_bbox) {}
+
+template <typename T>
+void CropIterator<T>::SetImage(const string& filename, const vector<box>& crops) {
+  image_.assign(filename.c_str());
+  crops_ = crops;
+  done_ = false;
+  index_ = 0;
+}
+
+template <typename T>
+void CropIterator<T>::Reset() {
+  done_ = true;
+}
+
+template <typename T>
+bool CropIterator<T>::Done() {
+  return done_;
+}
+
+template <typename T>
+void CropIterator<T>::GetNext(T* data_ptr) {
+  const box& b = crops_[index_++];
+
+  int left, top, right, bottom;
+
+  if (warp_bbox_) {
+    left = b.xmin;
+    top = b.ymin;
+    right = b.xmax;
+    bottom = b.ymax;
+    left = MAX(0, left);
+    top  = MAX(0, top);
+    right = MIN(image_.width(), right);
+    bottom = MIN(image_.height(), bottom);
+  } else {
+    int width = b.xmax - b.xmin;
+    int height = b.ymax - b.ymin;
+    int size = int(MAX(width, height) * context_factor_);
+    int width_slack = size - width;
+    int height_slack = size - height;
+    left = b.xmin - width_slack / 2;
+    top  = b.ymin - height_slack / 2;
+    right = b.xmin + size;
+    bottom = b.ymin + size;
+  }
+  /*
+  int left = MAX(0, b.xmin - width_slack / 2);
+  int top  = MAX(0, b.ymin - height_slack / 2);
+  int right = MIN(image_.width(), b.xmax + width_slack - width_slack / 2);
+  int bottom = MIN(image_.height(), b.ymax + height_slack - height_slack / 2);
+  */
+
+  CImg<T> img = image_.get_crop(left, top, right - 1, bottom - 1, false);
+  img.resize(image_size_, image_size_, 1, -100, INTERPOLATION_TYPE);
+
+  int num_image_colors = img.spectrum();
+  int num_pixels = image_size_ * image_size_;
+  if (num_image_colors >= 3) {  // Image has 3 channels.
+    memcpy(data_ptr, img.data(), 3 * num_pixels * sizeof(T));
+  } else if (num_image_colors == 1) {  // Image has 1 channel.
+    for (int i = 0; i < 3; i++) {
+      memcpy(data_ptr + i * num_pixels, img.data(), num_pixels * sizeof(T));
+    }
+  } else {
+    cerr << "Image has " << num_image_colors << "colors." << endl;
+    exit(1);
+  }
+  if (index_ == crops_.size()) {
+    done_ = true;
+    index_ = 0;
+  }
+}
+
+template class CropIterator<float>;
+template class CropIterator<unsigned char>;
