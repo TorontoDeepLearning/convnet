@@ -54,12 +54,9 @@ class ConvNet {
   void Display();
   
   /** Write the state of the layers to disk.
-   * This method runs the model on the specified dataset and writes the layer
-   * states out to disk in a hdf5 file.
-   * @param output_file: The name of the output hdf5 file.
-   * @param dataset: The dataset to be run.
-   * @param layer_names: The names of the layers whose state needs to be written
-   * out.
+   * Runs the model on the dataset specified in config and writes
+   * the requested layer states out to disk in a hdf5 file.
+   * @param config Feature extractor configuartion.
    */ 
   void ExtractFeatures(const config::FeatureExtractorConfig& config);
   void ExtractFeatures(const string& config_file);
@@ -170,6 +167,7 @@ class ConvNet {
   ImageDisplayer displayer_;
   string model_filename_, timestamp_, log_file_, val_log_file_;
 
+  // Field of view.
   int fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
   int num_fov_x_, num_fov_y_;
   bool localizer_;
