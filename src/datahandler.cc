@@ -68,7 +68,7 @@ void DataHandler::AllocateMemory() {
     int num_dims = it->GetDims();
     Matrix::SetDevice(it->GetGPUId());
     Matrix& data = data_[layer_name];
-    data.AllocateGPUMemory(num_dims, chunk_size_);
+    data.AllocateGPUMemory(num_dims, chunk_size_, "databuffer");
   }
 }
 
@@ -382,8 +382,8 @@ void DataIterator::LoadMeans(const string& data_file) {
     pixel_std.Reshape(1, -1);
     int num_channels = pixel_mean.GetCols();
     int num_pixels = num_dims_ / num_channels;
-    mean_.AllocateGPUMemory(num_pixels, num_channels);
-    std_.AllocateGPUMemory(num_pixels, num_channels);
+    mean_.AllocateGPUMemory(num_pixels, num_channels, "normalizer");
+    std_.AllocateGPUMemory(num_pixels, num_channels, "normalizer");
 
     mean_.AddRowVec(pixel_mean);
     std_.AddRowVec(pixel_std);

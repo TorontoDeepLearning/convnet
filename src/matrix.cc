@@ -9,6 +9,7 @@ vector<rnd_struct> Matrix::rnd_;
 vector<Matrix> Matrix::ones_, Matrix::temp_;
 vector<int> Matrix::boards_, Matrix::temp_size_, Matrix::ones_size_;
 int Matrix::current_gpu_id_ = 0, Matrix::num_boards_ = 0;
+map<string, long> Matrix::gpu_memory_;
 
 Matrix::Matrix() {
   mat_.data_host = NULL;
@@ -31,6 +32,7 @@ Matrix::~Matrix() {
   if (mat_.owns_data == 1) {
     if(mat_.data_host != NULL) free(mat_.data_host);
     free_device_memory(&mat_);
+    gpu_memory_[name_] = 0;
   }
 }
 
@@ -61,7 +63,10 @@ void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& nam
       cerr << "This should not happen" << endl;
       exit(1);
     }
-    if (GetNumEls() > 0) free_device_memory(&mat_);
+    if (GetNumEls() > 0) {
+      Matrix::gpu_memory_[name] -= GetNumEls() * sizeof(float);
+      free_device_memory(&mat_);
+    }
     AllocateMainMemory(rows, cols);
     CopyToDevice();
     mat_.owns_data = 1;
@@ -70,7 +75,36 @@ void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& nam
     //const int size = (rows * cols * sizeof(float)) >> 20;
     //cout << "Allocated GPU memory " << rows << " * " << cols << " " << size << "MB for " << name << endl;
     cuda_create_event(&ready_);
+    Matrix::gpu_memory_[name] += GetNumEls() * sizeof(float);
   }
+}
+
+void Matrix::ShowMemoryUsage() {
+  map<string, long> summary;
+  map<string, string> groups;
+  groups["deriv"] = "layer";
+  groups["state"] = "layer";
+  groups["data"] = "layer";
+  groups["bias"] = "edge";
+  groups["optimizer"] = "edge";
+  groups["weight"] = "edge";
+  groups[""] = "misc";
+  for(auto it : Matrix::gpu_memory_) {
+    const string& name = it.first;
+    size_t pos = name.find_last_of(" _");
+    string group = (pos != string::npos) ? name.substr(pos+1) : name;
+    //cout << name << " Group " << group << " " << it.second / (1024.0 * 1024) << " MB" << endl;
+    auto lookup = groups.find(group);
+    string key = (lookup == groups.end()) ? group : lookup->second;
+    summary[key] += it.second;
+  }
+  cout << "----- SUMMARY ------" << endl;
+  long total = 0;
+  for(auto it : summary) {
+    cout << it.first << "\t" << it.second / (1024.0 * 1024) << " MB" << endl;
+    total += it.second;
+  }
+  cout << "TOTAL " << "\t" << total / (1024.0 * 1024) << " MB" << endl;
 }
 
 void Matrix::AllocateMainMemory(const int rows, const int cols) {
@@ -316,7 +350,7 @@ void Matrix::GetOnes(int rows, int cols, Matrix& ones) {
   Matrix& o = Matrix::ones_[current_gpu_id_];
   int size = o.GetCols();
   if (size == 0) {  // Allocate memory on first call to GetOnes.
-    o.AllocateGPUMemory(1, ones_size_[current_gpu_id_]);
+    o.AllocateGPUMemory(1, ones_size_[current_gpu_id_], "ones");
     o.Set(1);
     size = ones_size_[current_gpu_id_];
   }
@@ -338,7 +372,7 @@ void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
   int size = t.GetNumEls();
   const int length = rows * cols;
   if (length > size) {  // Allocate memory as required.
-    t.AllocateGPUMemory(1, length);
+    t.AllocateGPUMemory(1, length, "temp");
     temp_size_[current_gpu_id_] = length;
     //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
@@ -627,13 +661,15 @@ void Matrix::HingeLossDeriv(Matrix& state, Matrix& gt, Matrix& deriv, bool quadr
 
 // target = alpha * target + beta * sum_rows(self)
 void Matrix::SumRows(Matrix& target, float alpha, float beta) {
-  Matrix ones;
-  Matrix::GetOnes(1, GetRows(), ones);
-  dot(ones.GetMat(), &mat_, target.GetMat(), alpha, beta);
+  sum_by_axis(&mat_, target.GetMat(), 0, beta, alpha);
+  //Matrix ones;
+  //Matrix::GetOnes(1, GetRows(), ones);
+  //dot(ones.GetMat(), &mat_, target.GetMat(), alpha, beta);
 }
 
 // target = alpha * target + beta * sum_cols(self)
 void Matrix::SumCols(Matrix& target, float alpha, float beta) {
+  //sum_by_axis(&mat_, target.GetMat(), 0, beta, alpha);  Probably not efficient.
   Matrix ones;
   Matrix::GetOnes(GetCols(), 1, ones);
   dot(&mat_, ones.GetMat(), target.GetMat(), alpha, beta);

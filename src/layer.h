@@ -112,6 +112,8 @@ class Layer {
   bool has_incoming_from_same_gpu_, has_outgoing_to_same_gpu_;
   bool has_incoming_from_other_gpus_, has_outgoing_to_other_gpus_;
 
+  static long total_gpu_memory_bytes_;
+
  protected:
   void ApplyDropoutAtTrainTime();
   void ApplyDropoutAtTestTime();

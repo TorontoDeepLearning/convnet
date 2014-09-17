@@ -648,6 +648,7 @@ int get_slice(cudamat* source, cudamat* target, unsigned int first_col, unsigned
     target->size[1] = last_col - first_col;
     target->is_trans = 0;
     target->owns_data = 0;
+    target->tex_obj = 0;
 
     return 0;
 }
@@ -702,6 +703,7 @@ void init_from_array(cudamat* mat, float* data, int m, int n) {
     mat->on_host = 1;
     mat->is_trans = 0;
     mat->owns_data = 1;
+    mat->tex_obj = 0;
 }
 
 void init_from_sparse_array(cudamat_sparse* mat, float* data, int* indices, int* indptr, int m, int n, int nnz) {
@@ -729,6 +731,7 @@ int init_empty(cudamat* mat, int m, int n) {
     mat->on_host = 0;
     mat->is_trans = 0;
     mat->owns_data = 1;
+    mat->tex_obj = 0;
 
     return allocate_device_memory(mat);
 }
@@ -1590,6 +1593,44 @@ int sqsum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) 
 
     return 0;
 }
+
+int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
+    unsigned int h = mat->size[0],
+                 w = mat->size[1];
+
+    if (!mat->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat->is_trans)
+        return ERROR_TRANSPOSED;
+
+    if (axis == 0) {
+        if (target->size[0] != 1 || target->size[1] != mat->size[1])
+            return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+        int shared_mem_size = 32 * sizeof(float) ;
+        int w1 = floor(sqrt(w));
+        int w2 = (w + w1 - 1) / w1;
+        dim3 gridDim(w1, w2, 1);
+        kSumColumnwise<<<gridDim, 32, shared_mem_size>>>(mat->data_device, target->data_device, w, h, mult, p);
+    } else if (axis == 1) {
+        if (target->size[1] != 1 || target->size[0] != mat->size[0])
+            return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+        int shared_mem_size = 32 * sizeof(float) ;
+        int h1 = floor(sqrt(h));
+        int h2 = (h + h1 - 1) / h1;
+        dim3 gridDim(h1, h2, 1);
+        kSumRowwise<<<gridDim, 32, shared_mem_size>>>(mat->data_device, target->data_device, w, h, mult, p);
+    } else
+        return ERROR_UNSUPPORTED;
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
 
 int normlimit_by_axis(cudamat* mat, cudamat* target, int axis,
                                    float norm, int constraint) {

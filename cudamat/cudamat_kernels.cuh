@@ -70,6 +70,8 @@ __global__ void kLowerBoundScalar(float* mat, float val, float* target, unsigned
 __global__ void kUpperBoundModScalar(float* mat, float val, float* target, unsigned int len);
 __global__ void kMaxColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kArgMaxColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
+__global__ void kSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
+__global__ void kSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint);

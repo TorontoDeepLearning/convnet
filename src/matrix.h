@@ -5,6 +5,7 @@
 #include "../cudamat/cudamat.cuh"
 #include "hdf5.h"
 #include <vector>
+#include <map>
 using namespace std;
 
 /** A GPU matrix class.*/
@@ -169,9 +170,11 @@ class Matrix {
   static void SyncAllDevices();
   static int GetDevice();
   static int GetNumBoards() {return num_boards_;}
+  static void ShowMemoryUsage();
 
   static vector<Matrix> ones_, temp_;
   static vector<rnd_struct> rnd_;
+  static map<string, long> gpu_memory_;
 
  private:
   cudamat mat_, mat_t_;

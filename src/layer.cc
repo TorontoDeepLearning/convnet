@@ -207,7 +207,7 @@ void Layer::AllocateMemory(int batch_size) {
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
   if (gaussian_dropout_) {
-    rand_gaussian_.AllocateGPUMemory(batch_size, num_pixels * num_channels_);
+    rand_gaussian_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " gaussian dropout");
   }
   AllocateMemoryOnOtherGPUs();
   Matrix::SetDevice(gpu_id_);
@@ -308,8 +308,7 @@ float LinearLayer::GetLoss() {
 void LinearLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
   const int num_pixels = image_size_ * image_size_;
-  if (is_output_) data_.AllocateGPUMemory(batch_size, num_pixels * num_channels_);
-  //Matrix::RegisterTempMemory(batch_size * num_channels_ * num_pixels); why did I have this?
+  if (is_output_) data_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " data");
 }
 
 ReLULayer::ReLULayer(const config::Layer& config) :
@@ -331,7 +330,7 @@ void ReLULayer::ApplyDerivativeOfActivation() {
 
 void SoftmaxLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
-  if (is_output_) data_.AllocateGPUMemory(batch_size, 1);
+  if (is_output_) data_.AllocateGPUMemory(batch_size, 1, GetName() + " data");
   Matrix::RegisterTempMemory(batch_size);
 }
 
@@ -369,7 +368,7 @@ void SoftmaxDistLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
   const int numdims = state_.GetCols();
   Matrix::RegisterTempMemory(batch_size * numdims);  // For computing CE.
-  if (is_output_) data_.AllocateGPUMemory(batch_size, numdims);
+  if (is_output_) data_.AllocateGPUMemory(batch_size, numdims, GetName() + " data");
 }
 
 void SoftmaxDistLayer::ComputeDeriv() {
@@ -386,7 +385,7 @@ float SoftmaxDistLayer::GetLoss() {
 void LogisticLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
   Matrix::RegisterTempMemory(batch_size);
-  if (is_output_) data_.AllocateGPUMemory(batch_size, num_channels_);
+  if (is_output_) data_.AllocateGPUMemory(batch_size, num_channels_, GetName() + " data");
 }
 
 void LogisticLayer::ApplyActivation(bool train) {

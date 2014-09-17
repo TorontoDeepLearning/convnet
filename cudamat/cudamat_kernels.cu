@@ -1329,6 +1329,22 @@ __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, 
   }
 }
 
+__global__ void kSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p) {
+  extern __shared__ float sum_vals[];
+  const int column = gridDim.x * blockIdx.y + blockIdx.x;
+  if (column < width) {
+    float cur_sum = 0;
+    float *cur_data = &mat[column * height] ; 
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_sum += cur_data[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal(sum_vals, threadIdx.x);
+    __syncthreads();
+    if (threadIdx.x == 0) target[column] = p * target[column] + mult * sum_vals[0];
+  }
+}
+
 __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p) {
   extern __shared__ float sum_vals[];
   const int row = gridDim.x * blockIdx.y + blockIdx.x;
@@ -1344,6 +1360,22 @@ __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, uns
     if (threadIdx.x == 0) target[row] = p * target[row] + mult * sum_vals[0];
   }
 }
+__global__ void kSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p) {
+  extern __shared__ float sum_vals[];
+  const int row = gridDim.x * blockIdx.y + blockIdx.x;
+  if (row < height) {
+    float cur_sum = 0;
+    float *cur_data = &mat[row] ; 
+    for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
+      cur_sum += cur_data[i * height];
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal(sum_vals, threadIdx.x);
+    __syncthreads();
+    if (threadIdx.x == 0) target[row] = p * target[row] + mult * sum_vals[0];
+  }
+}
+
 
 __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint) {
   extern __shared__ float sum_vals[];

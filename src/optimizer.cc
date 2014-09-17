@@ -78,7 +78,7 @@ SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
       optimizer_config.momentum_transition_timescale()) {}
 
 void SGDOptimizer::AllocateMemory(const int rows, const int cols) {
-  gradient_history_.AllocateGPUMemory(rows, cols);
+  gradient_history_.AllocateGPUMemory(rows, cols, "optimizer");
 }
 
 void SGDOptimizer::LoadParameters(hid_t file, const string& prefix) {
@@ -143,14 +143,14 @@ LBFGSOptimizer::LBFGSOptimizer(const config::Optimizer& optimizer_config) :
 }
 
 void LBFGSOptimizer::AllocateMemory(const int rows, const int cols) {
-  q_.AllocateGPUMemory(rows, cols);
-  last_w_.AllocateGPUMemory(rows, cols);
-  last_q_.AllocateGPUMemory(rows, cols);
+  q_.AllocateGPUMemory(rows, cols, "optimizer");
+  last_w_.AllocateGPUMemory(rows, cols, "optimizer");
+  last_q_.AllocateGPUMemory(rows, cols, "optimizer");
   last_w_.FillWithRandn();
   last_q_.FillWithRandn();
   for (int i = 0; i < m_; i++) {
-    s_[i].AllocateGPUMemory(rows, cols);
-    y_[i].AllocateGPUMemory(rows, cols);
+    s_[i].AllocateGPUMemory(rows, cols, "optimizer");
+    y_[i].AllocateGPUMemory(rows, cols, "optimizer");
   }
 }
 

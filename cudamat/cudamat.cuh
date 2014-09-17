@@ -157,6 +157,7 @@ int choose_max_and_accumulate(cudamat* mat, cudamat* acc);
 int choose_max_by_axis(cudamat* mat, cudamat* target, int axis);
 int argmax_by_axis(cudamat* mat, cudamat* target, int axis);
 int sqsum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p);
+int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p);
 int normlimit_by_axis(cudamat* mat, cudamat* target, int axis, float norm, int constraint);
 int sign(cudamat* mat, cudamat* target);
 int apply_cos(cudamat* mat, cudamat* target);

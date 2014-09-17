@@ -342,6 +342,8 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
 void ConvNet::AllocateMemory(bool fprop_only) {
   AllocateLayerMemory();
   AllocateEdgeMemory(fprop_only);
+  //cout << "Total GPU Memory consumption" << endl;
+  //cout << "Layers: " << Layer::total_gpu_memory_bytes_ / (1024.0 * 1024) << " MB" << endl;
 }
 
 void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
@@ -645,7 +647,9 @@ void ConvNet::Train() {
   const int lr_max_reduce = model_.reduce_lr_max();
   bool newline;
 
+  Matrix::ShowMemoryUsage();
   for(int i = current_iter_; i < model_.max_iter(); i++) {
+    if (i == 2) Matrix::ShowMemoryUsage();
     current_iter_++;
     cout << "\rStep " << current_iter_;
     cout.flush();
