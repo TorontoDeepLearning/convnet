@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
       start_t = end_t;
       cout << endl;
     }
-    delete data;
+    delete[] data;
     for (ofstream& f : outf) {
       f.close();
     }

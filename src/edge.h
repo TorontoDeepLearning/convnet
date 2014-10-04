@@ -14,7 +14,7 @@ class Edge {
  public:
   /** Instatntiate an Edge from the config.*/
   Edge(const config::Edge& edge_config);
-  ~Edge();
+  virtual ~Edge();
   
   /** Allocate memory for the model.
    * @param fprop_only If true, does not allocate memory needed for optimization.

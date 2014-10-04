@@ -8,7 +8,7 @@
 class Optimizer {
  public:
   Optimizer(const config::Optimizer& optimizer_config);
-  ~Optimizer();
+  virtual ~Optimizer();
 
   // Allocate any memory needed.
   virtual void AllocateMemory(const int rows, const int cols);
