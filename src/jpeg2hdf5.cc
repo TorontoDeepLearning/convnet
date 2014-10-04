@@ -73,7 +73,7 @@ int main(int argc, char ** argv) {
     cout << endl;
     H5Sclose(mem_dataspace);
     H5Fclose(file);
-    delete image_buf;
+    delete[] image_buf;
   } catch (TCLAP::ArgException &e)  {
     cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
   }
