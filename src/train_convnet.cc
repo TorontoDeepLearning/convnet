@@ -1,41 +1,61 @@
+/*
+ * Copyright 2014 Google Inc. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "multigpu_convnet.h"
+
+#include <opencv2/core.hpp>
+
 #include <iostream>
-#include <tclap/CmdLine.h>
+
 using namespace std;
+using namespace cv;
 
 int main(int argc, char** argv) {
-  try {
-    TCLAP::CmdLine cmd("ConvNet", ' ', "1.0");
-    TCLAP::MultiArg<int> board_arg(
-        "b", "board", "GPU board(s)", true, "integer");
-    TCLAP::ValueArg<std::string> model_file_arg(
-        "m", "model", "Model pbtxt file", true, "", "string");
-    TCLAP::ValueArg<std::string> train_data_file_arg(
-        "t", "train", "Training data pbtxt file", true, "", "string");
-    TCLAP::ValueArg<std::string> val_data_file_arg(
-        "v", "val", "Validation data pbtxt file", false, "", "string");
-    
-    cmd.add(board_arg);
-    cmd.add(model_file_arg);
-    cmd.add(train_data_file_arg);
-    cmd.add(val_data_file_arg);
+    const char *keys =
+            "{ board b || GPU board(s): 0 or 012, etc. }"
+            "{ model m || Model pbtxt file }"
+            "{ train t || Training data pbtxt file }"
+            "{ val   v || Validation data pbtxt file }";
+    CommandLineParser parser(argc, argv, keys);
+    string board(parser.get<string>("board"));
+    string model_file(parser.get<string>("model"));
+    string train_data_file(parser.get<string>("train"));
+    string val_data_file(parser.get<string>("val"));
+    if (board.empty() || model_file.empty() || train_data_file.empty())
+    {
+        parser.printMessage();
+        return -1;
+    }
 
-    cmd.parse(argc, argv);
-
-    const string& model_file = model_file_arg.getValue();
-    const string& val_data_file = val_data_file_arg.getValue();
-    const string& train_data_file = train_data_file_arg.getValue();
-    const vector<int>& boards = board_arg.getValue();
-    
+    vector<int> boards;
+    for (auto b:board)
+    {
+        string currBoard;
+        currBoard.push_back(b);
+        boards.push_back(atoi(currBoard.c_str()));
+    }
     bool multi_gpu = boards.size() > 1; 
-    
+
     // Setup GPU boards.
     if (multi_gpu) {
       Matrix::SetupCUDADevices(boards);
     } else {
       Matrix::SetupCUDADevice(boards[0]);
     }
-    for (const int &b : boards){
+    for (const int &b : boards) {
       cout << "Using board " << b << endl;
     }
 
@@ -49,8 +69,6 @@ int main(int argc, char** argv) {
     net->AllocateMemory(false);
     net->Train();
     delete net;
-  } catch (TCLAP::ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
-  return 0;
+
+    return 0;
 }
