@@ -6,7 +6,10 @@
 class ConvEdge : public EdgeWithWeight {
  public:
   ConvEdge(const config::Edge& edge_config);
-  virtual void AllocateMemory(bool fprop_only);
+  virtual string GetDescription();
+  virtual void SetMemory(Matrix& p);
+  virtual void SetGradMemory(Matrix& p);
+  virtual size_t GetParameterMemoryRequirement();
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
@@ -25,9 +28,6 @@ class ConvEdge : public EdgeWithWeight {
   bool GetSharedBias() const { return shared_bias_; }
 
  private:
-  void AllocateMemoryBprop();
-  void AllocateMemoryFprop();
-
   Matrix grad_weights_partial_sum_;
   int kernel_size_, stride_, padding_, partial_sum_;
   bool shared_bias_;

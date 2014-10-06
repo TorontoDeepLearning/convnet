@@ -52,7 +52,17 @@ Layer::Layer(const config::Layer& config) :
   scale_targets_(0),
   image_size_(0),
   img_display_(NULL),
-  gpu_id_(config.gpu_id()){}
+  gpu_id_(config.gpu_id()){
+
+  add_or_overwrite_state_[""] = true;
+  add_or_overwrite_deriv_[""] = true;
+  for (const config::LayerSlice& s:config.layer_slice()) {
+    slice_channels_[s.name()] = s.num_channels();
+    num_channels_ += s.num_channels();
+    add_or_overwrite_state_[s.name()] = true;
+    add_or_overwrite_deriv_[s.name()] = true;
+  }
+}
 
 Layer:: ~Layer() {
   if (img_display_ != NULL) delete img_display_;
@@ -201,16 +211,107 @@ void Layer::SetSize(int image_size) {
   }
 }
 
+void Layer::SetupSlices() {
+  int start = 0, end;
+  const int num_pixels = image_size_ * image_size_;
+  for (auto& kv : slice_channels_) {
+    end = start + num_pixels * kv.second;
+    state_.GetSlice(state_slices_[kv.first], start, end);
+    deriv_.GetSlice(deriv_slices_[kv.first], start, end);
+    start = end;
+  }
+}
+
 void Layer::AllocateMemory(int batch_size) {
   const int num_pixels = image_size_ * image_size_;
   Matrix::SetDevice(gpu_id_);
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
+
   if (gaussian_dropout_) {
     rand_gaussian_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " gaussian dropout");
   }
+  SetupSlices();
+
   AllocateMemoryOnOtherGPUs();
   Matrix::SetDevice(gpu_id_);
+}
+
+Matrix& Layer::GetState() {
+  return state_;
+}
+
+Matrix& Layer::GetState(const string& slice) {
+  if (slice.empty()) {
+    return state_;
+  } else {
+    auto it = state_slices_.find(slice);
+    if (it == state_slices_.end()) {
+      cerr << "Layer " << name_ << " does not contain a slice called " << slice << endl;
+      exit(1);
+    }
+    return it->second;
+  }
+}
+
+bool Layer::AddOrOverwriteState(const string& slice) {
+  auto it = add_or_overwrite_state_.find(slice);
+  if (it == add_or_overwrite_state_.end()) {
+    cerr << "Layer " << name_ << " does not contain a slice called " << slice << endl;
+    exit(1);
+  }
+  bool val = it->second;
+  it->second = false;
+  return val;
+}
+
+bool Layer::AddOrOverwriteDeriv(const string& slice) {
+  auto it = add_or_overwrite_deriv_.find(slice);
+  if (it == add_or_overwrite_deriv_.end()) {
+    cerr << "Layer " << name_ << " does not contain a slice called " << slice << endl;
+    exit(1);
+  }
+  bool val = it->second;
+  it->second = false;
+  return val;
+}
+
+void Layer::ResetAddOrOverwrite() {
+  for (auto& kv : add_or_overwrite_state_) kv.second = true;
+  for (auto& kv : add_or_overwrite_deriv_) kv.second = true;
+}
+
+int Layer::GetNumChannels(const string& slice) const {
+  int res = 0;
+  if (slice.empty()) {
+    res = num_channels_;
+  } else {
+    auto it = slice_channels_.find(slice);
+    if (it == slice_channels_.end()) {
+      cerr << "Layer " << name_ << " does not contain a slice called " << slice << endl;
+      exit(1);
+    } else {
+      res = it->second;
+    }
+  }
+  return res;
+}
+
+Matrix& Layer::GetDeriv() {
+  return deriv_;
+}
+
+Matrix& Layer::GetDeriv(const string& slice) {
+  if (slice.empty()) {
+    return deriv_;
+  } else {
+    auto it = deriv_slices_.find(slice);
+    if (it == deriv_slices_.end()) {
+      cerr << "Layer " << name_ << " does not contain a slice called " << slice << endl;
+      exit(1);
+    }
+    return it->second;
+  }
 }
 
 void Layer::ApplyDropoutAtTrainTime() {

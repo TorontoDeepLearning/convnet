@@ -8,6 +8,9 @@
 #define __USE_GNU
 #endif
 
+#ifdef USE_MPI
+#include "mpi.h"
+#endif
 #include <string>
 #define cimg_use_jpeg
 #define cimg_use_lapack
@@ -22,8 +25,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 #include <ucontext.h>
 #include <unistd.h>
+
+#define MPITAG_WEIGHTGRAD 11
+#define MPITAG_TRAINERROR 12
 
 using namespace cimg_library;
 using namespace std;

@@ -3550,12 +3550,12 @@ void ContrastNormUndo(cudamat* outGrads, cudamat* denoms, cudamat* meanDiffs, cu
 }
 
 // Pooling.
-void MaxPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX){
+void MaxPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX, float scaleTargets){
   MaxPooler mpooler;
   convLocalPool<MaxPooler>(images, targets, numFilters, subsX, startX, strideX, outputsX, mpooler);
 }
 
-void AvgPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX){
+void AvgPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX, float scaleTargets){
   AvgPooler pooler = AvgPooler();
   convLocalPool<AvgPooler>(images, targets, numFilters, subsX, startX, strideX, outputsX, pooler);
 }
@@ -3567,12 +3567,12 @@ void ProbMaxPool(cudamat* images, cudamat* rnd, cudamat* targets, int numFilters
 */
 
 
-void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs, cudamat* targets, int subsX, int startX, int strideX, int outputsX){
-  convLocalMaxUndo(images, maxGrads, maxActs, targets, subsX, startX, strideX, outputsX, 0, 1);
+void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs, cudamat* targets, int subsX, int startX, int strideX, int outputsX, float scaleTargets){
+  convLocalMaxUndo(images, maxGrads, maxActs, targets, subsX, startX, strideX, outputsX, scaleTargets, 1);
 }
 
-void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, int subsX, int startX, int strideX, int outputsX, int imgSize) {
-  convLocalAvgUndo(avgGrads, targets, subsX, startX, strideX, outputsX, imgSize, 0, 1);
+void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, int subsX, int startX, int strideX, int outputsX, int imgSize, float scaleTargets) {
+  convLocalAvgUndo(avgGrads, targets, subsX, startX, strideX, outputsX, imgSize, scaleTargets, 1);
 }
 
 void UpSample(cudamat* images, cudamat* targets, int factor, int input_image_size, float scaleTargets) { 

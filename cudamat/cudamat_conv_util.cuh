@@ -30,7 +30,7 @@
 #endif
 
 #define NUM_BLOCKS_MAX                      65535
-#define TEXTURE_SIZE_MAX                    (1<<29)
+#define TEXTURE_SIZE_MAX                    (1 << 29)
 
 #define NUM_RND_BLOCKS                      96
 #define NUM_RND_THREADS_PER_BLOCK           128

@@ -6,14 +6,13 @@
 class FCEdge : public EdgeWithWeight {
  public:
   FCEdge(const config::Edge& edge_config);
-  virtual void AllocateMemory(bool fprop_only);
+  virtual string GetDescription();
+  virtual void SetMemory(Matrix& p);
+  virtual void SetGradMemory(Matrix& p);
+  virtual size_t GetParameterMemoryRequirement();
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
   virtual void ComputeOuter(Matrix& input, Matrix& deriv_output);
-
- private:
-  void AllocateMemoryBprop();
-  void AllocateMemoryFprop();
 };
 #endif

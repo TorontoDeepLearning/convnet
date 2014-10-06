@@ -22,6 +22,17 @@ void LocalEdge::DisplayWeights() {
   }
 }
 
+string LocalEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " "
+     << " Local Kernel: " << kernel_size_ << "-" << kernel_size_ << "-"
+     << num_input_channels_ << " : " << num_output_channels_
+     << " Layer: " << image_size_ << "-" << image_size_ << "-"
+     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << "-" << num_output_channels_ << endl;
+  return ss.str();
+}
+
 void LocalEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
@@ -36,45 +47,31 @@ void LocalEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
   *pad2 = (*pad2) * stride_ + effective_right_pad;
 }
 
-void LocalEdge::AllocateMemoryFprop() {
+
+size_t LocalEdge::GetParameterMemoryRequirement() {
+  if (is_tied_) return 0;
+ 
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_
                    * num_modules_ * num_modules_;
   int bias_locs = num_modules_ * num_modules_;
-  weights_.AllocateGPUMemory(num_output_channels_, input_size);
-  bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
-
+  return num_output_channels_ * (input_size + (has_no_bias_ ? 0 : bias_locs));
 }
 
-void LocalEdge::AllocateMemoryBprop() {
-  int input_size = kernel_size_ * kernel_size_ * num_input_channels_
-                   * num_modules_ * num_modules_;
-  int bias_locs = num_modules_ * num_modules_;
-  // Matrix for storing the current gradient.
-  grad_weights_.AllocateGPUMemory(num_output_channels_, input_size);
-
-  weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
-
-  grad_bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
-  bias_optimizer_->AllocateMemory(1, num_output_channels_ * bias_locs);
-}
-
-void LocalEdge::AllocateMemory(bool fprop_only) {
+void LocalEdge::SetMemory(Matrix& p) {
   if (is_tied_) return;
-  Edge::AllocateMemory(fprop_only);
-  
-  num_modules_ = (image_size_ + 2 * padding_ - kernel_size_) / stride_ + 1;
+  Edge::SetMemory(p);
+ 
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_
+                   * num_modules_ * num_modules_;
+  int bias_locs = num_modules_ * num_modules_;
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(weights_, 0, input_size);
 
-  cout << name_ << " ";
-  printf("Kernel: %d-%d-%d to %d ", kernel_size_, kernel_size_,
-         num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
-         image_size_ * image_size_ * num_input_channels_);
-  
-  AllocateMemoryFprop();
-  if (!fprop_only) AllocateMemoryBprop();
-
-  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols()
-       << " Locally Connected" << endl;
+  if(!has_no_bias_) {
+    p.GetSlice(bias_, input_size, input_size + bias_locs);
+    bias_.Reshape(1, -1);
+  }
+ 
   if (num_input_channels_ == 3) {
     int num_filters = num_output_channels_;
     int num_filters_w = int(sqrt(num_filters));
@@ -84,6 +81,26 @@ void LocalEdge::AllocateMemory(bool fprop_only) {
     img_display_ = new ImageDisplayer(width, height, 3, false, "weights");
   }
 }
+
+void LocalEdge::SetGradMemory(Matrix& p) {
+  if (is_tied_) return;
+  Edge::SetGradMemory(p);
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_
+                   * num_modules_ * num_modules_;
+  int bias_locs = num_modules_ * num_modules_;
+  // Matrix for storing the current gradient.
+
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(grad_weights_, 0, input_size);
+  weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
+
+  if(!has_no_bias_) {
+    p.GetSlice(grad_bias_, input_size, input_size + bias_locs);
+    grad_bias_.Reshape(1, -1);
+    bias_optimizer_->AllocateMemory(1, num_output_channels_ * bias_locs);
+  }
+}
+
 
 void LocalEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;

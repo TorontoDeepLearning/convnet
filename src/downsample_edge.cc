@@ -4,6 +4,16 @@ DownSampleEdge::DownSampleEdge(const config::Edge& edge_config) :
   Edge(edge_config),
   sample_factor_(edge_config.sample_factor()) {}
 
+string DownSampleEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " "
+     << " Downsample factor " << sample_factor_
+     << " Layer: " << image_size_ << "-" << image_size_ << "-"
+     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << "-" << num_output_channels_ << endl;
+  return ss.str();
+}
+
 void DownSampleEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = image_size / sample_factor_;

@@ -15,6 +15,12 @@ def ReadModel(proto_file):
   proto_pbtxt = open(proto_file, 'r')
   txt = proto_pbtxt.read().replace(';', '')
   text_format.Merge(txt, proto)
+
+  for l in proto.layer:
+    num_channels = l.num_channels
+    for ls in l.layer_slice:
+      num_channels += ls.num_channels
+    l.num_channels = num_channels
   return proto
 
 def AddSubnet(model, subnet):
@@ -59,11 +65,41 @@ def SetIO(model):
   for layer in model.layer:
     layer.is_input = layer.name not in dest_layers
     layer.is_output = layer.name not in source_layers
+  for layer in model.layer:
+    print layer.name, layer.is_input, layer.is_output
+
+
+def Sort(model):
+  S = []
+  L = []
+  outgoing_edge = {}
+  incoming_edge = {}
+  mark = {}
+  for l in model.layer:
+    outgoing_edge[l.name] = [e for e in model.edge if e.source == l.name]
+    incoming_edge[l.name] = [e for e in model.edge if e.dest == l.name]
+  for e in model.edge:
+    mark[GetName(e)] = False
+
+  for l in model.layer:
+    if l.is_input:
+      S.append(l)
+  while len(S) > 0:
+    n = S.pop()
+    L.append(n)
+    for e in outgoing_edge[n.name]:
+      mark[GetName(e)] = True
+      m = next(l for l in model.layer if l.name == e.dest)
+      if reduce(lambda x, y: x and y, [mark[GetName(ee)] for ee in incoming_edge[m.name]], True):
+        S.append(m)
+  return L
+
 
 def GetSizes(model):
   size_dict = {}
   patch_size = model.patch_size
-  for l in model.layer:
+  L = Sort(model)
+  for l in L:
     if l.is_input:
       size = patch_size
     else:
@@ -96,8 +132,9 @@ def main():
   for subnet in model.subnet:
     AddSubnet(model, subnet)
   SetIO(model)
-  output = open(sys.argv[2], 'w')
   size_dict = GetSizes(model)
+  
+  output = open(sys.argv[2], 'w')
   output.write('digraph G {\n')
 
   show_gpu = True

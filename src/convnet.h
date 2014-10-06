@@ -109,9 +109,8 @@ class ConvNet {
    * @param input the input layer.
    * @param output the output layer.
    * @param edge the edge connecting the input to the output.
-   * @param overwrite If true, overwrite the state present in output, else add to it.
    */ 
-  void Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite);
+  void Fprop(Layer& input, Layer& output, Edge& edge);
   
   /** Back propagate through one layer.
    * Passes down the gradients from the output layer to the input layer.
@@ -119,21 +118,19 @@ class ConvNet {
    * @param output the output layer (gradients w.r.t this have been computed).
    * @param input the input layer (gradients w.r.t this will be computed here).
    * @param edge the edge connecting the input to the output.
-   * @param overwrite If true, overwrite the deriv present in input, else add
-   * to it.
-   * @param update_weights If true, the weights will be updated.
    */ 
-  virtual void Bprop(Layer& output, Layer& input, Edge& edge, bool overwrite, bool update_weights);
+  virtual void Bprop(Layer& output, Layer& input, Edge& edge);
 
-
-  /** Backpropagate through the network and update weights.*/ 
-  virtual void Bprop(bool update_weights);
+  /** Backpropagate through the network.*/ 
+  virtual void Bprop();
   
   /** Computes the derivative of the loss function.*/ 
   virtual void ComputeDeriv();
 
   /** Computes the loss function (to be displayed).*/ 
   virtual void GetLoss(vector<float>& error);
+  
+  virtual void UpdateWeights();
 
   /** Takes one optimization step.*/ 
   virtual void TrainOneBatch(vector<float>& error);
@@ -146,6 +143,11 @@ class ConvNet {
   void WriteLog(int current_iter, float time, const vector<float>& training_error);
   void WriteValLog(int current_iter, const vector<float>& error);
   
+  // Data parallel synchronization.
+  void Accumulate(Matrix& mat, int tag);
+  void Accumulate(vector<float>& v, int tag);
+  void Broadcast(Matrix& mat);
+
   /** Decides if learning rate should be reduced.*/
   bool CheckReduceLearningRate(const vector<float>& val_error);
 
@@ -171,6 +173,12 @@ class ConvNet {
   int fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
   int num_fov_x_, num_fov_y_;
   bool localizer_;
+
+  int process_id_;  // MPI rank.
+  int num_processes_;  // Number of data parallel processes.
+  bool is_root_;  // The process that is root.
+
+  Matrix parameters_, grad_parameters_;
 
   // a+=b;
   static void AddVectors(vector<float>& a, vector<float>& b);

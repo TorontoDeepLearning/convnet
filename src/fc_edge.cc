@@ -4,35 +4,46 @@
 FCEdge::FCEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config){}
 
-void FCEdge::AllocateMemoryBprop() {
-  int input_size = image_size_ * image_size_ * num_input_channels_;
-  grad_weights_.AllocateGPUMemory(num_output_channels_, input_size, GetName() + "_grad_weight");
+size_t FCEdge::GetParameterMemoryRequirement() {
+  if (is_tied_) return 0;
+  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  return num_output_channels_ * (input_size + (has_no_bias_ ? 0 : 1));
+}
+
+string FCEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " Fully Connected :" << image_size_ << "-" << image_size_
+     << "-" << num_input_channels_ << ":" << num_output_channels_;
+  return ss.str();
+}
+
+void FCEdge::SetMemory(Matrix& p) {
+  if (is_tied_) return;
+  Edge::SetMemory(p);
+  
+  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(weights_, 0, input_size);
+  if (!has_no_bias_) {
+    p.GetSlice(bias_, input_size, input_size + 1);
+    bias_.Reshape(1, -1);
+  }
+}
+
+void FCEdge::SetGradMemory(Matrix& p) {
+  if (is_tied_) return;
+  Edge::SetGradMemory(p);
+  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(grad_weights_, 0, input_size);
+
   weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
 
   if (!has_no_bias_) {
-    grad_bias_.AllocateGPUMemory(1, num_output_channels_, GetName() + "_grad_bias");
+    p.GetSlice(grad_bias_, input_size, input_size + 1);
+    grad_bias_.Reshape(1, -1);
     bias_optimizer_->AllocateMemory(1, num_output_channels_);
   }
-}
-
-void FCEdge::AllocateMemoryFprop() {
-  int input_size = image_size_ * image_size_ * num_input_channels_;
-  weights_.AllocateGPUMemory(num_output_channels_, input_size, GetName() + "_weight");
-  if (!has_no_bias_) {
-    bias_.AllocateGPUMemory(1, num_output_channels_, GetName() + "_bias");
-  }
-}
-
-void FCEdge::AllocateMemory(bool fprop_only) {
-  if (is_tied_) return;
-  Edge::AllocateMemory(fprop_only);
-  cout << name_ << " ";
-  printf("Fully connected : %d-%d-%d (%d) : %d\n", image_size_, image_size_,
-         num_input_channels_, image_size_ * image_size_ * num_input_channels_,
-         num_output_channels_);
-
-  AllocateMemoryFprop();
-  if (!fprop_only) AllocateMemoryBprop();
 }
 
 void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

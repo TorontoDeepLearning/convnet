@@ -16,12 +16,25 @@ ConvNet::ConvNet(const string& model_file):
   lr_reduce_counter_(0),
   train_dataset_(NULL), val_dataset_(NULL),
   model_filename_(model_file) {
+
+#ifdef USE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &process_id_);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_processes_);
+#else
+  process_id_ = 0;
+  num_processes_ = 1;
+#endif
+  is_root_ = process_id_ == 0;
+  if (num_processes_ > 1) {
+    cout << "Process " << process_id_ << " of " << num_processes_ << endl;
+  }
+
   ReadModel(model_file, model_);
   for (const config::Subnet& subnet : model_.subnet()) {
     AddSubnet(model_, subnet);
   }
-  Matrix::InitRandom(model_.seed());
-  srand(model_.seed());
+  Matrix::InitRandom(model_.seed() + process_id_);
+  srand(model_.seed() + process_id_);
   localizer_ = model_.localizer();
   model_name_ = model_.name();
   checkpoint_dir_ = model_.checkpoint_dir();
@@ -100,12 +113,13 @@ void ConvNet::AddSubnet(config::Model& model, const config::Subnet& subnet) {
 }
 
 void ConvNet::BuildNet() {
-  layers_.resize(model_.layer_size());
-  edges_.resize(model_.edge_size());
+  for (const config::Layer& l : model_.layer()) {
+    layers_.push_back(Layer::ChooseLayerClass(l));
+  }
 
   // Setup edges.
-  for (int i = 0; i < edges_.size(); i++) {
-    edges_[i] = Edge::ChooseEdgeClass(model_.edge(i));
+  for (const config::Edge& e : model_.edge()) {
+    edges_.push_back(Edge::ChooseEdgeClass(e));
   }
 
   // Communicate information about tied edges.
@@ -120,18 +134,18 @@ void ConvNet::BuildNet() {
   }
 
   // Setup layers.
-  for (int i = 0; i < layers_.size(); i++) {
-    layers_[i] = Layer::ChooseLayerClass(model_.layer(i));
+  for (Layer* l : layers_) {
+    const string& name = l->GetName();
     for (Edge* e : edges_) {
-      if (layers_[i]->GetName().compare(e->GetSourceName()) == 0) {
-        layers_[i]->AddOutgoing(e);
-        e->SetSource(layers_[i]);
-        e->SetInputChannels(layers_[i]->GetNumChannels());
+      if (name.compare(e->GetSourceName()) == 0) {
+        l->AddOutgoing(e);
+        e->SetSource(l);
+        e->SetInputChannels(l->GetNumChannels(e->GetSourceSliceName()));
       }
-      if (layers_[i]->GetName().compare(e->GetDestName()) == 0) {
-        layers_[i]->AddIncoming(e);
-        e->SetDest(layers_[i]);
-        e->SetOutputChannels(layers_[i]->GetNumChannels());
+      if (name.compare(e->GetDestName()) == 0) {
+        l->AddIncoming(e);
+        e->SetDest(l);
+        e->SetOutputChannels(l->GetNumChannels(e->GetDestSliceName()));
       }
     }
   }
@@ -187,15 +201,46 @@ void ConvNet::AllocateLayerMemory() {
 }
 
 void ConvNet::AllocateEdgeMemory(bool fprop_only) {
-  for (Edge* e : edges_) e->AllocateMemory(fprop_only);
-
-  if (timestamp_.empty()) {
-    // Initialize randomly.
-    for (Edge* e: edges_) e->Initialize();
-  } else {
-    // Initialize from a saved model.
-    Load();
+  size_t total_memory_usage = 0;
+  map<Edge*, size_t> memory_usage;
+  for (Edge* e : edges_) {
+    size_t mem = e->GetParameterMemoryRequirement();  // Number of floats
+    memory_usage[e] = mem;
+    // Align to 512-bytes. Weights being used through texture memory need 512-byte aligned address.
+    mem = ((mem + 127) / 128) * 128;
+    total_memory_usage += mem;
   }
+  parameters_.AllocateGPUMemory(1, total_memory_usage);
+  if (!fprop_only) grad_parameters_.AllocateGPUMemory(1, total_memory_usage);
+  size_t offset = 0;
+
+  for (Edge* e : edges_) {
+    size_t mem = memory_usage[e];
+    if (mem == 0) continue;
+    Matrix slice;
+    parameters_.GetSlice(slice, offset, offset + mem);
+    e->SetMemory(slice);
+    if (!fprop_only) {
+      Matrix grad_slice;
+      grad_parameters_.GetSlice(grad_slice, offset, offset + mem);
+      e->SetGradMemory(grad_slice);
+    }
+    offset += ((mem + 127) / 128) * 128;
+  }
+
+  if (is_root_) {
+    if (timestamp_.empty()) {
+      // Initialize randomly.
+      for (Edge* e: edges_) e->Initialize();
+    } else {
+      // Initialize from a saved model.
+      Load();
+    }
+  }
+  if (num_processes_ > 1) Broadcast(parameters_);
+
+  parameters_.Print();
+
 }
 
 void ConvNet::Sort() {
@@ -221,6 +266,10 @@ void ConvNet::Sort() {
     for (Edge* e : n->outgoing_edge_) {
       e->SetMark();
       m = e->GetDest();
+      if (m == NULL) {
+        cerr << "Edge " << e->GetName() << " has no destination layer" << endl;
+        exit(1);
+      }
       x = true;
       for (Edge* f : m->incoming_edge_) x &= f->HasMark();
       if (x) S.push(m);
@@ -237,28 +286,34 @@ void ConvNet::Sort() {
   for (int i = 0; i < layers_.size(); i++) layers_[i] = L[i];
 }
 
-void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge, bool overwrite) {
-  edge.ComputeUp(input.GetState(), output.GetState(), overwrite);
+void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge) {
+  Matrix& input_state = input.GetState(edge.GetSourceSliceName());
+  Matrix& output_state = output.GetState(edge.GetDestSliceName());
+  bool overwrite = output.AddOrOverwriteState(edge.GetDestSliceName());
+  //cout << "Fprop from " << input.GetName() << " slice " << edge.GetSourceSliceName() << " to " << output.GetName() << " slice " << edge.GetDestSliceName() << " overwrite " << overwrite << endl;
+  edge.ComputeUp(input_state, output_state, overwrite);
 }
 
-void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge, bool overwrite,
-                    bool update_weights) {
+void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge) {
   if (edge.IsBackPropBlocked()) return;
-  edge.ComputeOuter(input.GetState(), output.GetDeriv());
+  Matrix& input_state = input.GetState(edge.GetSourceSliceName());
+  Matrix& output_state = output.GetState(edge.GetDestSliceName());
+  Matrix& input_deriv = input.GetDeriv(edge.GetSourceSliceName());
+  Matrix& output_deriv = output.GetDeriv(edge.GetDestSliceName());
+
+  edge.ComputeOuter(input_state, output_deriv);
   if (!input.IsInput()) {
-    edge.ComputeDown(output.GetDeriv(), input.GetState(), output.GetState(),
-                     input.GetDeriv(), overwrite);
+    bool overwrite = input.AddOrOverwriteDeriv(edge.GetSourceSliceName());
+  //cout << "Bprop to " << input.GetName() << " slice " << edge.GetSourceSliceName() << " from " << output.GetName() << " slice " << edge.GetDestSliceName() << " overwrite " << overwrite << endl;
+    edge.ComputeDown(output_deriv, input_state, output_state,
+                     input_deriv, overwrite);
   }
-  if (update_weights) edge.UpdateWeights();
 }
 
 void ConvNet::Fprop(bool train) {
-  bool overwrite;
   for(Layer* l : layers_) {
-    overwrite = true;
     for (Edge* e : l->incoming_edge_) {
-      Fprop(*(e->GetSource()), *l, *e, overwrite);
-      overwrite = false;
+      Fprop(*(e->GetSource()), *l, *e);
     }
     if (l->IsInput()) {
       l->ApplyDropout(train);
@@ -268,20 +323,70 @@ void ConvNet::Fprop(bool train) {
   }
 }
 
-void ConvNet::Bprop(bool update_weights) {
+void ConvNet::Bprop() {
   Layer *l;
-  bool overwrite;
   for (int i = layers_.size() - 1; i >= 0; i--) {
-    overwrite = true;
     l = layers_[i];
     for (Edge* e : l->outgoing_edge_) {
-      Bprop(*(e->GetDest()), *l, *e, overwrite, update_weights);
-      overwrite = false;
+      Bprop(*(e->GetDest()), *l, *e);
     }
     if (!l->IsInput() && l->outgoing_edge_.size() > 0) {
       l->ApplyDerivativeOfActivation();
     }
   }
+}
+
+void ConvNet::Broadcast(Matrix& mat) {
+#ifdef USE_MPI
+  if (is_root_) mat.CopyToHost();
+  MPI_Bcast(mat.GetHostData(), mat.GetNumEls(), MPI_FLOAT, 0, MPI_COMM_WORLD);
+  if (!is_root_) mat.CopyToDevice();
+#endif
+}
+
+void ConvNet::Accumulate(Matrix& mat, int tag) {
+#ifdef USE_MPI
+  float* data = mat.GetHostData();
+  int buffer_size = mat.GetNumEls();
+  mat.CopyToHost();
+  float sum = 0;
+  if (is_root_) {
+    float* buffer = new float[buffer_size];
+    MPI_Status stat;
+    for (int pid = 1; pid < num_processes_; pid++) {
+      sum = 0;
+      MPI_Recv(buffer, buffer_size, MPI_FLOAT, pid, tag, MPI_COMM_WORLD, &stat);
+      /*
+      if (stat != MPI_SUCCESS) {
+        cerr << "Error: Could not receive message from pid " << pid << endl;
+      }*/
+      for (size_t i = 0; i < buffer_size; i++) {
+        data[i] += buffer[i];
+        sum += buffer[i];
+      }
+      //cout << "Sum received " << sum << endl;
+    }
+    for (size_t i = 0; i < buffer_size; i++) data[i] /= num_processes_;
+    delete buffer;
+    mat.CopyToDevice();
+  } else {
+    for (size_t i = 0; i < buffer_size; i++) sum += data[i];
+    //cout << "Sum sent " << sum << endl;
+    MPI_Send(data, buffer_size, MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
+  }
+#endif
+}
+
+void ConvNet::UpdateWeights() {
+  if (num_processes_ > 1) Accumulate(grad_parameters_, MPITAG_WEIGHTGRAD);
+  if (num_processes_ > 1) Broadcast(grad_parameters_);
+  //if (is_root_) {
+    for (Edge* e : edges_) {
+      if (!e->IsBackPropBlocked()) e->UpdateWeights();
+    }
+  //}
+  //parameters_.Print();
+  //if (num_processes_ > 1) Broadcast(parameters_);
 }
 
 void ConvNet::ComputeDeriv() {
@@ -296,11 +401,13 @@ void ConvNet::GetLoss(vector<float>& error) {
 }
 
 void ConvNet::TrainOneBatch(vector<float>& error) {
+  for (Layer* l : layers_) l->ResetAddOrOverwrite();
   train_dataset_->GetBatch(data_layers_);
   Fprop(true);
   ComputeDeriv();
   GetLoss(error);
-  Bprop(true);
+  Bprop();
+  UpdateWeights();
 }
 
 void ConvNet::SetupDataset(const string& train_data_config_file) {
@@ -342,8 +449,34 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
 void ConvNet::AllocateMemory(bool fprop_only) {
   AllocateLayerMemory();
   AllocateEdgeMemory(fprop_only);
-  //cout << "Total GPU Memory consumption" << endl;
-  //cout << "Layers: " << Layer::total_gpu_memory_bytes_ / (1024.0 * 1024) << " MB" << endl;
+  if (is_root_) {
+    for (Edge* e : edges_) {
+      cout << e->GetDescription() << endl;
+    }
+  }
+}
+
+void ConvNet::Accumulate(vector<float>& v, int tag) {
+#ifdef USE_MPI
+  int buffer_size = v.size();
+  if (is_root_) {
+    float* buffer = new float[buffer_size];
+    MPI_Status stat;
+    for (int pid = 1; pid < num_processes_; pid++) {
+      MPI_Recv(buffer, buffer_size, MPI_FLOAT, pid, tag, MPI_COMM_WORLD, &stat);
+      /*if (stat != MPI_SUCCESS) {
+        cerr << "Error: Could not receive message from pid " << pid << endl;
+      }*/
+      for (int i = 0; i < buffer_size; i++) v[i] += buffer[i];
+    }
+    delete buffer;
+  } else {
+    float* data = new float[v.size()];
+    for (int i = 0; i < v.size(); i++) data[i] = v[i];
+    MPI_Send(data, buffer_size, MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
+    delete data;
+  }
+#endif
 }
 
 void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
@@ -354,7 +487,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       batch_size = dataset->GetBatchSize(),
       num_batches = dataset_size / batch_size;
   for (int k = 0; k < num_batches; k++) {
-
+    for (Layer* l : layers_) l->ResetAddOrOverwrite();
     dataset->GetBatch(data_layers_);
     Fprop(false);
     GetLoss(error);
@@ -420,6 +553,7 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
     cout.flush();
     numcases = (left_overs > 0 && k == num_batches - 1) ? left_overs : batch_size;
     for (int m = 0; m < multiplicity; m++) {
+      for (Layer* l : layers_) l->ResetAddOrOverwrite();
       dataset.GetBatch(data_layers_);
       if (display && k % display_after == 0) {
         DisplayLayers();
@@ -620,7 +754,7 @@ void ConvNet::Train() {
   }
 
   // Before starting the training, mark this model with a timestamp.
-  TimestampModel();
+  if (is_root_) TimestampModel();
 
   const int display_after = model_.display_after(),
             print_after = model_.print_after(),
@@ -649,10 +783,11 @@ void ConvNet::Train() {
 
   Matrix::ShowMemoryUsage();
   for(int i = current_iter_; i < model_.max_iter(); i++) {
-    if (i == 2) Matrix::ShowMemoryUsage();
     current_iter_++;
-    cout << "\rStep " << current_iter_;
-    cout.flush();
+    if (is_root_) {
+      cout << "\rStep " << current_iter_;
+      cout.flush();
+    }
 
     TrainOneBatch(this_train_error);
     AddVectors(train_error, this_train_error);
@@ -664,21 +799,26 @@ void ConvNet::Train() {
     }
     newline = false;
     if ((i+1) % print_after == 0) {
-      end_t = chrono::system_clock::now();
-      time_diff = end_t - start_t;
-      printf(" Time %f s Train Acc :", time_diff.count());
-      for (float& err : train_error) err /= print_after * batch_size_;
-      for (const float& err : train_error) printf(" %.5f", err);
-      WriteLog(current_iter_, time_diff.count(), train_error);
-      if (print_weights) {
-        printf(" Weight length: " );
-        for (Edge* e : edges_) {
-          if (e->HasNoParameters() || e->IsTied()) continue;
-          printf(" %.3f", e->GetRMSWeight());
+#ifdef USE_MPI
+      if (num_processes_ > 1) Accumulate(train_error, MPITAG_TRAINERROR);
+#endif
+      if (is_root_) {
+        end_t = chrono::system_clock::now();
+        time_diff = end_t - start_t;
+        printf(" Time %f s Train Acc :", time_diff.count());
+        for (float& err : train_error) err /= print_after * batch_size_ * num_processes_;
+        for (const float& err : train_error) printf(" %.5f", err);
+        WriteLog(current_iter_, time_diff.count(), train_error);
+        if (print_weights) {
+          printf(" Weight length: " );
+          for (Edge* e : edges_) {
+            if (e->HasNoParameters() || e->IsTied()) continue;
+            printf(" %.3f", e->GetRMSWeight());
+          }
         }
+        start_t = end_t;
       }
       train_error.clear();
-      start_t = end_t;
       newline = true;
     }
 
@@ -693,9 +833,11 @@ void ConvNet::Train() {
       if (polyak_after > 0) LoadCurrentWeights();
 
       val_error.push_back(this_val_error[0]);
-      cout << " Val Acc :";
-      for (const float& val: this_val_error) printf(" %.5f", val);
-      WriteValLog(current_iter_, this_val_error);
+      if (is_root_) {
+        cout << " Val Acc :";
+        for (const float& val: this_val_error) printf(" %.5f", val);
+        WriteValLog(current_iter_, this_val_error);
+      }
 
       // Should we reduce the learning rate ?
       if (learning_rate_reduce_factor < 1.0) {
@@ -707,19 +849,20 @@ void ConvNet::Train() {
           ReduceLearningRate(learning_rate_reduce_factor);
         }
       }
+
       newline = true;
     }
-    if (newline) cout << endl;
+    if (is_root_ && newline) cout << endl;
     if ((i+1) % save_after == 0) {
       train_dataset_->Sync();
-      Save();
+      if (is_root_) Save();
     }
   }
   if (model_.max_iter() % save_after != 0) {
     train_dataset_->Sync();
-    Save();
+    if (is_root_) Save();
   }
-  cout << "End of training." << endl;
+  if (is_root_) cout << "End of training." << endl;
   if (display && localizer_) {
     delete localization_display_;
   }

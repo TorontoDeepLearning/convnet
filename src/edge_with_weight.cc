@@ -102,11 +102,11 @@ void EdgeWithWeight::ReduceLearningRate(float factor) {
 }
 
 void EdgeWithWeight::UpdateWeights() {
-  if (is_tied_) {
-    tied_edge_->UpdateWeights();
-    return;
+  if (is_tied_) return;
+  if (num_grads_received_ < num_shares_) {
+    cerr << "Error: Update called when all gradients were not received." << endl;
+    exit(1);
   }
-  if (num_grads_received_ < num_shares_) return;
   num_grads_received_ = 0;
   Matrix::SetDevice(gpu_id_);
   weight_optimizer_->Optimize(grad_weights_, weights_);
@@ -124,7 +124,7 @@ void EdgeWithWeight::Initialize() {
       init_wt /= sqrt(weights_.GetCols());
     }
     weights_.Mult(init_wt);
-    //cout << "Initialized weight: Dense Gaussian. Initial scale " << GetRMSWeight() << endl;
+    cout << "Initialized weight: Dense Gaussian. Initial scale " << GetRMSWeight() << endl;
   } else if (initialization_ == config::Edge::DENSE_UNIFORM_SQRT_FAN_IN ||
              initialization_ == config::Edge::DENSE_UNIFORM) {
     weights_.FillWithRand();
@@ -134,7 +134,7 @@ void EdgeWithWeight::Initialize() {
       init_wt /= sqrt(weights_.GetCols() / 3.0f);
     }
     weights_.Mult(init_wt);
-    //cout << "Initialized weight: Dense Uniform. Initial scale " << GetRMSWeight() << endl;
+    cout << "Initialized weight: Dense Uniform. Initial scale " << GetRMSWeight() << endl;
   } else if (initialization_ == config::Edge::CONSTANT) {
     weights_.Set(init_wt_);
   } else if (initialization_ == config::Edge::PRETRAINED) {

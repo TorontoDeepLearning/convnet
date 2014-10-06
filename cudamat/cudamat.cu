@@ -248,7 +248,7 @@ void cuda_sync_threads() {
 /* ------------------------------ Allocating/moving data ------------------------------ */
 
 int allocate_device_memory(cudamat* mat) {
-    int len = mat->size[0]*mat->size[1];
+    size_t len = mat->size[0]*mat->size[1];
 
     cublasStatus stat;
 
@@ -316,12 +316,12 @@ int allocate_device_memory_sparse(cudamat_sparse* mat) {
     return 0;
 }
 
-int copy_to_host_slice(cudamat* mat, int start, int end) {
+int copy_to_host_slice(cudamat* mat, size_t start, size_t end) {
     if (start >= end || end > mat->size[1])
       return ERROR_GENERIC;
 
-    int len = mat->size[0] * (end - start);
-    int offset = mat->size[0] * start;
+    size_t len = mat->size[0] * (end - start);
+    size_t offset = mat->size[0] * start;
 
     if (mat->on_device) {
         cublasGetVector(len, sizeof(mat->data_host[0]), mat->data_device + offset, 1, mat->data_host + offset, 1);
@@ -335,7 +335,7 @@ int copy_to_host_slice(cudamat* mat, int start, int end) {
 }
 
 int copy_to_host(cudamat* mat) {
-    int len = mat->size[0]*mat->size[1];
+    size_t len = mat->size[0]*mat->size[1];
 
     if (mat->on_device) {
         cublasGetVector(len, sizeof(mat->data_host[0]), mat->data_device, 1, mat->data_host, 1);
@@ -359,13 +359,14 @@ int copy_bbox_to_host(cudamat_bbox* mat) {
   }
   return 0;
 }
-int copy_to_device_slice(cudamat* mat, int start, int end) {
+
+int copy_to_device_slice(cudamat* mat, size_t start, size_t end) {
     if (end <= start || end > mat->size[1])
       return ERROR_GENERIC;
 
-    int len = mat->size[0] * (end - start);
+    size_t len = mat->size[0] * (end - start);
     int err_code = 0;
-    int offset = mat->size[0] * start;
+    size_t offset = mat->size[0] * start;
     //if (!mat->owns_data)
     //    return VIEW_ERROR;
 
@@ -386,7 +387,7 @@ int copy_to_device_slice(cudamat* mat, int start, int end) {
 
 
 int copy_to_device(cudamat* mat) {
-    int len = mat->size[0]*mat->size[1];
+    size_t len = mat->size[0]*mat->size[1];
     int err_code = 0;
 
     //if (!mat->owns_data)
@@ -1617,11 +1618,12 @@ int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
         if (target->size[1] != 1 || target->size[0] != mat->size[0])
             return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-        int shared_mem_size = 32 * sizeof(float) ;
-        int h1 = floor(sqrt(h));
-        int h2 = (h + h1 - 1) / h1;
+
+        int num_blocks = DIVUP(h, 32);
+        int h1 = floor(sqrt(num_blocks));
+        int h2 = DIVUP(num_blocks, h1);
         dim3 gridDim(h1, h2, 1);
-        kSumRowwise<<<gridDim, 32, shared_mem_size>>>(mat->data_device, target->data_device, w, h, mult, p);
+        kSumRowwise<<<gridDim, 32>>>(mat->data_device, target->data_device, w, h, mult, p);
     } else
         return ERROR_UNSUPPORTED;
 

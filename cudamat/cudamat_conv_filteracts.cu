@@ -1134,7 +1134,6 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
             }
         }
     }
-
     if (scale) {
         #pragma unroll
         for (int g = 0; g < imgsPerThread; g++) {
@@ -1187,9 +1186,6 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     assert(numGroups == 1 || numFilterColors % 4 == 0);
     assert(numFilters % (16 * numGroups) == 0);
     assert(numImgColors % numGroups == 0);
-    //images.printShape("images");
-    //printf("rows: %d, pixels: %d, colors: %d\n", images->size[1], imgPixels, numImgColors);
-    //images.printShape("images");
     assert(images->size[1] == imgPixels * numImgColors);
     assert(imgSizeY * imgSizeX == imgPixels);
     int numFiltersPerGroup = numFilters / numGroups;
@@ -1238,13 +1234,13 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     // Auto-generated calling code...
     // NOTE: The calling code is set up such that if checkImgBounds is true, then imgsPerThread = 1. 
     // In principle it doesn't have to be this way, and you may want to optimize for that case.
-    int images_num_data_bytes = images->size[0] * images->size[1] * sizeof(float);
+    bool use_texture = FitsAsTexture(images) && FitsAsTexture(filters);
     if (scale == false) {
         if (checkImgBounds == false) {
             if (numFilterColors % 8 == 0) {
                 if (numImages % 128 == 0) {
                     if (numFiltersPerGroup % 128 == 0) {
-                        if (images_num_data_bytes < TEXTURE_SIZE_MAX) {
+                        if (use_texture) {
                             cudaFuncSetCacheConfig(filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, false, false >, cudaFuncCachePreferL1);
                             filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, false, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, numImgColors, numGroups, scaleTargets, scaleOutput, conv);
                         } else {
@@ -1253,7 +1249,7 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
                         }
                     }
                     else if (numFiltersPerGroup % 64 == 0) {
-                        if (images_num_data_bytes < TEXTURE_SIZE_MAX) {
+                        if (use_texture) {
                             cudaFuncSetCacheConfig(filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, false, false >, cudaFuncCachePreferL1);
                             filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, false, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, numImgColors, numGroups, scaleTargets, scaleOutput, conv);
                         } else {
@@ -1366,12 +1362,22 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
             else if (numFilterColors == 3) {
                 if (numImages % 128 == 0) {
                     if (numFiltersPerGroup % 64 == 0) {
+                      if (use_texture) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_16_px_4_cc_3_tex < 4, 32, 4, 16, 3, 4, false, false >, cudaFuncCachePreferShared);
                         filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_16_px_4_cc_3_tex < 4, 32, 4, 16, 3, 4, false, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device,numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      } else {
+                        cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 16, 3, 4, false, false >, cudaFuncCachePreferShared);
+                        filterActs_YxX_color < 4, 32, 4, 16, 3, 4, false, false > <<<blocks, threads, 0, stream>>>(images->data_device, filters->data_device, targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      }
                     }
                     else if (numFiltersPerGroup % 48 == 0) {
+                      if (use_texture) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_12_px_4_cc_3_tex < 4, 32, 4, 12, 3, 4, false, false >, cudaFuncCachePreferShared);
                         filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_12_px_4_cc_3_tex < 4, 32, 4, 12, 3, 4, false, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device,numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      } else {
+                        cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 12, 3, 4, false, false >, cudaFuncCachePreferShared);
+                        filterActs_YxX_color < 4, 32, 4, 12, 3, 4, false, false > <<<blocks, threads, 0, stream>>>(images->data_device, filters->data_device, targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      }
                     }
                     else if (numFiltersPerGroup % 32 == 0) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 8, 3, 4, false, false >, cudaFuncCachePreferShared);
@@ -1640,7 +1646,7 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
             if (numFilterColors % 8 == 0) {
                 if (numImages % 128 == 0) {
                     if (numFiltersPerGroup % 128 == 0) {
-                        if (images_num_data_bytes < TEXTURE_SIZE_MAX) {
+                        if (use_texture) {
                             cudaFuncSetCacheConfig(filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, true, false >, cudaFuncCachePreferL1);
                             filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, true, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, numImgColors, numGroups, scaleTargets, scaleOutput, conv);
                         } else {
@@ -1649,7 +1655,7 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
                         }
                     }
                     else if (numFiltersPerGroup % 64 == 0) {
-                        if (images_num_data_bytes < TEXTURE_SIZE_MAX) {
+                        if (use_texture) {
                             cudaFuncSetCacheConfig(filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, true, false >, cudaFuncCachePreferL1);
                             filterActs_YxX_sparse2_preload_ty_4_tx_32_i_4_f_16_c_4_tex < 4, 32, 4, 16, 4, true, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, numImgColors, numGroups, scaleTargets, scaleOutput, conv);
                         } else {
@@ -1762,12 +1768,22 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
             else if (numFilterColors == 3) {
                 if (numImages % 128 == 0) {
                     if (numFiltersPerGroup % 64 == 0) {
+                      if (use_texture) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_16_px_4_cc_3_tex < 4, 32, 4, 16, 3, 4, true, false >, cudaFuncCachePreferShared);
                         filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_16_px_4_cc_3_tex < 4, 32, 4, 16, 3, 4, true, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device,numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      } else {
+                        cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 16, 3, 4, true, false >, cudaFuncCachePreferShared);
+                        filterActs_YxX_color < 4, 32, 4, 16, 3, 4, true, false > <<<blocks, threads, 0, stream>>>(images->data_device, filters->data_device, targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      }
                     }
                     else if (numFiltersPerGroup % 48 == 0) {
+                      if (use_texture) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_12_px_4_cc_3_tex < 4, 32, 4, 12, 3, 4, true, false >, cudaFuncCachePreferShared);
                         filterActs_YxX_color_preload_ty_4_tx_32_i_4_f_12_px_4_cc_3_tex < 4, 32, 4, 12, 3, 4, true, false > <<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(filters), targets->data_device,numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      } else {
+                        cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 12, 3, 4, true, false >, cudaFuncCachePreferShared);
+                        filterActs_YxX_color < 4, 32, 4, 12, 3, 4, true, false > <<<blocks, threads, 0, stream>>>(images->data_device, filters->data_device, targets->data_device, numImages, numFilters, imgSizeY, imgSizeX, filterSize, paddingStart, moduleStride, numModulesY, numModulesX, imgStride, scaleTargets, scaleOutput, conv);
+                      }
                     }
                     else if (numFiltersPerGroup % 32 == 0) {
                         cudaFuncSetCacheConfig(filterActs_YxX_color < 4, 32, 4, 8, 3, 4, true, false >, cudaFuncCachePreferShared);
@@ -2046,6 +2062,13 @@ void convUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, i
 void localUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY, int numModulesX, int paddingStart, int moduleStride, int numImgColors, int numGroups, float scaleTargets){
   _filterActs(images, filters, targets, imgSizeY, numModulesY, numModulesX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1, false);
 }
+
+void SetupTexture(cudamat* mat) {
+  if (FitsAsTexture(mat)) {
+    getTextureObject(mat);
+  }
+}
+
 #ifdef __cplusplus
 }
 #endif

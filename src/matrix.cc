@@ -7,7 +7,8 @@
 
 vector<rnd_struct> Matrix::rnd_;
 vector<Matrix> Matrix::ones_, Matrix::temp_;
-vector<int> Matrix::boards_, Matrix::temp_size_, Matrix::ones_size_;
+vector<int> Matrix::boards_;
+vector<size_t> Matrix::temp_size_, Matrix::ones_size_;
 int Matrix::current_gpu_id_ = 0, Matrix::num_boards_ = 0;
 map<string, long> Matrix::gpu_memory_;
 
@@ -20,12 +21,9 @@ Matrix::Matrix() {
   mat_.size[0] = 0;
   mat_.size[1] = 0;
   mat_.owns_data = 0;
-  mat_t_ = mat_;
-  mat_t_.is_trans = 1;
   mat_.tex_obj = 0;
-  mat_t_.tex_obj = 0;
+  SetupTranspose();
 }
-
 
 Matrix::~Matrix() {
   destroy_tex(&mat_);  // Does a check for texture creation.
@@ -36,7 +34,7 @@ Matrix::~Matrix() {
   }
 }
 
-Matrix::Matrix(const int rows, const int cols, const bool on_gpu) {
+Matrix::Matrix(const size_t rows, const size_t cols, const bool on_gpu) {
   Matrix();
   if (on_gpu) {
     AllocateGPUMemory(rows, cols);
@@ -45,17 +43,32 @@ Matrix::Matrix(const int rows, const int cols, const bool on_gpu) {
   }
 }
 
+void Matrix::GetSlice(Matrix& slice, size_t start, size_t end) {
+  get_slice(&mat_, slice.GetMat(), start, end);
+  slice.SetupTranspose();
+  slice.SetGPUId(gpu_id_);
+}
+
 void Matrix::Tie(Matrix &m) {
   cout << "Tying" << endl;
   mat_ = *(m.GetMat());
   mat_t_ = *(m.GetMatTranspose());
 }
 
-void Matrix::AllocateGPUMemory(const int rows, const int cols) {
+void Matrix::SetupTranspose() {
+  mat_t_ = mat_;
+  mat_t_.is_trans = 1 - mat_.is_trans;
+}
+
+void Matrix::SetupTextureObject() {
+  SetupTexture(&mat_);
+}
+
+void Matrix::AllocateGPUMemory(const size_t rows, const size_t cols) {
   AllocateGPUMemory(rows, cols, "");
 }
 
-void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& name) {
+void Matrix::AllocateGPUMemory(const size_t rows, const size_t cols, const string& name) {
   if (rows != mat_.size[0] || cols != mat_.size[1]) {
     name_ = name;
     gpu_id_ = current_gpu_id_;
@@ -70,9 +83,8 @@ void Matrix::AllocateGPUMemory(const int rows, const int cols, const string& nam
     AllocateMainMemory(rows, cols);
     CopyToDevice();
     mat_.owns_data = 1;
-    mat_t_ = mat_;
-    mat_t_.is_trans = 1;
-    //const int size = (rows * cols * sizeof(float)) >> 20;
+    SetupTranspose();
+    //const size_t size = (rows * cols * sizeof(float)) >> 20;
     //cout << "Allocated GPU memory " << rows << " * " << cols << " " << size << "MB for " << name << endl;
     cuda_create_event(&ready_);
     Matrix::gpu_memory_[name] += GetNumEls() * sizeof(float);
@@ -107,7 +119,7 @@ void Matrix::ShowMemoryUsage() {
   cout << "TOTAL " << "\t" << total / (1024.0 * 1024) << " MB" << endl;
 }
 
-void Matrix::AllocateMainMemory(const int rows, const int cols) {
+void Matrix::AllocateMainMemory(const size_t rows, const size_t cols) {
   if (mat_.data_host != NULL) free(mat_.data_host);
   mat_.data_host = (float*)calloc(rows * cols, sizeof(float));
   if (mat_.data_host == NULL) {
@@ -183,8 +195,8 @@ void Matrix::FillWithRand() {
 
 float Matrix::Sum() {
   Matrix ones;
-  int rows = mat_.size[0];
-  int cols = mat_.size[1];
+  size_t rows = mat_.size[0];
+  size_t cols = mat_.size[1];
   reshape(&mat_, 1, -1);
   GetOnes(1, rows * cols, ones);
   int err;
@@ -234,7 +246,7 @@ void Matrix::Subtract(Matrix& m, Matrix& target) {
   }
 }
 
-void Matrix::CopyToDeviceSlice(const int start, const int end) {
+void Matrix::CopyToDeviceSlice(const size_t start, const size_t end) {
   int err_code = copy_to_device_slice(&mat_, start, end);
   if (err_code != 0) {
     cerr << "Error copying matrix of size " << mat_.size[0] << " "
@@ -246,7 +258,7 @@ void Matrix::CopyToDeviceSlice(const int start, const int end) {
   }
 }
 
-void Matrix::CopyToHostSlice(const int start, const int end) {
+void Matrix::CopyToHostSlice(const size_t start, const size_t end) {
   int err_code = copy_to_host_slice(&mat_, start, end);
   if (err_code != 0) {
     cerr << "Error copying matrix of size " << mat_.size[0] << " "
@@ -259,7 +271,7 @@ void Matrix::CopyToHostSlice(const int start, const int end) {
 }
 
 
-void Matrix::Reshape(int rows, int cols) {
+void Matrix::Reshape(size_t rows, size_t cols) {
   reshape(&mat_, rows, cols);
   mat_t_ = mat_;
   mat_t_.is_trans = 1;
@@ -272,8 +284,8 @@ void Matrix::PrintToFile(const string& filename) {
     exit(1);
   }
   ofstream f(filename, ios::out);
-  for (int i = 0; i < mat_.size[0]; i++) {
-    for (int j = 0; j < mat_.size[1]; j++) {
+  for (size_t i = 0; i < mat_.size[0]; i++) {
+    for (size_t j = 0; j < mat_.size[1]; j++) {
       f << mat_.data_host[j * mat_.size[0] + i] << " ";
     }
     f << '\n';
@@ -288,9 +300,9 @@ void Matrix::Print() {
     cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
     exit(1);
   }
-  for (int i = 0; i < mat_.size[0]; i++) {
+  for (size_t i = 0; i < mat_.size[0]; i++) {
     if (i < 10) {
-      for (int j = 0; j < mat_.size[1]; j++) {
+      for (size_t j = 0; j < mat_.size[1]; j++) {
         if (j < 10) {
           printf("%.12f ", mat_.data_host[j * mat_.size[0] + i]);
         } else {
@@ -304,6 +316,18 @@ void Matrix::Print() {
     }
     printf("\n");
   }
+}
+
+bool Matrix::CheckNaN() {
+  CopyToHost();
+  float* data = mat_.data_host;
+  bool is_nan = false;
+  size_t i = 0;
+  for (; i < mat_.size[0] * mat_.size[1] && !is_nan; i++) {
+    is_nan = !isfinite(data[i]);
+  }
+  if (is_nan) cout << "Nan at location " << i << " row " << i % mat_.size[0] << " col " << i / mat_.size[0] << endl;
+  return is_nan;
 }
 
 string Matrix::GetShapeString() {
@@ -346,9 +370,9 @@ void Matrix::AllocateAndReadHDF5(hid_t file, const string& name) {
   ReadHDF5(file, name);
 }
 
-void Matrix::GetOnes(int rows, int cols, Matrix& ones) {
+void Matrix::GetOnes(size_t rows, size_t cols, Matrix& ones) {
   Matrix& o = Matrix::ones_[current_gpu_id_];
-  int size = o.GetCols();
+  size_t size = o.GetCols();
   if (size == 0) {  // Allocate memory on first call to GetOnes.
     o.AllocateGPUMemory(1, ones_size_[current_gpu_id_], "ones");
     o.Set(1);
@@ -363,17 +387,18 @@ void Matrix::GetOnes(int rows, int cols, Matrix& ones) {
   ones.Reshape(rows, cols);
 }
 
-void Matrix::GetSlice(Matrix& slice, int start, int end) {
-  get_slice(&mat_, slice.GetMat(), start, end);
-}
-
-void Matrix::GetTemp(int rows, int cols, Matrix& temp) {
+void Matrix::GetTemp(size_t rows, size_t cols, Matrix& temp) {
   Matrix& t = Matrix::temp_[current_gpu_id_];
-  int size = t.GetNumEls();
-  const int length = rows * cols;
+  size_t size = t.GetNumEls();
+  const size_t length = rows * cols;
   if (length > size) {  // Allocate memory as required.
-    t.AllocateGPUMemory(1, length, "temp");
-    temp_size_[current_gpu_id_] = length;
+    size_t temp_size = temp_size_[current_gpu_id_];
+    if (length > temp_size) {
+      temp_size = length;
+      temp_size_[current_gpu_id_] = length;
+    }
+    cout << "Allocating new temp memory of size " << temp_size << " on gpu " << current_gpu_id_ << endl;
+    t.AllocateGPUMemory(1, temp_size, "temp");
     //cout << "Allocated " << (temp_size_[current_gpu_id_] >> 18) << " MB for temp." << endl;
   }
   t.GetSlice(temp, 0, length);
@@ -431,7 +456,7 @@ void Matrix::SetupCUDADevices(const vector<int>& boards) {
 
   for (int i = 0; i < num_boards_; i++) {
     temp_size_[i] = 0;
-    ones_size_[i] = 128*256*256;
+    ones_size_[i] = 256 * 256 * 128;
   }
   SetDevice(0);
 }
@@ -498,18 +523,18 @@ void Matrix::InitRandom(int seed){
   }
 }
 
-void Matrix::RegisterTempMemory(int size, const string& why) {
+void Matrix::RegisterTempMemory(size_t size, const string& why) {
   if (size > temp_size_[current_gpu_id_]) {
     temp_size_[current_gpu_id_] = size;
-    cout << "Max for " << why << " " << size << endl;
+    cout << "Max for " << why << " " << size << " on gpu " << current_gpu_id_ << endl;
   }
 }
 
-void Matrix::RegisterTempMemory(int size) {
+void Matrix::RegisterTempMemory(size_t size) {
   RegisterTempMemory(size, "");
 }
 
-void Matrix::RegisterOnes(int size) {
+void Matrix::RegisterOnes(size_t size) {
   if (size > ones_size_[current_gpu_id_]) {
     ones_size_[current_gpu_id_] = size;
   }
@@ -669,15 +694,19 @@ void Matrix::SumRows(Matrix& target, float alpha, float beta) {
 
 // target = alpha * target + beta * sum_cols(self)
 void Matrix::SumCols(Matrix& target, float alpha, float beta) {
-  //sum_by_axis(&mat_, target.GetMat(), 0, beta, alpha);  Probably not efficient.
-  Matrix ones;
-  Matrix::GetOnes(GetCols(), 1, ones);
-  dot(&mat_, ones.GetMat(), target.GetMat(), alpha, beta);
+  sum_by_axis(&mat_, target.GetMat(), 1, beta, alpha);  // Optimized for large number of rows.
+  //Matrix ones;
+  //Matrix::GetOnes(GetCols(), 1, ones);
+  //dot(&mat_, ones.GetMat(), target.GetMat(), alpha, beta);
 }
 
 // target = alpha * target + beta * sum_cols(self**2)
 void Matrix::SqSumAxis(Matrix& target, int axis, float beta, float alpha) {
-  sqsum_by_axis(&mat_, target.GetMat(), axis, beta, alpha);
+  int err_code = sqsum_by_axis(&mat_, target.GetMat(), axis, beta, alpha);
+  if (err_code != 0) {
+    cerr << "Error in sqsum_by_axis " << GetStringError(err_code) << endl;
+    exit(1);
+  }
 }
 
 void Matrix::NormLimitByAxis(int axis, float val, bool constraint) {
@@ -742,16 +771,30 @@ void Matrix::LocalOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
 }
 
 void Matrix::ConvMaxPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules) {
+                     int kernel_size, int padding, int stride, int num_modules, float scale_targets) {
   MaxPool(input.GetMat(), output.GetMat(), num_input_channels, kernel_size,
-          -padding, stride, num_modules);
+          -padding, stride, num_modules, scale_targets);
 }
+
+void Matrix::ConvAvgPool(Matrix& input, Matrix& output, int num_input_channels,
+                     int kernel_size, int padding, int stride, int num_modules, float scale_targets) {
+  AvgPool(input.GetMat(), output.GetMat(), num_input_channels, kernel_size,
+          -padding, stride, num_modules, scale_targets);
+}
+
 
 void Matrix::ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
                          Matrix& deriv_input, int kernel_size, int padding,
-                         int stride, int num_modules) {
+                         int stride, int num_modules, float scale_targets) {
   MaxPoolUndo(input.GetMat(), deriv_output.GetMat(), output.GetMat(),
-              deriv_input.GetMat(), kernel_size, -padding, stride, num_modules);
+              deriv_input.GetMat(), kernel_size, -padding, stride, num_modules,
+              scale_targets);
+}
+
+void Matrix::ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, int kernel_size, int padding,
+                         int stride, int num_modules, int image_size, float scale_targets) {
+  AvgPoolUndo(input.GetMat(), deriv_output.GetMat(), kernel_size, -padding,
+              stride, num_modules, image_size, scale_targets);
 }
 
 void Matrix::ConvResponseNormCrossMap(

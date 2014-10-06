@@ -24,6 +24,18 @@ void ConvEdge::SetTiedTo(Edge* e) {
 void ConvEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
+
+}
+
+string ConvEdge::GetDescription() {
+  stringstream ss;
+  ss << name_
+     << " Convolutional Kernel: " << kernel_size_ << "-" << kernel_size_ << "-"
+     << num_input_channels_ << " : " << num_output_channels_
+     << " Layer: " << image_size_ << "-" << image_size_ << "-"
+     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << "-" << num_output_channels_;
+  return ss.str();
 }
 
 void ConvEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
@@ -42,25 +54,27 @@ void ConvEdge::DisplayWeights() {
   }
 }
 
-void ConvEdge::AllocateMemory(bool fprop_only) {
-  fprop_only |= block_backprop_;
-  Edge::AllocateMemory(fprop_only);
-  if (is_tied_) {
-    if (!fprop_only) AllocateMemoryBprop();  // For partial sums.
-    return;
+size_t ConvEdge::GetParameterMemoryRequirement() {
+  if (is_tied_) return 0;
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
+  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
+  return num_output_channels_ *  (input_size + (has_no_bias_ ? 0 : bias_locs));
+}
+
+void ConvEdge::SetMemory(Matrix& p) {
+  if (is_tied_) return;
+  Edge::SetMemory(p);
+
+  int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
+  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
+  
+  // Weights for this convolution.
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(weights_, 0, input_size);
+  if (!has_no_bias_) {
+    p.GetSlice(bias_, input_size, input_size + bias_locs);
+    bias_.Reshape(1, -1);
   }
-
-  cout << name_ << " ";
-  printf("Kernel: %d-%d-%d to %d ", kernel_size_, kernel_size_,
-         num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
-         image_size_ * image_size_ * num_input_channels_);
- 
-  AllocateMemoryFprop();
-  if (!fprop_only) AllocateMemoryBprop();
-
-  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols()
-       << " Convolutional" << endl;
 
   if (num_input_channels_ == 3) {
     int num_filters = num_output_channels_;
@@ -70,18 +84,16 @@ void ConvEdge::AllocateMemory(bool fprop_only) {
     int height = (width * num_filters_h) / num_filters_w;
     img_display_ = new ImageDisplayer(width, height, 3, false, "weights");
   }
-
 }
 
-
-void ConvEdge::AllocateMemoryBprop() {
+void ConvEdge::SetGradMemory(Matrix& p) {
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
   int num_locs = num_modules_ * num_modules_;
   int bias_locs = shared_bias_ ? 1 : num_locs;
-  // Matrix for storing the current gradient.
 
   if (!is_tied_) {
-    grad_weights_.AllocateGPUMemory(num_output_channels_, input_size);
+    p.Reshape(num_output_channels_, -1);
+    p.GetSlice(grad_weights_, 0, input_size);
     weight_optimizer_->AllocateMemory(num_output_channels_, input_size);
   }
 
@@ -93,22 +105,12 @@ void ConvEdge::AllocateMemoryBprop() {
   }
  
   if (!has_no_bias_ && !is_tied_) {
-    grad_bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
+    p.GetSlice(grad_bias_, input_size, input_size + bias_locs);
+    grad_bias_.Reshape(1, -1);
     bias_optimizer_->AllocateMemory(1, num_output_channels_ * bias_locs);
     if (shared_bias_) {
       Matrix::RegisterTempMemory(num_output_channels_ * num_locs, "shared bias");
     }
-  }
-}
-
-void ConvEdge::AllocateMemoryFprop() {
-  int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
-  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
-  
-  // Weights for this convolution.
-  weights_.AllocateGPUMemory(num_output_channels_, input_size);
-  if (!has_no_bias_) {
-    bias_.AllocateGPUMemory(1, num_output_channels_ * bias_locs);
   }
 }
 

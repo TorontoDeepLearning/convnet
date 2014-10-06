@@ -17,19 +17,20 @@ void ResponseNormEdge::SetTiedTo(Edge* e) {
   frac_of_filters_response_norm_ = ee->FracOfFilters();
 }
 
+string ResponseNormEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " Response norm crossmap : " <<
+    "num_filters = " << num_filters_response_norm_ << " "
+    << image_size_ << "-" << image_size_ << "-" << num_input_channels_ << ":"
+    << num_modules_ << "-" << num_modules_ << "-" << num_output_channels_;
+  return ss.str();
+}
+
 void ResponseNormEdge::SetImageSize(int image_size) {
   Edge::SetImageSize(image_size);
   num_modules_ = image_size;
-}
-
-void ResponseNormEdge::AllocateMemory(bool fprop_only) {
-  num_modules_ = image_size_;
   num_filters_response_norm_ = (int)(frac_of_filters_response_norm_
                                      * num_input_channels_);
-  // There are memory requirements for this edge but the memory size is
-  // batchsize dependent. I want to make edges as batch size independent as
-  // possible. Therefore, memory allocation is done when ComputeUp is called the 
-  // first time.
 }
 
 void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite){

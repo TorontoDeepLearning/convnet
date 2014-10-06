@@ -16,10 +16,21 @@ class Edge {
   Edge(const config::Edge& edge_config);
   ~Edge();
   
-  /** Allocate memory for the model.
-   * @param fprop_only If true, does not allocate memory needed for optimization.
+  /** Returns a human-readable string describing the edge.*/
+  virtual string GetDescription();
+
+  /** Setup memory for parameters.
+   * @param p The slice of memory given to this edge.
    */ 
-  virtual void AllocateMemory(bool fprop_only);
+  virtual void SetMemory(Matrix& p);
+
+  /** Setup memory for storing the gradient of the parameters.
+   * @param p The slice of memory given to this edge for this purpose.
+   */ 
+  virtual void SetGradMemory(Matrix& p);
+
+  /** Returns number of floats needed by this edge to store parameters.*/
+  virtual size_t GetParameterMemoryRequirement();
   
   /** Initialize the weights and biases.*/
   virtual void Initialize();
@@ -108,6 +119,8 @@ class Edge {
   const string& GetSourceName();
   const string& GetDestName();
   const string& GetName();
+  const string& GetSourceSliceName();
+  const string& GetDestSliceName();
 
   /** Set the number of input channels.*/
   void SetInputChannels(int a);
@@ -126,7 +139,9 @@ class Edge {
  protected:
   Layer *source_;  /** The source layer for this edge.*/
   Layer *dest_;  /** The destination layer for this edge.*/
-  const string source_node_, dest_node_, name_, tied_edge_name_;
+  const string source_node_, dest_node_, source_node_slice_, dest_node_slice_,
+        tied_edge_name_;
+  string name_;
   Edge* tied_edge_;  /* The edge to which this edge is tied.*/
   int num_input_channels_, num_output_channels_, image_size_, num_modules_;
   bool mark_;  /** A marker. Used for topological sorting.*/
@@ -134,5 +149,10 @@ class Edge {
   ImageDisplayer *img_display_;
   const int gpu_id_;  /** The GPU on which this edge should do its computation.*/
   const bool display_;
+
+  int process_id_;  // MPI rank.
+  int num_processes_;  // Number of data parallel processes.
+  bool is_root_;  // The process that is root.
+
 };
 #endif

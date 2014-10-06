@@ -13,25 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 #include "cudamat_conv_util.cuh"
 
 cudaTextureObject_t getTextureObject(cudamat* mat) {
   if (mat->tex_obj == 0) {
-    int size = mat->size[0] * mat->size[1] * sizeof(float);
+    size_t size = mat->size[0] * mat->size[1] * sizeof(float);
     if (size <= TEXTURE_SIZE_MAX) {
-      struct cudaResourceDesc resDesc;
+      cudaResourceDesc resDesc;
       memset(&resDesc, 0, sizeof(resDesc));
       resDesc.resType = cudaResourceTypeLinear;
       resDesc.res.linear.devPtr = mat->data_device;
       resDesc.res.linear.sizeInBytes = size;
       resDesc.res.linear.desc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
-      struct cudaTextureDesc texDesc;
+      cudaTextureDesc texDesc;
       memset(&texDesc, 0, sizeof(texDesc));
+      texDesc.readMode = cudaReadModeElementType;
       cudaError_t err = cudaCreateTextureObject(&(mat->tex_obj), &resDesc, &texDesc, NULL);
       if (cudaSuccess != err) {
-        fprintf(stderr, "Error creating texture object for matrix of shape %d %d.", mat->size[0], mat->size[1]);
+        fprintf(stderr, "Error creating texture object for matrix of shape %d %d : (%d) %s.\n",
+                mat->size[0], mat->size[1], (int)err, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
       }
     }

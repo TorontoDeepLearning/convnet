@@ -4,6 +4,9 @@
 using namespace std;
 
 int main(int argc, char** argv) {
+#ifdef USE_MPI
+  MPI_Init(&argc, &argv);
+#endif
   try {
     TCLAP::CmdLine cmd("ConvNet Feature Extractor", ' ', "1.0");
     TCLAP::MultiArg<int> board_arg(
@@ -42,5 +45,8 @@ int main(int argc, char** argv) {
   } catch (TCLAP::ArgException &e)  {
     cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
   }
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
   return 0;
 }

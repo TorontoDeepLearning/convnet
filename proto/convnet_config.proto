@@ -4,6 +4,11 @@
 
 package config;
 
+message LayerSlice {
+  required string name = 1;
+  optional int32 num_channels = 2;
+}
+
 message Layer {
   required string name = 1;
   optional int32 num_channels = 2;
@@ -20,14 +25,13 @@ message Layer {
     HINGE_QUADRATIC = 6;
   }
   optional Activation activation = 6 [default=LINEAR];
-  optional bool is_spatial_output = 7 [default=false];
-  optional bool is_classifier_output = 8 [default=false];
   optional bool display = 9 [default=false];
   optional bool is_output = 10 [default=false];  // DEPRECATED
   optional bool gaussian_dropout = 11 [default=false];
   optional float max_act_gaussian_dropout = 12 [default = -1];
   optional int32 gpu_id = 13 [default = 0];
   optional float hinge_margin = 14 [default=0];
+  repeated LayerSlice layer_slice = 15;  // Sublayers.
 }
 
 message Optimizer {
@@ -152,6 +156,10 @@ message Edge {
   optional string pretrained_edge_name = 26;
   
   optional bool display = 27 [default=false];
+  
+  // Layer slices.
+  optional string source_slice = 28;
+  optional string dest_slice = 29;
 }
 
 message Subnet {

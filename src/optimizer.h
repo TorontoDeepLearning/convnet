@@ -57,6 +57,7 @@ class SGDOptimizer : public Optimizer {
   // Hyperparams.
   const float initial_momentum_, final_momentum_;
   const int momentum_transition_timescale_;
+  const bool other_way_;
 };
 
 /** Implmenets LBFGS optimization.

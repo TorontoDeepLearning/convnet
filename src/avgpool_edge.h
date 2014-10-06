@@ -1,11 +1,11 @@
-#ifndef MAXPOOL_EDGE_H_
-#define MAXPOOL_EDGE_H_
+#ifndef AVGPOOL_EDGE_H_
+#define AVGPOOL_EDGE_H_
 #include "edge.h"
 
-/** Implements a Max-pool edge.*/
-class MaxPoolEdge : public Edge {
+/** Implements an Avg-pool edge.*/
+class AvgPoolEdge : public Edge {
  public:
-  MaxPoolEdge(const config::Edge& edge_config);
+  AvgPoolEdge(const config::Edge& edge_config);
   virtual string GetDescription();
   virtual void SetTiedTo(Edge* e);
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);

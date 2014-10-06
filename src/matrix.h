@@ -12,27 +12,30 @@ using namespace std;
 class Matrix {
  public:
   Matrix();
-  Matrix(const int rows, const int cols, const bool on_gpu);
+  Matrix(const size_t rows, const size_t cols, const bool on_gpu);
   ~Matrix();
   
   void Tie(Matrix &m);
-  void AllocateGPUMemory(const int rows, const int cols, const string& name);
-  void AllocateGPUMemory(const int rows, const int cols);
-  void AllocateMainMemory(const int rows, const int cols);
+  void SetupTranspose();
+  void SetupTextureObject();
+  void AllocateGPUMemory(const size_t rows, const size_t cols, const string& name);
+  void AllocateGPUMemory(const size_t rows, const size_t cols);
+  void AllocateMainMemory(const size_t rows, const size_t cols);
   void Set(const float val);
   void Set(Matrix& val);
   void CopyP2PAsync(Matrix& val);
-  void GetSlice(Matrix& slice, int start, int end);
+  void GetSlice(Matrix& slice, size_t start, size_t end);
   void FillWithRand();
   void FillWithRandn();
   void CopyToHost();
   void CopyToDevice();
-  void CopyToDeviceSlice(const int start, const int end);
-  void CopyToHostSlice(const int start, const int end);
+  void CopyToDeviceSlice(const size_t start, const size_t end);
+  void CopyToHostSlice(const size_t start, const size_t end);
   void CopyFromMainMemory(Matrix& mat);
-  void Reshape(const int rows, const int cols);
+  void Reshape(const size_t rows, const size_t cols);
   float Norm();
   void Print();
+  bool CheckNaN();
   void PrintToFile(const string& filename);
   void WriteToFile(FILE* file);
   void ReadFromFile(FILE* file);
@@ -43,11 +46,12 @@ class Matrix {
   cudamat* GetMat() { return &mat_; }
   cudamat* GetMatTranspose() { return &mat_t_; }
   float* GetHostData() { return mat_.data_host; }
-  int GetRows() const {return mat_.size[0];}
-  int GetCols() const {return mat_.size[1];}
-  int GetNumEls() const {return mat_.size[1] * mat_.size[0]; }
+  size_t GetRows() const {return mat_.size[0];}
+  size_t GetCols() const {return mat_.size[1];}
+  size_t GetNumEls() const {return mat_.size[1] * mat_.size[0]; }
 
   int GetGPUId() const { return gpu_id_; }
+  void SetGPUId(int gpu_id) { gpu_id_ = gpu_id; }
   void SetReady();
   void WaitTillReady();
 
@@ -131,11 +135,17 @@ class Matrix {
                         float scale_targets, float scale_outputs);
 
   static void ConvMaxPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules);
+                     int kernel_size, int padding, int stride, int num_modules, float scale_targets);
 
   static void ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
                           Matrix& deriv_input, int kernel_size, int padding,
-                          int stride, int num_modules);
+                          int stride, int num_modules, float scale_targets);
+
+  static void ConvAvgPool(Matrix& input, Matrix& output, int num_input_channels,
+                     int kernel_size, int padding, int stride, int num_modules, float scale_targets);
+
+  static void ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, int kernel_size, int padding,
+                          int stride, int num_modules, int image_size, float scale_targets);
 
   static void ConvResponseNormCrossMap(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
@@ -158,11 +168,11 @@ class Matrix {
                              int image_width, int image_height, int patch_width,
                              int patch_height);
 
-  static void GetOnes(int rows, int cols, Matrix& ones);
-  static void RegisterTempMemory(int size);
-  static void RegisterTempMemory(int size, const string& why);
-  static void RegisterOnes(int size);
-  static void GetTemp(int rows, int cols, Matrix& temp);
+  static void GetOnes(size_t rows, size_t cols, Matrix& ones);
+  static void RegisterTempMemory(size_t size);
+  static void RegisterTempMemory(size_t size, const string& why);
+  static void RegisterOnes(size_t size);
+  static void GetTemp(size_t rows, size_t cols, Matrix& temp);
   static void InitRandom(int seed);
   static void SetupCUDADevice(int gpu_id);
   static void SetupCUDADevices(const vector<int>& boards);
@@ -183,7 +193,8 @@ class Matrix {
   string name_;
   static int num_boards_;
   static int current_gpu_id_;
-  static vector<int> boards_, temp_size_, ones_size_;
+  static vector<int> boards_;
+  static vector<size_t> temp_size_, ones_size_;
 };
 
 #endif

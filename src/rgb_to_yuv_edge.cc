@@ -3,8 +3,10 @@
 RGBToYUVEdge::RGBToYUVEdge(const config::Edge& edge_config) :
   Edge(edge_config), image_size_(0) {}
 
-void RGBToYUVEdge::AllocateMemory(int image_size) {
-  image_size_ = image_size;
+string RGBToYUVEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " RGB to YUV " << image_size_ << "-" << image_size_;
+  return ss.str();
 }
 
 void RGBToYUVEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

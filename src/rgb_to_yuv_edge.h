@@ -6,7 +6,7 @@
 class RGBToYUVEdge : public Edge {
  public:
   RGBToYUVEdge(const config::Edge& edge_config);
-  virtual void AllocateMemory(int image_size);
+  virtual string GetDescription();
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);

@@ -39,6 +39,7 @@ class EdgeWithWeight : public Edge {
   virtual void LoadPolyakOnGPU();
 
  protected:
+  
   // Tied edge management.
   void IncrementNumGradsReceived();
   int GetNumGradsReceived();

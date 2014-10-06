@@ -6,7 +6,10 @@
 class LocalEdge : public EdgeWithWeight {
  public:
   LocalEdge(const config::Edge& edge_config);
-  virtual void AllocateMemory(bool fprop_only);
+  virtual string GetDescription();
+  virtual void SetMemory(Matrix& p);
+  virtual void SetGradMemory(Matrix& p);
+  virtual size_t GetParameterMemoryRequirement();
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
@@ -24,8 +27,6 @@ class LocalEdge : public EdgeWithWeight {
   int GetPadding() const { return padding_; }
  
  private:
-  void AllocateMemoryBprop();
-  void AllocateMemoryFprop();
 
   int kernel_size_, stride_, padding_;
 };

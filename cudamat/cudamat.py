@@ -38,8 +38,6 @@ _cudamat.add_row_mult.restype = ct.c_int
 _cudamat.add_row_vec.restype = ct.c_int
 _cudamat.mult_by_col_vec.restype = ct.c_int
 _cudamat.mult_by_row_vec.restype = ct.c_int
-_cudamat.div_by_col_vec.restype = ct.c_int
-_cudamat.div_by_row_vec.restype = ct.c_int
 
 _cudamat.less_than.restype = ct.c_int
 _cudamat.less_than_scalar.restype = ct.c_int
@@ -779,6 +777,22 @@ class CUDAMatrix(object):
         else:
           return sum(self, axis, target, mult)
 
+    def sum_along_cols(self, target = None, mult=1.0):
+        """
+        Sum the matrix along the given dimension, where 0 represents the leading
+        dimension and 1 represents the non-leading dimension. If None, the sum
+        of all elements is returned. If a target is not prvided, a new vector is
+        created for storing the result.
+        """
+        m = self.shape[0]
+        if not target:
+            target = empty((m, 1))
+        err_code = _cudamat.sum_by_axis(self.p_mat, target.p_mat, 1, ct.c_float(mult), 0)
+        if err_code:
+            raise generate_exception(err_code)
+        return target
+
+
     def add_sums(self, mat, axis, mult = 1.):
         """
         Add a multiple of the sums of the matrix mat along the given dimension
@@ -1049,7 +1063,7 @@ class CUDAMatrix(object):
         if err_code:
             raise generate_exception(err_code)
 
-    def sqsum(self, axis, target = None):
+    def sqsum(self, axis, target = None, mult=1.0):
         """
         Find the sum of squares along the given dimension, where 0 represents the
         leading dimension and 1 represents the non-leading dimension. If a target
@@ -1066,7 +1080,7 @@ class CUDAMatrix(object):
             if not target:
                 target = empty((m, 1))
 
-        err_code =  _cudamat.sqsum_by_axis(self.p_mat, target.p_mat, ct.c_int(axis), 1.0, 0.0)
+        err_code =  _cudamat.sqsum_by_axis(self.p_mat, target.p_mat, ct.c_int(axis), ct.c_float(mult), ct.c_float(0.0))
         if err_code:
             raise generate_exception(err_code)
 
@@ -1096,6 +1110,11 @@ class CUDAMatrix(object):
         Apply the softmax activation function.
         """
         return softmax(self, target)
+
+    def apply_softmax_row_major(self, num_slices=None):
+        if num_slices is None:
+          num_slices = self.shape[1]
+        _cudamat.softmax_row_major_multi(self.p_mat, ct.c_int(num_slices))
 
     def sign(self, target = None):
         """
@@ -1669,7 +1688,7 @@ def sparse_dot(sparse_mat, dense_mat, mult=1.0, target = None):
 
     return target
 
-def dot(m1, m2, mult=1.0, target = None):
+def dot(m1, m2, mult=1.0, scale_targets= 0.0, target = None):
     """
     Find the dot product between m1 and m2.
     """
@@ -1680,7 +1699,7 @@ def dot(m1, m2, mult=1.0, target = None):
 
         target = empty((m, n))
 
-    err_code = _cudamat.dot(m1.p_mat, m2.p_mat, target.p_mat, ct.c_float(0.), ct.c_float(mult))
+    err_code = _cudamat.dot(m1.p_mat, m2.p_mat, target.p_mat, ct.c_float(scale_targets), ct.c_float(mult))
     if err_code:
         raise generate_exception(err_code)
 

@@ -8,6 +8,7 @@
 class UpSampleEdge : public Edge {
  public:
   UpSampleEdge(const config::Edge& edge_config);
+  virtual string GetDescription();
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);

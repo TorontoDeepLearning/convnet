@@ -9,39 +9,44 @@ void ConvOneToOneEdge::SetImageSize(int image_size) {
   num_modules_ = image_size;
 }
 
-void ConvOneToOneEdge::AllocateMemory(bool fprop_only) {
+size_t ConvOneToOneEdge::GetParameterMemoryRequirement() {
+  return num_output_channels_ * (num_input_channels_ + (has_no_bias_ ? 0 : 1));
+}
+
+string ConvOneToOneEdge::GetDescription() {
+  stringstream ss;
+  ss << name_ << " "
+     << " One-to-One Convolutional Kernel: "
+     << num_input_channels_ << " : " << num_output_channels_
+     << " Layer: " << image_size_ << "-" << image_size_ << "-"
+     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << "-" << num_output_channels_;
+  return ss.str();
+}
+
+void ConvOneToOneEdge::SetMemory(Matrix& p) {
   if (is_tied_) return;
-  Edge::AllocateMemory(fprop_only);
+  Edge::SetMemory(p);
 
-  cout << name_ << " ";
-  printf("One to one convolution: %d - %d ", num_input_channels_, num_output_channels_);
-  printf("Layer: %d-%d-%d (%d) ", image_size_, image_size_, num_input_channels_,
-         image_size_ * image_size_ * num_input_channels_);
- 
-  AllocateMemoryFprop();
-  if (!fprop_only) AllocateMemoryBprop();
-
-  cout << " Allocated weight " << weights_.GetRows() << " " << weights_.GetCols()
-       << " One to One Convolutional" << endl;
-}
-
-
-void ConvOneToOneEdge::AllocateMemoryBprop() {
-  if (!is_tied_) {
-    grad_weights_.AllocateGPUMemory(num_output_channels_, num_input_channels_);
-    weight_optimizer_->AllocateMemory(num_output_channels_, num_input_channels_);
-  }
-
-  if (!has_no_bias_ && !is_tied_) {
-    grad_bias_.AllocateGPUMemory(1, num_output_channels_);
-    bias_optimizer_->AllocateMemory(1, num_output_channels_);
-  }
-}
-
-void ConvOneToOneEdge::AllocateMemoryFprop() {
-  weights_.AllocateGPUMemory(num_output_channels_, num_input_channels_);
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(weights_, 0, num_input_channels_);
   if (!has_no_bias_) {
-    bias_.AllocateGPUMemory(1, num_output_channels_);
+    p.GetSlice(bias_, num_input_channels_, num_input_channels_ + 1);
+    bias_.Reshape(1, -1);
+  }
+}
+
+void ConvOneToOneEdge::SetGradMemory(Matrix& p) {
+  if (is_tied_) return;
+  p.Reshape(num_output_channels_, -1);
+  p.GetSlice(grad_weights_, 0, num_input_channels_);
+  
+  weight_optimizer_->AllocateMemory(num_output_channels_, num_input_channels_);
+
+  if (!has_no_bias_) {
+    p.GetSlice(grad_bias_, num_input_channels_, num_input_channels_ + 1);
+    grad_bias_.Reshape(1, -1);
+    bias_optimizer_->AllocateMemory(1, num_output_channels_);
   }
 }
 

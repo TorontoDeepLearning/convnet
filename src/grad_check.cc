@@ -59,7 +59,7 @@ void GradChecker::Run() {
   Fprop(false);
   ComputeDeriv();
   GetLoss(error);
-  Bprop(false);  // false means do not update weights.
+  Bprop();
   // Analytical gradients are now stored in grad_weights of each edge.
 
 

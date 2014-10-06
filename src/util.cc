@@ -134,6 +134,7 @@ void ReadHDF5Shape(hid_t file, const string& name, int* rows, int* cols) {
   H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
   *cols = dims_out[0];
   *rows = (ndims == 1) ? 1 :dims_out[1];
+  H5Sclose(dataspace);
   H5Dclose(dataset);
 }
 
@@ -168,6 +169,7 @@ void ReadHDF5CPU(hid_t file, float* mat, int size, const string& name) {
     exit(1);
   }
   H5Dread(dataset, H5T_NATIVE_FLOAT, dataspace, dataspace, H5P_DEFAULT, mat);
+  H5Sclose(dataspace);
   H5Dclose(dataset);
 }
 

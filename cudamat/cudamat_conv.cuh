@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+void SetupTexture(cudamat* mat);
+
 void convUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY,
             int numModulesX, int paddingStart, int moduleStride,
             int numImgColors, int numGroups, float scaleTargets);
@@ -56,21 +58,17 @@ void ContrastNormUndo(cudamat* outGrads, cudamat* denoms, cudamat* meanDiffs,
                       int sizeX, float addScale, float powScale);
 
 void MaxPool(cudamat* images, cudamat* targets, int numFilters, int subsX,
-             int startX,	int strideX, int outputsX);
+             int startX,	int strideX, int outputsX, float scaleTargets);
 
 void AvgPool(cudamat* images, cudamat* targets, int numFilters, int subsX,
-             int startX,	int strideX, int outputsX);
-
-void ProbMaxPool(cudamat* images, cudamat* rnd, cudamat* targets,
-                 int numFilters, int subsX,	int startX,	int strideX,
-                 int outputsX);
+             int startX,	int strideX, int outputsX, float scaleTargets);
 
 void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
                  cudamat* targets, int subsX, int startX, int strideX,
-                 int outputsX);
+                 int outputsX, float scaleTargets);
 
 void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, int subsX, int startX,
-                 int strideX, int outputsX, int imgSize);
+                 int strideX, int outputsX, int imgSize, float scaleTargets);
 
 void UpSample(cudamat* images, cudamat* targets, int factor,
               int input_image_size, float scaleTargets);

@@ -24,40 +24,4 @@ class DataWriter {
   map<string, stream> streams_;
   hid_t file_;
 };
-
-/** Buffers a specified number of batches, averages them and then writes
- * the average into an HDF5 file.
- */ 
-/*
-class AveragedDataWriter : public DataWriter {
- public:
-  AveragedDataWriter(const string& output_file, const int dataset_size,
-                     const int avg_after, int max_batchsize);
-  ~AveragedDataWriter();
-  virtual void AddStream(const string& name, const int numdims);
-  virtual void Write(Matrix& mat, const int data_id, const int rows);
- private:
-  const int avg_after_, max_batchsize_;
-  vector<Matrix*> buf_;
-  vector<int> counter_;
-};
-*/
-/** Averages a specified number of consecutive entries and writes the
- * average into an HDF5 file.
- */
-/*
-class SequentialAveragedDataWriter : public DataWriter {
- public:
-  SequentialAveragedDataWriter(const string& output_file, const int dataset_size,
-                               const int avg_after);
-  ~SequentialAveragedDataWriter();
-  virtual void AddStream(const string& name, const int numdims);
-  virtual void Write(Matrix& mat, const int data_id, const int rows);
-
- private:
-  const int avg_after_, dataset_size_;
-  vector<Matrix*> buf_;
-  int consumed_, num_rows_written_;
-};
-*/
 #endif

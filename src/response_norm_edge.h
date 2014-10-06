@@ -7,8 +7,8 @@
 class ResponseNormEdge : public Edge {
  public:
   ResponseNormEdge(const config::Edge& edge_config);
+  virtual string GetDescription();
   virtual void SetTiedTo(Edge* e);
-  virtual void AllocateMemory(bool fprop_only);
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);

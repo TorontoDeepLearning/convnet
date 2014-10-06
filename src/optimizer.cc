@@ -75,7 +75,8 @@ SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
   initial_momentum_(optimizer_config.initial_momentum()),
   final_momentum_(optimizer_config.final_momentum()),
   momentum_transition_timescale_(
-      optimizer_config.momentum_transition_timescale()) {}
+      optimizer_config.momentum_transition_timescale()),
+  other_way_(true) {}
 
 void SGDOptimizer::AllocateMemory(const int rows, const int cols) {
   gradient_history_.AllocateGPUMemory(rows, cols, "optimizer");
@@ -115,13 +116,18 @@ void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
     gradient_history_.Mult(momentum);
    
     // L2 decay.
-    if (l2_decay_ > 0) gradient_history_.Add(parameter, l2_decay_);
+    if (l2_decay_ > 0) gradient_history_.Add(parameter, l2_decay_ * (other_way_ ? epsilon : 1));
    
     // Clip gradients to prevent explosions.
     if (gradient_clip_ > 0) gradient.UpperBoundMod(gradient_clip_);
 
-    gradient_history_.Add(gradient, 1.0);
-    parameter.Add(gradient_history_, -epsilon);
+    if (other_way_) {
+      gradient_history_.Add(gradient, epsilon);
+      parameter.Add(gradient_history_, -1);
+    } else {
+      gradient_history_.Add(gradient, 1.0);
+      parameter.Add(gradient_history_, -epsilon);
+    }
     ApplyConstraints(parameter);
   }
   step_++;

@@ -68,10 +68,12 @@ class Layer {
   Edge* GetIncomingEdge(int index) { return incoming_edge_[index]; }  // TODO:add check for size.
 
   /** Returns a reference to the state of the layer.*/
-  Matrix& GetState() { return state_;}
+  Matrix& GetState();
+  Matrix& GetState(const string& slice);
 
   /** Returns a reference to the deriv at this layer.*/
-  Matrix& GetDeriv() { return deriv_;}
+  Matrix& GetDeriv();
+  Matrix& GetDeriv(const string& slice);
   
   /** Returns a reference to the data at this layer.*/
   Matrix& GetData() { return data_;}
@@ -87,6 +89,7 @@ class Layer {
 
   const string& GetName() const { return name_; }
   int GetNumChannels() const { return num_channels_; }
+  int GetNumChannels(const string& slice) const;
   int GetSize() const { return image_size_; }
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
@@ -112,14 +115,17 @@ class Layer {
   bool has_incoming_from_same_gpu_, has_outgoing_to_same_gpu_;
   bool has_incoming_from_other_gpus_, has_outgoing_to_other_gpus_;
 
-  static long total_gpu_memory_bytes_;
+  bool AddOrOverwriteState(const string& slice);
+  bool AddOrOverwriteDeriv(const string& slice);
+  void ResetAddOrOverwrite();
 
  protected:
   void ApplyDropoutAtTrainTime();
   void ApplyDropoutAtTestTime();
+  void SetupSlices();
 
   const string name_;
-  const int num_channels_;
+  int num_channels_;
   bool is_input_, is_output_;
   const float dropprob_;
   const bool display_, dropout_scale_up_at_train_time_, gaussian_dropout_;
@@ -141,6 +147,9 @@ class Layer {
   ImageDisplayer *img_display_;
   const int gpu_id_;
   set<int> other_incoming_gpu_ids_, other_outgoing_gpu_ids_;
+  map<string, Matrix> state_slices_, deriv_slices_;
+  map<string, int> slice_channels_;
+  map<string, bool> add_or_overwrite_state_, add_or_overwrite_deriv_;
 };
 
 /** Implements a layer with a linear activation function.*/
