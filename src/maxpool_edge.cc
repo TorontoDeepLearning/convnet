@@ -43,11 +43,11 @@ void MaxPoolEdge::AllocateMemory(bool fprop_only) {
 
 void MaxPoolEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   Matrix::ConvMaxPool(input, output, num_input_channels_, kernel_size_,
-                      -padding_, stride_, num_modules_);
+                      padding_, stride_, num_modules_);
 }
 
 void MaxPoolEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                               Matrix& output, Matrix& deriv_input, bool overwrite) {
   Matrix::ConvMaxPoolUndo(input, deriv_output, output, deriv_input, kernel_size_,
-                          -padding_, stride_, num_modules_);
+                          padding_, stride_, num_modules_);
 }

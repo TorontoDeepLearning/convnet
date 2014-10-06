@@ -38,6 +38,7 @@ Compiling the CPU-only feature extractor -
 - Run make in `convnet/cpu`.
 
 Compiling the full package -
+- Compile cudamat : Set the path to dependencies in `convnet/cudamat/Makefile` and run make in `convnet/cudamat/`.
 - Set the paths to the dependencies in `convnet/Makefile`.
 - Set the compute capability for your GPU.
 - Run make in `convnet`.

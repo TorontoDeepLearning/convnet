@@ -10,7 +10,7 @@ CUDA_INC=/pkgs_local/cuda-5.5/include
 CUDA_LIB=/pkgs_local/cuda-5.5/lib64
 #####################################
 CXX = g++
-LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L/u/nitish/convnet/cudamat
+LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L./cudamat
 CPPFLAGS = -I$(INC) -I$(CUDA_INC) -I$(SRC) -Ideps
 LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudamat_conv -lcudart -Wl,-rpath='$$ORIGIN/../cudamat'
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare -fopenmp

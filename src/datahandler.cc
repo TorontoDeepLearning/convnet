@@ -339,7 +339,7 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
       it = new BoundingBoxIterator(config);
       break;
     default:
-      cerr << "Unknown data type " << config.data_type() << endl;
+      cerr << "Unknown data type " << (int)config.data_type() << endl;
       exit(1);
   }
   return it;
@@ -570,7 +570,7 @@ HDF5DataIterator<T>::HDF5DataIterator(const config::DataStreamConfig& config):
 
 template <typename T>
 HDF5DataIterator<T>::~HDF5DataIterator() {
-  delete buf_;
+  delete[] buf_;
   H5Tclose(type_);
   H5Sclose(m_dataspace_);
   H5Pclose(dapl_id_);
@@ -593,7 +593,7 @@ void HDF5DataIterator<T>::Get(float* data_ptr, const int row) const {
   for (int i = 0; i < num_dims_; i++) {
     data_ptr[i] = static_cast<float>(buf[i]);
   }
-  delete buf;
+  delete[] buf;
 }
 
 template <typename T>
@@ -641,7 +641,7 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
 }
 
 ImageDataIterator::~ImageDataIterator() {
-  delete buf_;
+  delete[] buf_;
   delete it_;
 }
 
@@ -679,7 +679,7 @@ void ImageDataIterator::Get(float* data_out, const int row) const {
   for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
     data_out[i] = static_cast<float>(buf[i]);
   }
-  delete buf;
+  delete[] buf;
 }
 
 SlidingWindowDataIterator::SlidingWindowDataIterator(
@@ -699,7 +699,7 @@ SlidingWindowDataIterator::SlidingWindowDataIterator(
 }
 
 SlidingWindowDataIterator::~SlidingWindowDataIterator() {
-  delete buf_;
+  delete[] buf_;
   delete it_;
 }
 
@@ -777,7 +777,7 @@ CropDataIterator::CropDataIterator(const config::DataStreamConfig& config):
 }
 
 CropDataIterator::~CropDataIterator() {
-  delete buf_;
+  delete[] buf_;
   delete it_;
 }
 
@@ -831,7 +831,7 @@ TextDataIterator::TextDataIterator(const config::DataStreamConfig& config):
 }
 
 TextDataIterator::~TextDataIterator() {
-  delete data_;
+  delete[] data_;
 }
 
 void TextDataIterator::Get(float* data_out, const int row) const {

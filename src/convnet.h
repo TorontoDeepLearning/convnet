@@ -18,7 +18,7 @@ class ConvNet {
   * Instantiate a model using the config in model_file.
   */ 
   ConvNet(const string& model_file);
-  ~ConvNet();
+  virtual ~ConvNet();
   virtual void SetupDataset(const string& train_data_config_file);
   virtual void SetupDataset(const string& train_data_config_file, const string& val_data_config_file);
 
