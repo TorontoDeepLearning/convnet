@@ -1,50 +1,49 @@
 #include "multigpu_convnet.h"
+#include <opencv2/core.hpp>
 #include <iostream>
-#include <tclap/CmdLine.h>
+
 using namespace std;
+using namespace cv;
 
 int main(int argc, char** argv) {
 #ifdef USE_MPI
   MPI_Init(&argc, &argv);
 #endif
-  try {
-    TCLAP::CmdLine cmd("ConvNet Feature Extractor", ' ', "1.0");
-    TCLAP::MultiArg<int> board_arg(
-        "b", "board", "GPU board(s)", true, "integer");
-    TCLAP::ValueArg<std::string> model_file_arg(
-        "m", "model", "Model pbtxt file", true, "", "string");
-    TCLAP::ValueArg<std::string> fe_file_arg(
-        "f", "feature-config", "Feature extraction pbtxt file", true, "", "string");
-    
-    cmd.add(board_arg);
-    cmd.add(model_file_arg);
-    cmd.add(fe_file_arg);
-
-    cmd.parse(argc, argv);
-
-    const vector<int>& boards = board_arg.getValue();
-    const string& model_file = model_file_arg.getValue();
-    const string& fe_file = fe_file_arg.getValue();
-    
-    bool multi_gpu = boards.size() > 1; 
-    
-    // Setup GPU boards.
-    if (multi_gpu) {
-      Matrix::SetupCUDADevices(boards);
-    } else {
-      Matrix::SetupCUDADevice(boards[0]);
-    }
-    for (const int &b : boards){
-      cout << "Using board " << b << endl;
-    }
-
-    ConvNet *net = multi_gpu ? new MultiGPUConvNet(model_file) :
-                               new ConvNet(model_file);
-    net->ExtractFeatures(fe_file);
-    delete net;
-  } catch (TCLAP::ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
+  const char *keys =
+          "{ board          b || GPU board(s): 0 or 012, etc. }"
+          "{ model          m || Model pbtxt file }"
+          "{ feature-config f || Feature extraction pbtxt file }";
+  CommandLineParser parser(argc, argv, keys);
+  string board(parser.get<string>("board"));
+  string model_file(parser.get<string>("model"));
+  string fe_file(parser.get<string>("feature-config"));
+  if (board.empty() || model_file.empty() || fe_file.empty()) {
+    parser.printMessage();
+    return 1;
   }
+
+  vector<int> boards;
+  for (auto b:board) {
+    string currBoard;
+    currBoard.push_back(b);
+    boards.push_back(atoi(currBoard.c_str()));
+  }
+  bool multi_gpu = boards.size() > 1;
+
+  // Setup GPU boards.
+  if (multi_gpu) {
+    Matrix::SetupCUDADevices(boards);
+  } else {
+    Matrix::SetupCUDADevice(boards[0]);
+  }
+  for (const int &b : boards) {
+    cout << "Using board " << b << endl;
+  }
+
+  ConvNet *net = multi_gpu ? new MultiGPUConvNet(model_file) :
+                             new ConvNet(model_file);
+  net->ExtractFeatures(fe_file);
+  delete net;
 #ifdef USE_MPI
   MPI_Finalize();
 #endif

@@ -7,7 +7,7 @@
 class DataWriter {
  public:
   DataWriter(const config::FeatureExtractorConfig config);
-  ~DataWriter();
+  virtual ~DataWriter();
   void SetNumDims(const string& name, const int num_dims);
   void SetDataSetSize(int dataset_size);
   virtual void Write(vector<Layer*>& layers, int numcases);

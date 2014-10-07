@@ -10,7 +10,7 @@ class Layer {
  public:
   /** Instantiate a layer from config. */ 
   Layer(const config::Layer& config);
-  ~Layer();
+  virtual ~Layer();
 
   /** Allocate memory for storing the state and derivative at this layer.
    * @param batch_size The mini-batch size.

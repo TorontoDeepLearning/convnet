@@ -283,9 +283,9 @@ void Matrix::PrintToFile(const string& filename) {
     cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
     exit(1);
   }
-  ofstream f(filename, ios::out);
-  for (size_t i = 0; i < mat_.size[0]; i++) {
-    for (size_t j = 0; j < mat_.size[1]; j++) {
+  ofstream f(filename.c_str(), ios::out);
+  for (int i = 0; i < mat_.size[0]; i++) {
+    for (int j = 0; j < mat_.size[1]; j++) {
       f << mat_.data_host[j * mat_.size[0] + i] << " ";
     }
     f << '\n';

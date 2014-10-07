@@ -3,18 +3,21 @@
 # Path to protocol buffers, hdf5.
 INC=$(HOME)/local/include
 LIB=$(HOME)/local/lib
-LOCAL_BIN = $(HOME)/local/bin
+LOCAL_BIN=$(HOME)/local/bin
 
 # CUDA.
-CUDA_INC=/pkgs_local/cuda-5.5/include
-CUDA_LIB=/pkgs_local/cuda-5.5/lib64
+CUDA_ROOT=/pkgs_local/cuda-5.5
+
 USE_MPI=yes
 #####################################
 
+CUDA_INC=$(CUDA_ROOT)/include
+CUDA_LIB=$(CUDA_ROOT)/lib64
+
 CXX = g++
-LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L/u/nitish/convnet/cudamat
+LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L./cudamat
 CPPFLAGS = -I$(INC) -I$(CUDA_INC) -I$(SRC) -Ideps
-LINKFLAGS = -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudamat_conv -lcudart -Wl,-rpath='$$ORIGIN/../cudamat'
+LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudamat_conv -lcudart -Wl,-rpath='$$ORIGIN/../cudamat'
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare -fopenmp
 
 ifeq ($(USE_MPI), yes)
@@ -30,7 +33,7 @@ EDGES_OBJS := $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(
 DATAHANDLER_SRC := $(SRC)/image_iterators.cc $(SRC)/datahandler.cc $(SRC)/datawriter.cc
 DATAHANDLER_OBJS := $(OBJ)/image_iterators.o $(OBJ)/datahandler.o $(OBJ)/datawriter.o
 COMMONOBJS = $(OBJ)/convnet_config.pb.o $(OBJ)/matrix.o $(DATAHANDLER_OBJS) $(OBJ)/layer.o $(OBJ)/util.o $(EDGES_OBJS)
-TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/jpeg2hdf5 $(BIN)/test_mpi
+TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/image2hdf5
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
 
@@ -52,7 +55,7 @@ $(BIN)/extract_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/multigpu_co
 $(BIN)/run_grad_check: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/grad_check.o $(OBJ)/run_grad_check.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
-$(BIN)/jpeg2hdf5: $(OBJ)/image_iterators.o $(OBJ)/jpeg2hdf5.o
+$(BIN)/image2hdf5: $(OBJ)/image_iterators.o $(OBJ)/image2hdf5.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(OBJ)/%.o: $(SRC)/%.cc $(SRC)/%.h

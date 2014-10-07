@@ -355,7 +355,7 @@ void Edge::LoadParameters(hid_t file) {
     int kernel_size = (edge_type_ == config::Edge::FC) ? image_size_ : kernel_size_;
     CPUMatrix::Transpose(data, weights_.GetData(), num_output_channels_,
                          kernel_size, kernel_size, num_input_channels_);
-    delete data;
+    delete[] data;
     ss.str("");
   }
   if (bias_.GetSize() > 0) {

@@ -21,7 +21,7 @@ CPUMatrix::CPUMatrix(const int rows, const int cols): rows_(rows), cols_(cols) {
 }
 
 void CPUMatrix::FreeMemory() {
-  if (rows_ * cols_ > 0) delete data_;
+  if (rows_ * cols_ > 0) delete[] data_;
 }
 
 void CPUMatrix::AllocateMemory(int rows, int cols) {

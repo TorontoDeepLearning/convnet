@@ -18,6 +18,14 @@ Dependencies
   $ make
   $ make install
 
+- OpenCV
+  Download the source code https://github.com/Itseez/opencv/archive/3.0.0-alpha.zip
+  To quick install -
+  $ cmake-gui, set CMAKE_BUILD_TYPE to Release
+  $ cd build directory
+  $ make -j7
+  $ sudo make install
+
 - libjpeg
   This is often present on standard operating systems since it is used by a lot of programs.
   It can be downloaded from http://libjpeg.sourceforge.net/
@@ -38,6 +46,7 @@ Compiling the CPU-only feature extractor -
 - Run make in `convnet/cpu`.
 
 Compiling the full package -
+- Compile cudamat : Set the path to dependencies in `convnet/cudamat/Makefile` and run make in `convnet/cudamat/`.
 - Set the paths to the dependencies in `convnet/Makefile`.
 - Set the compute capability for your GPU.
 - Run make in `convnet`.

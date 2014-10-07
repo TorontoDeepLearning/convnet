@@ -7,11 +7,11 @@
 
 Run:
 ```
-$ train_convnet --board <board-id> --model net.pbtxt --train train_data.pbtxt --val val_data.pbtxt
+$ train_convnet --board=<board-id> --model=net.pbtxt --train=train_data.pbtxt --val=val_data.pbtxt
 ```
 or
 ```
-$ train_convnet --board <board-id> --model net.pbtxt --train train_plus_val_data.pbtxt --val test_data.pbtxt
+$ train_convnet --board=<board-id> --model=net.pbtxt --train=train_plus_val_data.pbtxt --val=test_data.pbtxt
 ```
 
 Toronto users-
@@ -25,12 +25,12 @@ then.
 ### Extracting features
 The representation at different layers of the learned model can be extracted:
 ```
-$ extract_representation --board <board-id> --model <model-file> --feature-config <feature-config-file>
+$ extract_representation --board=<board-id> --model=<model-file> --feature-config=<feature-config-file>
 ```
 
 For example, 
 ```
-$ extract_representation --board 0 --model checkpoint_dir/mnist_net_20140627130044.pbtxt --feature-config feature_config.pbtxt
+$ extract_representation --board=0 --model=checkpoint_dir/mnist_net_20140627130044.pbtxt --feature-config=feature_config.pbtxt
 ```
 The `feature_config.pbtxt` file describes what data to input, which layers to extract features from and where to write the output.
 

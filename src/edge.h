@@ -14,7 +14,7 @@ class Edge {
  public:
   /** Instatntiate an Edge from the config.*/
   Edge(const config::Edge& edge_config);
-  ~Edge();
+  virtual ~Edge();
   
   /** Returns a human-readable string describing the edge.*/
   virtual string GetDescription();
