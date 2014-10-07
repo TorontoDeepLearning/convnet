@@ -7,6 +7,7 @@ Dependencies
 
 A simple example of running forward props through a ConvNet model -
 ```
+  import convnet as cn
   model = cn.ConvNet(pbtxt_file)  # Load the model architecture.
   model.Load(params_file)  # Set the weights and biases.
   model.SetNormalizer(means_file, 224)  # Set the mean and std for input normalization.
