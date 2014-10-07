@@ -349,29 +349,21 @@ void ConvNet::Accumulate(Matrix& mat, int tag) {
   float* data = mat.GetHostData();
   int buffer_size = mat.GetNumEls();
   mat.CopyToHost();
-  float sum = 0;
   if (is_root_) {
     float* buffer = new float[buffer_size];
     MPI_Status stat;
     for (int pid = 1; pid < num_processes_; pid++) {
-      sum = 0;
       MPI_Recv(buffer, buffer_size, MPI_FLOAT, pid, tag, MPI_COMM_WORLD, &stat);
       /*
       if (stat != MPI_SUCCESS) {
         cerr << "Error: Could not receive message from pid " << pid << endl;
       }*/
-      for (size_t i = 0; i < buffer_size; i++) {
-        data[i] += buffer[i];
-        sum += buffer[i];
-      }
-      //cout << "Sum received " << sum << endl;
+      for (size_t i = 0; i < buffer_size; i++) data[i] += buffer[i];
     }
     for (size_t i = 0; i < buffer_size; i++) data[i] /= num_processes_;
-    delete buffer;
+    delete[] buffer;
     mat.CopyToDevice();
   } else {
-    for (size_t i = 0; i < buffer_size; i++) sum += data[i];
-    //cout << "Sum sent " << sum << endl;
     MPI_Send(data, buffer_size, MPI_FLOAT, 0, tag, MPI_COMM_WORLD);
   }
 #endif

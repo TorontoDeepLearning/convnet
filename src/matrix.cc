@@ -515,7 +515,7 @@ void Matrix::InitRandom(int seed){
   int err_code;
   for (int i = 0; i < num_boards_; i++) {
     SetDevice(i);
-    err_code = init_random(&rnd_[i], seed + i, NULL);
+    err_code = init_random(&rnd_[i], seed + i);
     if (err_code != 0) {
       cerr << "Error init random board " << i << " " << GetStringError(err_code) << endl;
       exit(1);

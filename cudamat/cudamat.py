@@ -273,7 +273,7 @@ class CUDAMatrix(object):
         CUDAMatrix.rnd_state = rnd_struct()
         CUDAMatrix.rnd_state_p = ct.pointer(CUDAMatrix.rnd_state)
 
-        cudamat_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'rnd_multipliers_32bit.txt')
+        cudamat_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
 
         err_code = _cudamat.init_random(CUDAMatrix.rnd_state_p, ct.c_int(seed), cudamat_path)
         if err_code:
