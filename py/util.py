@@ -1,7 +1,6 @@
 import numpy as np
 import cudamat as cm
 from cudamat import cudamat_conv as cc
-from cudamat import gpu_lock2 as gpu_lock
 import sys
 import h5py
 from time import sleep
@@ -12,6 +11,7 @@ import convnet_config_pb2
 This script uses the GPU locking system used at University of Toronto.
 Please modify this accordingly for your GPU resource environment.
 """
+from cudamat import gpu_lock2 as gpu_lock
 
 def LockGPU(max_retries=10):
   """ Locks a free GPU board and returns its id. """

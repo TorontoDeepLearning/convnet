@@ -21,9 +21,15 @@ def LoadImage(file_name, resize=256, crop=224):
   data = np.array(image_resized.getdata()).T.reshape(1, -1)
   return data
 
+def Usage():
+  print 'python run_convnet.py <model_file(.pbtxt)> <model_parameters(.h5)> <means_file(.h5)>'
+
 def main():
   board = cn.LockGPU()
   print 'Using board', board
+  if len(sys.argv) < 4:
+    Usage()
+    sys.exit(1)
   pbtxt_file = sys.argv[1]
   params_file = sys.argv[2]
   means_file = sys.argv[3]

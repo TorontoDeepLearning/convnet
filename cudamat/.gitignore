@@ -1,5 +1,3 @@
-gpu_lock2.py
-run_on_me_or_pid_quit
 *.o
 *.so
 *.pyc
