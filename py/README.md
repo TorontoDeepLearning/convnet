@@ -23,7 +23,7 @@ A simple example of running forward props through a ConvNet model -
   print output.shape, last_hidden_layer.shape  # (128, 1000) (128, 4096).
 ```
 
-
+Usage
 ```
 python run_convnet.py <model_file(.pbtxt)> <model_parameters(.h5)> <means_file(.h5)>
 ```
