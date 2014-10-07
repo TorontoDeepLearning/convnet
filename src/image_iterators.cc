@@ -7,89 +7,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-using namespace cv;
-
-inline void resizeOCV(Mat &img, unsigned int width, unsigned int height)
-{
-    Mat out;
-    resize(img, out, Size(width, height));
-    img = out;
-}
-
-inline void rotateOCV(Mat &img, float angle)
-{
-    Mat rot = getRotationMatrix2D(Point2f(img.cols/2, img.rows/2), angle, 1.0);
-    Mat out;
-    warpAffine(img, out, rot, Size(img.cols, img.rows));
-    img = out;
-}
-
-inline void cropOCV(Mat &img, Mat &out, int left, int top, int right, int bottom)
-{
-    Size s(right - left, bottom - top);
-    Point2f center(left + s.width/2, top + s.height/2);
-    getRectSubPix(img, s, center, out);
-}
-
-inline void cropOCV(Mat &img, int left, int top, int right, int bottom)
-{
-    Mat out;
-    cropOCV(img, out, left, top, right, bottom);
-    img = out;
-}
-
-inline void mirrorOCV(Mat &img)
-{
-    Mat out;
-    flip(img, out, 1); // 0 - x, 1 - y, -1 - both
-    img = out;
-}
-
-inline unsigned int spectrumOCV(Mat &img)
-{
-    return 1 + (img.type() >> CV_CN_SHIFT);
-}
-
-template<typename T>
-void getData(Mat &image, T* data_ptr)
-{
-    int num_image_colors = spectrumOCV(image);
-    int num_pixels = image.cols * image.rows;
-    if (num_image_colors >= 3) // Image has 3 channels.
-    {
-        //memcpy(data_ptr, image.data, 3 * num_pixels * sizeof(T));
-
-        // convert from opencv Mat to format: "rr..gg..bb"
-        unsigned int base1 =   num_pixels;
-        unsigned int base2 = 2*num_pixels;
-        for (int j=0, posr=0; j<image.rows; ++j, posr+=image.cols)
-        {
-            unsigned int offset0 =         posr;
-            unsigned int offset1 = base1 + posr;
-            unsigned int offset2 = base2 + posr;
-
-            char *imgr = image.ptr<char>(j);
-            for (int k=0, posc=0; k<image.cols; ++k, posc+=3)
-            {
-                data_ptr[offset0 + k] = imgr[posc+2];
-                data_ptr[offset1 + k] = imgr[posc+1];
-                data_ptr[offset2 + k] = imgr[posc  ];
-            }
-        }
-    } else
-    if (num_image_colors == 1) // Image has 1 channel.
-    {
-        for (int i=0; i<3; ++i)
-        {
-            memcpy(data_ptr + i * num_pixels, image.data, num_pixels * sizeof(T));
-        }
-    } else
-    {
-        cerr << "Image has " << num_image_colors << "colors." << endl;
-        exit(1);
-    }
-}
-
 #define PI 3.14159265
 
 #ifndef MIN
@@ -98,6 +15,73 @@ void getData(Mat &image, T* data_ptr)
 #ifndef MAX
 #define MAX(x,y) ((x > y) ? x : y)
 #endif
+
+using namespace cv;
+
+inline void resizeOCV(Mat &img, unsigned int width, unsigned int height) {
+  Mat out;
+  resize(img, out, Size(width, height));
+  img = out;
+}
+
+inline void rotateOCV(Mat &img, float angle) {
+  Mat rot = getRotationMatrix2D(Point2f(img.cols/2, img.rows/2), angle, 1.0);
+  Mat out;
+  warpAffine(img, out, rot, Size(img.cols, img.rows));
+  img = out;
+}
+
+inline void cropOCV(Mat &img, Mat &out, int left, int top, int right, int bottom) {
+  Size s(right - left, bottom - top);
+  Point2f center(left + s.width/2, top + s.height/2);
+  getRectSubPix(img, s, center, out);
+}
+
+inline void cropOCV(Mat &img, int left, int top, int right, int bottom) {
+  Mat out;
+  cropOCV(img, out, left, top, right, bottom);
+  img = out;
+}
+
+inline void mirrorOCV(Mat &img) {
+  Mat out;
+  flip(img, out, 1); // 0 - x, 1 - y, -1 - both
+  img = out;
+}
+
+inline unsigned int spectrumOCV(Mat &img) {
+  return 1 + (img.type() >> CV_CN_SHIFT);
+}
+
+template<typename T>
+void getData(Mat &image, T* data_ptr) {
+  int num_image_colors = spectrumOCV(image);
+  int num_pixels = image.cols * image.rows;
+  if (num_image_colors >= 3) {  // Image has 3 channels.
+
+    // Convert from opencv Mat to format: "rr..gg..bb".
+    unsigned int base1 =   num_pixels;
+    unsigned int base2 = 2*num_pixels;
+    for (int j=0, posr=0; j<image.rows; ++j, posr+=image.cols) {
+      unsigned int offset0 =         posr;
+      unsigned int offset1 = base1 + posr;
+      unsigned int offset2 = base2 + posr;
+      char *imgr = image.ptr<char>(j);
+      for (int k=0, posc=0; k<image.cols; ++k, posc+=3) {
+        data_ptr[offset0 + k] = imgr[posc+2];
+        data_ptr[offset1 + k] = imgr[posc+1];
+        data_ptr[offset2 + k] = imgr[posc  ];
+      }
+    }
+  } else if (num_image_colors == 1) { // Image has 1 channel.
+    for (int i=0; i<3; ++i) {
+      memcpy(data_ptr + i * num_pixels, image.data, num_pixels * sizeof(T));
+    }
+  } else {
+    cerr << "Image has " << num_image_colors << "colors." << endl;
+    exit(1);
+  }
+}
 
 template <typename T>
 RawImageFileIterator<T>::RawImageFileIterator(
@@ -120,9 +104,7 @@ RawImageFileIterator<T>::RawImageFileIterator(
     if (!f.eof()) filenames_.push_back(str);
   }
   f.close();
-
   dataset_size_ = filenames_.size();
-
   distribution_ = random_jitter_ ? new uniform_real_distribution<float>(0, 1) : NULL;
 }
 
@@ -308,17 +290,12 @@ void RawImageFileIterator<T>::ExtractRGB(Mat &image, T* data_ptr, int position) 
 
   Mat out;
   cropOCV(image, out, left, top, left + image_size_, top + image_size_);
-
-  if (flip)
-  {
-    mirrorOCV(out);
-  }
-
+  if (flip) mirrorOCV(out);
   getData(out, data_ptr);
 }
+
 template class RawImageFileIterator<float>;
 template class RawImageFileIterator<unsigned char>;
-
 
 template <typename T>
 SlidingWindowIterator<T>::SlidingWindowIterator(const int window_size, const int stride):
