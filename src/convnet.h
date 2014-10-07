@@ -6,7 +6,6 @@
 #include "datawriter.h"
 #include <vector>
 #include <string>
-using namespace std;
 
 /**
  * A Convolutional Net Model.

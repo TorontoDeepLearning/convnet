@@ -149,7 +149,7 @@ int destroy_tex(cudamat* mat) {
   return 0;
 }
 
-int init_random(rnd_struct* rnd_state, int seed, const char* cudamatpath) {
+int init_random(rnd_struct* rnd_state, int seed) {
     unsigned int * host_mults;
     host_mults = (unsigned int*)malloc(NUM_RND_STREAMS * sizeof(unsigned int));
 
@@ -161,9 +161,6 @@ int init_random(rnd_struct* rnd_state, int seed, const char* cudamatpath) {
     cublasAlloc(NUM_RND_STREAMS, sizeof(unsigned long long), (void**)&rnd_state->dev_words);
     cublasSetVector(NUM_RND_STREAMS, sizeof(unsigned int), host_mults, 1, rnd_state->dev_mults, 1);
     free(host_mults);
-    //cudaMalloc((void **)&rnd_state->dev_mults, NUM_RND_STREAMS * sizeof(unsigned int));
-    //cudaMalloc((void **)&rnd_state->dev_words, NUM_RND_STREAMS * sizeof(unsigned long long));
-    //cudaMemcpy(rnd_state->dev_mults, host_mults, NUM_RND_STREAMS * sizeof(unsigned int), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 
     kSeedRandom<<<NUM_RND_BLOCKS, NUM_RND_THREADS_PER_BLOCK>>>(rnd_state->dev_mults, rnd_state->dev_words, seed);
@@ -186,41 +183,6 @@ int get_rnd_state(rnd_struct* rnd_state, unsigned long long* host_words_out, int
     return CUBLAS_ERROR;
   else
      return 0;
-}
-
-int init_random_from_state(rnd_struct* rnd_state, unsigned long long* host_words, char* cudamatpath) {
-    unsigned int * host_mults;
-    host_mults = (unsigned int*)malloc(NUM_RND_STREAMS * sizeof(unsigned int));
-    FILE * pFile;
-
-    if (cudamatpath == NULL) {
-      pFile = fopen ("/u/nitish/deepnet/cudamat/rnd_multipliers_32bit.txt","r");
-    } else {
-      pFile = fopen (cudamatpath,"r");
-    }
-    if (pFile == NULL) {
-      printf("Error: Missing rnd_multipliers_32bit.txt file\n");
-      return 1;
-    }
-
-    for (int i = 0; i < NUM_RND_STREAMS; i++) {
-      int r = fscanf (pFile, "%u", &host_mults[i]);
-      if (r != 1) return ERROR_GENERIC;
-    }
-    fclose (pFile);
-
-    cublasAlloc(NUM_RND_STREAMS, sizeof(unsigned int), (void**)&rnd_state->dev_mults);
-    cublasAlloc(NUM_RND_STREAMS, sizeof(unsigned long long), (void**)&rnd_state->dev_words);
-    cublasSetVector(NUM_RND_STREAMS, sizeof(unsigned int), host_mults, 1, rnd_state->dev_mults, 1);
-    cublasSetVector(NUM_RND_STREAMS, sizeof(unsigned int), host_words, 1, rnd_state->dev_words, 1);
-    free(host_mults);
-
-    cudaDeviceSynchronize();
-
-    if (checkCUDAError())
-        return CUDA_ERROR;
-    else
-        return 0;
 }
 
 /* ------------------------------ Utility routines ------------------------------ */
