@@ -1,13 +1,19 @@
 #define cimg_use_jpeg
 #include "CImg/CImg.h"
-#include <tclap/CmdLine.h>
+
 #include "convnet_cpu.h"
+
+#include <opencv2/core.hpp>
+
 #include <string>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <chrono>
+
 using namespace cimg_library;
 using namespace std;
+using namespace cv;
 
 CImgDisplay disp;
 void GetCoordinates(int image_size, int width, int height, int position,
@@ -93,34 +99,38 @@ void LoadImage(const string& filename, int image_size, int big_image_size, int p
   }
 }
 
+void split(const string &s, vector<string> &elems, char delim)
+{
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim))
+    {
+        elems.push_back(item);
+    }
+}
+
 int main(int argc, char** argv) {
-  try {
-    TCLAP::CmdLine cmd("ConvNet CPU-based Feature Extractor", ' ', "1.0");
-    TCLAP::MultiArg<string> layer_arg(
-        "l", "layer", "layer name", true, "string");
-    TCLAP::ValueArg<std::string> model_file_arg(
-        "m", "model", "Model file", true, "", "string");
-    TCLAP::ValueArg<std::string> param_arg(
-        "p", "parameters", "Parameter file", true, "", "string");
-    TCLAP::ValueArg<std::string> mean_file_arg(
-        "s", "mean", "Pixel mean file", true, "", "string");
-    TCLAP::ValueArg<std::string> output_arg(
-        "o", "output", "Output directory", true, "", "string");
-    
+    const char *keys =
+            "{ layer      l || Layer name }"
+            "{ model      m || Model file }"
+            "{ parameters p || Parameter file }"
+            "{ mean       s || Pixel mean file }"
+            "{ output     o || Output directory }";
+    CommandLineParser parser(argc, argv, keys);
+    string layer_name(parser.get<string>("layer"));
+    string model(parser.get<string>("model"));
+    string param(parser.get<string>("parameters"));
+    string mean_file(parser.get<string>("mean"));
+    string output_dir(parser.get<string>("output"));
+    if (layer_name.empty() || model.empty() ||
+        param.empty() || mean_file.empty() || output_dir.empty())
+    {
+        parser.printMessage();
+        return -1;
+    }
 
-    cmd.add(layer_arg);
-    cmd.add(model_file_arg);
-    cmd.add(param_arg);
-    cmd.add(mean_file_arg);
-    cmd.add(output_arg);
-
-    cmd.parse(argc, argv);
-
-    const vector<string>& layer_names = layer_arg.getValue();
-    const string& model = model_file_arg.getValue();
-    const string& param = param_arg.getValue();
-    const string& mean_file = mean_file_arg.getValue();
-    const string& output_dir = output_arg.getValue();
+    vector<string> layer_names;
+    split(layer_name, layer_names, ';');
 
 
     cpu::ConvNetCPU net(model, param, mean_file, 1);
@@ -184,8 +194,6 @@ int main(int argc, char** argv) {
     for (ofstream& f : outf) {
       f.close();
     }
-  } catch (TCLAP::ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
-  return 0;
+
+    return 0;
 }

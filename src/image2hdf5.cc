@@ -1,38 +1,36 @@
-// Writes jpeg files into an hdf5 dataset as unsigned chars.
+// Writes image files into an hdf5 dataset as unsigned chars.
 // Crops out central 256*256 patch after resizing the image
 // so that its shorter side is 256.
+
 #include "image_iterators.h"
+
 #include "hdf5.h"
+
+#include <opencv2/core.hpp>
+
 #include <string>
 #include <iostream>
-#include <tclap/CmdLine.h>
+
 using namespace std;
+using namespace cv;
 
 int main(int argc, char ** argv) {
-  try {
-    TCLAP::CmdLine cmd("jpeg2hdf5", ' ', "1.0");
-    TCLAP::ValueArg<string> file_list_arg(
-        "i", "input", "File containing list of images.", true, "", "string");
-    TCLAP::ValueArg<string> output_file_arg(
-        "o", "output", "Output hdf5 file.", true, "", "string");
-    TCLAP::ValueArg<int> image_size_arg(
-        "c", "crop", "After resize, crop a central patch of this size. Default=256.",
-        false, 256, "integer");
-    TCLAP::ValueArg<int> big_image_size_arg(
-        "s", "resize", "Resize each image so that the shorter side is equal to this size. Default=256.",
-        false, 256, "integer");
-    
-    cmd.add(file_list_arg);
-    cmd.add(output_file_arg);
-    cmd.add(image_size_arg);
-    cmd.add(big_image_size_arg);
+    const char *keys =
+            "{ input  i |   | File containing list of images. }"
+            "{ output o |   | Output hdf5 file. }"
+            "{ crop   c |256| After resize, crop a central patch of this size. }"
+            "{ resize s |256| Resize each image so that the shorter side is equal to this size. }";
+    CommandLineParser parser(argc, argv, keys);
+    string file_list(parser.get<string>("input"));
+    string output_file(parser.get<string>("output"));
+    int image_size(parser.get<int>("crop"));
+    int big_image_size(parser.get<int>("resize"));
+    if (file_list.empty() || output_file.empty())
+    {
+        parser.printMessage();
+        return -1;
+    }
 
-    cmd.parse(argc, argv);
-
-    const string& file_list = file_list_arg.getValue();
-    const string& output_file = output_file_arg.getValue();
-    const int image_size = image_size_arg.getValue();
-    const int big_image_size = big_image_size_arg.getValue();
     if (image_size > big_image_size) {
      cerr << "Crop size cannot be bigger than the resized image." << endl;
      exit(1);
@@ -74,8 +72,6 @@ int main(int argc, char ** argv) {
     H5Sclose(mem_dataspace);
     H5Fclose(file);
     delete[] image_buf;
-  } catch (TCLAP::ArgException &e)  {
-    cerr << "error: " << e.error() << " for arg " << e.argId() << endl;
-  }
-  return 0;
+
+    return 0;
 }

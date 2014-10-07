@@ -1,17 +1,104 @@
 #include "image_iterators.h"
+
 #include <fstream>
 #include <sstream>
 #include <iterator>
+
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+
+using namespace cv;
+
+inline void resizeOCV(Mat &img, unsigned int width, unsigned int height)
+{
+    Mat out;
+    resize(img, out, Size(width, height));
+    img = out;
+}
+
+inline void rotateOCV(Mat &img, float angle)
+{
+    Mat rot = getRotationMatrix2D(Point2f(img.cols/2, img.rows/2), angle, 1.0);
+    Mat out;
+    warpAffine(img, out, rot, Size(img.cols, img.rows));
+    img = out;
+}
+
+inline void cropOCV(Mat &img, Mat &out, int left, int top, int right, int bottom)
+{
+    Size s(right - left, bottom - top);
+    Point2f center(left + s.width/2, top + s.height/2);
+    getRectSubPix(img, s, center, out);
+}
+
+inline void cropOCV(Mat &img, int left, int top, int right, int bottom)
+{
+    Mat out;
+    cropOCV(img, out, left, top, right, bottom);
+    img = out;
+}
+
+inline void mirrorOCV(Mat &img)
+{
+    Mat out;
+    flip(img, out, 1); // 0 - x, 1 - y, -1 - both
+    img = out;
+}
+
+inline unsigned int spectrumOCV(Mat &img)
+{
+    return 1 + (img.type() >> CV_CN_SHIFT);
+}
+
+template<typename T>
+void getData(Mat &image, T* data_ptr)
+{
+    int num_image_colors = spectrumOCV(image);
+    int num_pixels = image.cols * image.rows;
+    if (num_image_colors >= 3) // Image has 3 channels.
+    {
+        //memcpy(data_ptr, image.data, 3 * num_pixels * sizeof(T));
+
+        // convert from opencv Mat to format: "rr..gg..bb"
+        unsigned int base1 =   num_pixels;
+        unsigned int base2 = 2*num_pixels;
+        for (int j=0, posr=0; j<image.rows; ++j, posr+=image.cols)
+        {
+            unsigned int offset0 =         posr;
+            unsigned int offset1 = base1 + posr;
+            unsigned int offset2 = base2 + posr;
+
+            char *imgr = image.ptr<char>(j);
+            for (int k=0, posc=0; k<image.cols; ++k, posc+=3)
+            {
+                data_ptr[offset0 + k] = imgr[posc+2];
+                data_ptr[offset1 + k] = imgr[posc+1];
+                data_ptr[offset2 + k] = imgr[posc  ];
+            }
+        }
+    } else
+    if (num_image_colors == 1) // Image has 1 channel.
+    {
+        for (int i=0; i<3; ++i)
+        {
+            memcpy(data_ptr + i * num_pixels, image.data, num_pixels * sizeof(T));
+        }
+    } else
+    {
+        cerr << "Image has " << num_image_colors << "colors." << endl;
+        exit(1);
+    }
+}
+
 #define PI 3.14159265
-#define INTERPOLATION_TYPE 3
+
 #ifndef MIN
 #define MIN(x,y) ((x < y) ? x : y)
 #endif
 #ifndef MAX
 #define MAX(x,y) ((x > y) ? x : y)
 #endif
-// 3 -> LINEAR
-// 5 -> BICUBIC
+
 template <typename T>
 RawImageFileIterator<T>::RawImageFileIterator(
     const string& filelist, const int image_size, const int raw_image_size,
@@ -36,7 +123,6 @@ RawImageFileIterator<T>::RawImageFileIterator(
 
   dataset_size_ = filenames_.size();
 
-  disp_ = new CImgDisplay();
   distribution_ = random_jitter_ ? new uniform_real_distribution<float>(0, 1) : NULL;
 }
 
@@ -45,7 +131,6 @@ RawImageFileIterator<T>::~RawImageFileIterator() {
   if (random_jitter_) {
     delete distribution_;
   }
-  delete disp_;
 }
 
 template<typename T>
@@ -102,8 +187,8 @@ void RawImageFileIterator<T>::GetCoordinates(
   }
 }
 template <typename T>
-void RawImageFileIterator<T>::Resize(CImg<T>& image) const {
-  int width = image.width(), height = image.height();
+void RawImageFileIterator<T>::Resize(Mat &image) const {
+  int width = image.cols, height = image.rows;
   if (width != raw_image_size_ || height != raw_image_size_) {
     int new_width, new_height;
     if (width > height) {
@@ -113,7 +198,7 @@ void RawImageFileIterator<T>::Resize(CImg<T>& image) const {
       new_width = raw_image_size_;
       new_height = (height * raw_image_size_) / width;
     }
-    image.resize(new_width, new_height, 1, -100, INTERPOLATION_TYPE);
+    resizeOCV(image, new_width, new_height);
   }
 }
 
@@ -153,7 +238,7 @@ void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row
 }
 
 template<typename T>
-void RawImageFileIterator<T>::AddRandomJitter(CImg<T>& image, int row) const {
+void RawImageFileIterator<T>::AddRandomJitter(Mat &image, int row) const {
   // Add Random rotation, scale, translation.
 
   int ind = row % angles_.size();
@@ -163,33 +248,33 @@ void RawImageFileIterator<T>::AddRandomJitter(CImg<T>& image, int row) const {
   float scale = scale_[ind];
 
   // Translation.
-  int width = image.width(), height = image.height();
+  int width = image.cols, height = image.rows;
   int size = (int)(scale * ((width < height) ? width : height));
   int left = (int)((width - size) * trans_x);
   int top = (int)((height - size) * trans_y);
-  image.crop(left, top, left + size - 1, top + size - 1, true);
+  cropOCV(image, left, top, left + size, top + size);
 
   // Resize (so that after rotation, we can crop out the central raw_image_size_ * raw_image_size_ image).
   int rot_adjusted_size = (int)(raw_image_size_ * (sin(fabs(angle)*PI/180) + cos(fabs(angle)*PI/180)));
-  image.resize(rot_adjusted_size, rot_adjusted_size, 1, -100, INTERPOLATION_TYPE);
+  resizeOCV(image, rot_adjusted_size, rot_adjusted_size);
 
   // Rotation.
-  image.rotate(angle, 1, 0);
-  
+  rotateOCV(image, angle);
+
   // Crop out the border created by rotation.
-  left = image.width() / 2 - raw_image_size_/2;
-  top = image.height() / 2 - raw_image_size_/2;
-  image.crop(left, top, left + raw_image_size_-1, top + raw_image_size_-1, true);
+  left = image.cols / 2 - raw_image_size_ / 2;
+  top = image.rows / 2 - raw_image_size_ / 2;
+  cropOCV(image, left, top, left + raw_image_size_, top + raw_image_size_);
 }
 
 template <typename T>
-void RawImageFileIterator<T>::LoadImageFile(const int row, CImg<T>& image) const {
-  image.assign(filenames_[row].c_str());
+void RawImageFileIterator<T>::LoadImageFile(const int row, Mat &image) {
+  image = imread(filenames_[row].c_str());
 }
 
 template <typename T>
-void RawImageFileIterator<T>::Get(T* data_ptr, const int row, const int position) const {
-  CImg<T> image;
+void RawImageFileIterator<T>::Get(T* data_ptr, const int row, const int position) {
+  Mat image;
   LoadImageFile(row, image);
   if (random_jitter_) {
     AddRandomJitter(image, row);
@@ -214,30 +299,22 @@ void RawImageFileIterator<T>::GetNext(T* data_ptr, const int row, const int posi
 }
 
 template<typename T>
-void RawImageFileIterator<T>::ExtractRGB(CImg<T>& image, T* data_ptr, int position) const {
-  int width = image.width(), height = image.height();
+void RawImageFileIterator<T>::ExtractRGB(Mat &image, T* data_ptr, int position) const {
+  int width = image.cols, height = image.rows;
   int left = 0, top = 0;
   bool flip = false;
+
   GetCoordinates(width, height, position, &left, &top, &flip);
 
-  CImg<T> img = image.get_crop(
-      left, top, left + image_size_ - 1, top + image_size_ - 1, true);
+  Mat out;
+  cropOCV(image, out, left, top, left + image_size_, top + image_size_);
 
-  if (flip) img.mirror('x');
-  //img.display(*disp_);
-
-  int num_image_colors = img.spectrum();
-  int num_pixels = image_size_ * image_size_;
-  if (num_image_colors >= 3) {  // Image has 3 channels.
-    memcpy(data_ptr, img.data(), 3 * num_pixels * sizeof(T));
-  } else if (num_image_colors == 1) {  // Image has 1 channel.
-    for (int i = 0; i < 3; i++) {
-      memcpy(data_ptr + i * num_pixels, img.data(), num_pixels * sizeof(T));
-    }
-  } else {
-    cerr << "Image has " << num_image_colors << "colors." << endl;
-    exit(1);
+  if (flip)
+  {
+    mirrorOCV(out);
   }
+
+  getData(out, data_ptr);
 }
 template class RawImageFileIterator<float>;
 template class RawImageFileIterator<unsigned char>;
@@ -250,11 +327,11 @@ SlidingWindowIterator<T>::SlidingWindowIterator(const int window_size, const int
 
 template <typename T>
 void SlidingWindowIterator<T>::SetImage(const string& filename) {
-  image_.assign(filename.c_str());
+  image_ = imread(filename.c_str());
   center_x_ = 0;
   center_y_ = 0;
-  int num_modules_x = (image_.width() - window_size_ % 2) / stride_ + 1;
-  int num_modules_y = (image_.height() - window_size_ % 2) / stride_ + 1;
+  int num_modules_x = (image_.cols - window_size_ % 2) / stride_ + 1;
+  int num_modules_y = (image_.rows - window_size_ % 2) / stride_ + 1;
   num_windows_ = num_modules_x * num_modules_y;
   done_ = false;
 }
@@ -268,10 +345,10 @@ template <typename T>
 void SlidingWindowIterator<T>::GetNext(T* data_ptr) {
   GetNext(data_ptr, center_x_, center_y_);
   center_x_ += stride_;
-  if (center_x_  >= image_.width()) {
+  if (center_x_ >= image_.cols) {
     center_x_ = 0;
     center_y_ += stride_;
-    if (center_y_ >= image_.height()) {
+    if (center_y_ >= image_.rows) {
       center_y_ = 0;
       done_ = true;
     }
@@ -285,13 +362,15 @@ bool SlidingWindowIterator<T>::Done() {
 
 template <typename T>
 void SlidingWindowIterator<T>::GetNext(T* data_ptr, int center_x, int center_y) {
-  int left    = center_x - window_size_ / 2,
-      right   = left + window_size_,
-      top     = center_y - window_size_ / 2,
-      bottom  = top + window_size_;
-  CImg<T> img = image_.get_crop(left, top, right - 1, bottom - 1, true);
-  int num_pixels = window_size_ * window_size_ * 3;
-  memcpy(data_ptr, img.data(), num_pixels * sizeof(float));
+  int left    = center_x - window_size_ / 2;
+  int right   = left + window_size_;
+  int top     = center_y - window_size_ / 2;
+  int bottom  = top + window_size_;
+
+  Mat out;
+  cropOCV(image_, out, left, top, right, bottom);
+
+  getData(out, data_ptr);
 }
 
 template class SlidingWindowIterator<float>;
@@ -375,11 +454,11 @@ void BBoxImageFileIterator<T>::GetCropCoordinates(int row, int width, int height
 
 /** Crop the bounding box region. */
 template <typename T>
-void BBoxImageFileIterator<T>::LoadImageFile(const int row, CImg<T>& image) const {
+void BBoxImageFileIterator<T>::LoadImageFile(const int row, Mat &image) {
   RawImageFileIterator<T>::LoadImageFile(row, image);
   int xmin, ymin, xmax, ymax;
-  GetCropCoordinates(row, image.width(), image.height(), &xmin, &xmax, &ymin, &ymax);
-  image.crop(xmin, ymin, xmax-1, ymax-1, true);
+  GetCropCoordinates(row, image.cols, image.rows, &xmin, &xmax, &ymin, &ymax);
+  cropOCV(image, xmin, ymin, xmax, ymax);
 }
 
 
@@ -404,7 +483,7 @@ CropIterator<T>::CropIterator(const int image_size, const float context_factor, 
 
 template <typename T>
 void CropIterator<T>::SetImage(const string& filename, const vector<box>& crops) {
-  image_.assign(filename.c_str());
+  image_ = imread(filename.c_str());
   crops_ = crops;
   done_ = false;
   index_ = 0;
@@ -433,8 +512,8 @@ void CropIterator<T>::GetNext(T* data_ptr) {
     bottom = b.ymax;
     left = MAX(0, left);
     top  = MAX(0, top);
-    right = MIN(image_.width(), right);
-    bottom = MIN(image_.height(), bottom);
+    right = MIN(image_.cols, right);
+    bottom = MIN(image_.rows, bottom);
   } else {
     int width = b.xmax - b.xmin;
     int height = b.ymax - b.ymin;
@@ -449,25 +528,17 @@ void CropIterator<T>::GetNext(T* data_ptr) {
   /*
   int left = MAX(0, b.xmin - width_slack / 2);
   int top  = MAX(0, b.ymin - height_slack / 2);
-  int right = MIN(image_.width(), b.xmax + width_slack - width_slack / 2);
-  int bottom = MIN(image_.height(), b.ymax + height_slack - height_slack / 2);
+  int right = MIN(image.cols, b.xmax + width_slack - width_slack / 2);
+  int bottom = MIN(image.rows, b.ymax + height_slack - height_slack / 2);
   */
 
-  CImg<T> img = image_.get_crop(left, top, right - 1, bottom - 1, false);
-  img.resize(image_size_, image_size_, 1, -100, INTERPOLATION_TYPE);
+  Mat out;
+  cropOCV(image_, out, left, top, right, bottom);
 
-  int num_image_colors = img.spectrum();
-  int num_pixels = image_size_ * image_size_;
-  if (num_image_colors >= 3) {  // Image has 3 channels.
-    memcpy(data_ptr, img.data(), 3 * num_pixels * sizeof(T));
-  } else if (num_image_colors == 1) {  // Image has 1 channel.
-    for (int i = 0; i < 3; i++) {
-      memcpy(data_ptr + i * num_pixels, img.data(), num_pixels * sizeof(T));
-    }
-  } else {
-    cerr << "Image has " << num_image_colors << "colors." << endl;
-    exit(1);
-  }
+  resizeOCV(out, image_size_, image_size_);
+
+  getData(out, data_ptr);
+
   if (index_ == crops_.size()) {
     done_ = true;
     index_ = 0;

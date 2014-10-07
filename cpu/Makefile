@@ -17,7 +17,7 @@ PROTO=../proto
 
 CPPFLAGS = -I$(DEPS) -I$(INC)
 LIBFLAGS = -L$(LIB)
-LINKFLAGS = -ljpeg -lX11 -lpthread -lprotobuf -lhdf5
+LINKFLAGS = -lopencv_core -ljpeg -lX11 -lpthread -lprotobuf -lhdf5
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
 
 ifeq ($(openblas), yes)
