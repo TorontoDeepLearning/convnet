@@ -1,19 +1,3 @@
-/*
- * Copyright 2014 Google Inc. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 #include "image_iterators.h"
 
 #include <fstream>
@@ -76,8 +60,8 @@ void getData(Mat &image, T* data_ptr)
         //memcpy(data_ptr, image.data, 3 * num_pixels * sizeof(T));
 
         // convert from opencv Mat to format: "rr..gg..bb"
-        unsigned int base1 =   num_pixels +   image.cols;
-        unsigned int base2 = 2*num_pixels + 2*image.cols;
+        unsigned int base1 =   num_pixels;
+        unsigned int base2 = 2*num_pixels;
         for (int j=0, posr=0; j<image.rows; ++j, posr+=image.cols)
         {
             unsigned int offset0 =         posr;
