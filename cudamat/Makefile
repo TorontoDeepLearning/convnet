@@ -1,10 +1,13 @@
 ##################################
 # Set path to dependencies.
 # CUDA.
-CUDA_LIB=/pkgs_local/cuda-5.5/lib64
+CUDA_ROOT=/pkgs_local/cuda-5.5
 ###################################
 
-NVCC = nvcc
+CUDA_LIB=$(CUDA_ROOT)/lib64
+CUDA_BIN=$(CUDA_ROOT)/bin
+
+NVCC = $(CUDA_BIN)/nvcc
 FLAGS = -O3 --use_fast_math -v \
 		    -gencode=arch=compute_20,code=sm_20 \
 		    -gencode=arch=compute_30,code=sm_30 \
