@@ -48,7 +48,7 @@ $(OBJ)/%.o: $(SRC)/%.cc
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJ)/convnet_config.pb.o : proto/convnet_config.proto
-	$(LOCAL_BIN)/protoc -I=proto --cpp_out=$(SRC) --python_out=$(SRC) proto/convnet_config.proto
+	$(LOCAL_BIN)/protoc -I=proto --cpp_out=$(SRC) --python_out=./py/ proto/convnet_config.proto
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $(SRC)/convnet_config.pb.cc -o $@
 
 clean:

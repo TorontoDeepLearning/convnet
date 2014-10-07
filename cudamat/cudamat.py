@@ -1097,6 +1097,17 @@ class CUDAMatrix(object):
         """
         return softmax(self, target)
 
+    def apply_softmax_row_major(self, num_slices = None):
+        """
+        Apply the softmax activation function.
+        """
+        if num_slices is None:
+          num_slices = self.shape[1]
+        err_code = _cudamat.softmax_row_major_multi(self.p_mat, ct.c_int(num_slices))
+        if err_code:
+            raise generate_exception(err_code)
+        return self
+
     def sign(self, target = None):
         """
         Find the sign of each element of the matrix.
@@ -1669,7 +1680,7 @@ def sparse_dot(sparse_mat, dense_mat, mult=1.0, target = None):
 
     return target
 
-def dot(m1, m2, mult=1.0, target = None):
+def dot(m1, m2, mult=1.0, target = None, scale_targets=0.0):
     """
     Find the dot product between m1 and m2.
     """
@@ -1680,7 +1691,7 @@ def dot(m1, m2, mult=1.0, target = None):
 
         target = empty((m, n))
 
-    err_code = _cudamat.dot(m1.p_mat, m2.p_mat, target.p_mat, ct.c_float(0.), ct.c_float(mult))
+    err_code = _cudamat.dot(m1.p_mat, m2.p_mat, target.p_mat, ct.c_float(scale_targets), ct.c_float(mult))
     if err_code:
         raise generate_exception(err_code)
 

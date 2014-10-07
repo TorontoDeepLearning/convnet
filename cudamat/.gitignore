@@ -1,0 +1,7 @@
+gpu_lock2.py
+run_on_me_or_pid_quit
+*.o
+*.so
+*.pyc
+cudamat_experimental.*
+test_cudamat_experimental.*
