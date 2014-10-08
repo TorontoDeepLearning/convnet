@@ -66,9 +66,11 @@ class EdgeWithWeight(Edge):
   def LoadParams(self, f):
     w_name = '%s:weight' % self.name_
     w = f[w_name].value.T
+    assert self.weights_.shape == w.shape
     self.weights_.overwrite(w)
     b_name = '%s:bias' % self.name_
     b = f[b_name].value.reshape(1, -1)
+    assert self.bias_.shape == b.shape
     self.bias_.overwrite(b)
 
 class ConvEdge(EdgeWithWeight):
@@ -150,7 +152,7 @@ class ResponseNormEdge(Edge):
     input_state = input_layer.GetState()
     output_state = output_layer.GetState()
     cc.ResponseNormCrossMap(input_state, output_state, self.num_input_channels_,
-                            self.num_input_channels_, self.add_scale_,
+                            self.num_filters_response_norm_, self.add_scale_,
                             self.pow_scale_, self.blocked_)
 
 class FCEdge(EdgeWithWeight):
