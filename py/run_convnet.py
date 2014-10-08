@@ -18,10 +18,8 @@ def LoadImage(file_name, resize=256, crop=224):
   image_resized = image.resize((width, height), Image.BICUBIC).crop((left, top, left + crop, top + crop))
   # image_resized.show()
   # raw_input('Press Enter.')
-  data = np.array(image_resized.getdata()).T
-  if len(data.shape) == 1:
-    data = np.tile(data, (3, 1))
-  return data.reshape(1, -1)
+  data = np.array(image_resized.convert('RGB').getdata()).T.reshape(1, -1)
+  return data
 
 def Usage():
   print 'python run_convnet.py <model_file(.pbtxt)> <model_parameters(.h5)> <means_file(.h5)>'
