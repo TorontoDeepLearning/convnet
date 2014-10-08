@@ -41,6 +41,7 @@ class Layer(object):
     if self.state_ is not None:
       self.state_.free_device_memory()
     self.state_ = cm.empty((batch_size, layer_size))
+    self.state_.assign(0)
 
   def GetState(self):
     return self.state_

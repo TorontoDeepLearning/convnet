@@ -58,23 +58,22 @@ void getData(Mat &image, T* data_ptr) {
   int num_image_colors = spectrumOCV(image);
   int num_pixels = image.cols * image.rows;
   if (num_image_colors >= 3) {  // Image has 3 channels.
-
     // Convert from opencv Mat to format: "rr..gg..bb".
-    unsigned int base1 =   num_pixels;
-    unsigned int base2 = 2*num_pixels;
-    for (int j=0, posr=0; j<image.rows; ++j, posr+=image.cols) {
+    unsigned int base1 =     num_pixels;
+    unsigned int base2 = 2 * num_pixels;
+    for (int j=0, posr=0; j < image.rows; ++j, posr+=image.cols) {
       unsigned int offset0 =         posr;
       unsigned int offset1 = base1 + posr;
       unsigned int offset2 = base2 + posr;
       char *imgr = image.ptr<char>(j);
-      for (int k=0, posc=0; k<image.cols; ++k, posc+=3) {
+      for (int k=0, posc=0; k < image.cols; ++k, posc+=3) {
         data_ptr[offset0 + k] = imgr[posc+2];
         data_ptr[offset1 + k] = imgr[posc+1];
         data_ptr[offset2 + k] = imgr[posc  ];
       }
     }
   } else if (num_image_colors == 1) { // Image has 1 channel.
-    for (int i=0; i<3; ++i) {
+    for (int i=0; i < 3; ++i) {
       memcpy(data_ptr + i * num_pixels, image.data, num_pixels * sizeof(T));
     }
   } else {
@@ -168,6 +167,7 @@ void RawImageFileIterator<T>::GetCoordinates(
             break;
   }
 }
+
 template <typename T>
 void RawImageFileIterator<T>::Resize(Mat &image) const {
   int width = image.cols, height = image.rows;
@@ -198,6 +198,7 @@ void RawImageFileIterator<T>::SampleNoiseDistributions(const int chunk_size) {
     scale_[i] = min_scale_ + (1 - min_scale_) * (*distribution_)(generator_);
   }
 }
+
 template<typename T>
 void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row) const {
   float trans_x = 0.5, trans_y = 0.5, scale = 1;
@@ -252,6 +253,10 @@ void RawImageFileIterator<T>::AddRandomJitter(Mat &image, int row) const {
 template <typename T>
 void RawImageFileIterator<T>::LoadImageFile(const int row, Mat &image) {
   image = imread(filenames_[row].c_str());
+  if (image.empty()) {
+    cerr << "Error reading file " << filenames_[row] << endl;
+    exit(1);
+  }
 }
 
 template <typename T>

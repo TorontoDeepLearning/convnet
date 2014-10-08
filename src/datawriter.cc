@@ -15,7 +15,7 @@ DataWriter::DataWriter(const config::FeatureExtractorConfig config) :
 }
 
 DataWriter::~DataWriter(){
-  for(auto it : streams_) {
+  for(auto& it : streams_) {
     H5Sclose(it.second.dataspace);
     H5Dclose(it.second.dataset);
   }

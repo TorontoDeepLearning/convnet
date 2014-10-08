@@ -89,7 +89,7 @@ class ConvEdge(EdgeWithWeight):
     if self.shared_bias_:
       bias_locs = 1
     else:
-      bias_locs = num_modules_**2
+      bias_locs = self.num_modules_**2
     if self.weights_ is not None:
       self.weights_.free_device_memory()
     if self.bias_ is not None:
