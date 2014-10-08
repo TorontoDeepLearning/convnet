@@ -61,6 +61,12 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   }
 }
 
+DataHandler::~DataHandler() {
+  for (auto& it : data_it_) {
+    delete it.second;
+  }
+}
+
 void DataHandler::AllocateMemory() {
   for (const string& layer_name : layer_names_) {
     DataIterator* it = data_it_[layer_name];
@@ -72,10 +78,13 @@ void DataHandler::AllocateMemory() {
   }
 }
 
-DataHandler::~DataHandler() {
-  for (auto it : data_it_) {
-    delete it.second;
+int DataHandler::GetDims(const string& layer_name) const {
+  auto it = data_it_.find(layer_name);
+  if (it == data_it_.end()) {
+    cerr << "Layer name " << layer_name << " not found." << endl;
+    exit(1);
   }
+  return it->second->GetDims();
 }
 
 void DataHandler::SetupShuffler() {

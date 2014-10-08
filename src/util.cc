@@ -9,6 +9,14 @@
 
 using namespace std;
 
+void ParseBoardIds(const string& board, vector<int>& boards) {
+  for (auto b:board)  {
+    string currBoard;
+    currBoard.push_back(b);
+    boards.push_back(atoi(currBoard.c_str()));
+  }
+}
+
 void WaitForEnter() {
   cout << "Press ENTER to continue...";
   cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -48,15 +56,24 @@ string GetTimeStamp() {
   return ss.str();
 }
 
-void ReadModel(const string& model_file, config::Model& model) {
-  string ext = model_file.substr(model_file.find_last_of('.'));
-  if (ext.compare(".pb") == 0) {
-    ReadModelBinary(model_file, model);
-  } else {
-    ReadModelText(model_file, model);
+template <class T>
+void ReadPbtxt(const string& pbtxt_file, T& model) {
+  stringstream ss;
+  ifstream file(pbtxt_file.c_str());
+  ss << file.rdbuf();
+  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &model)) {
+    cerr << "Could not read text proto buffer : " << pbtxt_file << endl;
+    exit(1);
   }
 }
 
+template void ReadPbtxt<config::Model>(const string&, config::Model&);
+template void ReadPbtxt<config::FeatureExtractorConfig>(const string&, config::FeatureExtractorConfig&);
+template void ReadPbtxt<config::DatasetConfig>(const string&, config::DatasetConfig&);
+template void ReadPbtxt<config::DataStreamConfig>(const string&, config::DataStreamConfig&);
+template void ReadPbtxt<config::Layer>(const string&, config::Layer&);
+
+/*
 void ReadModelText(const string& model_file, config::Model& model) {
   stringstream ss;
   ifstream file(model_file.c_str());
@@ -85,6 +102,16 @@ void ReadDataConfig(const string& data_config_file, config::DatasetConfig& data_
   }
 }
 
+void ReadDataStreamConfig(const string& data_config_file, config::DataStreamConfig& data_config) {
+  stringstream ss;
+  ifstream file(data_config_file.c_str());
+  ss << file.rdbuf();
+  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &data_config)) {
+    cerr << "Could not read text proto buffer : " << data_config_file << endl;
+    exit(1);
+  }
+}
+
 void ReadLayerConfig(const string& layer_config_file, config::Layer& layer_config) {
   stringstream ss;
   ifstream file(layer_config_file.c_str());
@@ -94,7 +121,7 @@ void ReadLayerConfig(const string& layer_config_file, config::Layer& layer_confi
     exit(1);
   }
 }
-
+*/
 void WriteModelBinary(const string& output_file, const config::Model& model) {
   ofstream out(output_file.c_str());
   model.SerializeToOstream(&out);

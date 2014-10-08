@@ -30,12 +30,9 @@ using namespace std;
 
 // Outputs a string that describes the err_code.
 string GetStringError(int err_code);
-// Reads model_file from the disk and instantiates a Model.
-void ReadModel(const string& model_file, config::Model& model);
-void ReadModelText(const string& model_file, config::Model& model);
-void ReadDataConfig(const string& data_config_file, config::DatasetConfig& data_config);
-void ReadFeatureExtractorConfig(const string& config_file, config::FeatureExtractorConfig& config);
-void ReadLayerConfig(const string& layer_config_file, config::Layer& layer_config);
+
+template<class T> void ReadPbtxt(const string& pbtxt_file, T& model);
+
 void WriteModelBinary(const string& output_file, const config::Model& model);
 void ReadModelBinary(const string& input_file, config::Model& model);
 void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name);
@@ -47,7 +44,7 @@ void ReadHDF5CPU(hid_t file, float* mat, int size, const string& name);
 void ReadHDF5Shape(hid_t file, const string& name, int* rows, int* cols);
 void ReadHDF5ShapeFromFile(const string& file_name, const string& dataset_name, int* rows, int* cols);
 
-void SetupBackTraceHandler();
+void ParseBoardIds(const string& board, vector<int>& boards);
 void WaitForEnter();
 int Bound(int val, int lb, int ub);
 string GetTimeStamp();

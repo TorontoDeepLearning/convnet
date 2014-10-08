@@ -16,7 +16,7 @@ ConvNet::ConvNet(const string& model_file):
   lr_reduce_counter_(0),
   train_dataset_(NULL), val_dataset_(NULL),
   model_filename_(model_file) {
-  ReadModel(model_file, model_);
+  ReadPbtxt<config::Model>(model_file, model_);
   for (const config::Subnet& subnet : model_.subnet()) {
     AddSubnet(model_, subnet);
   }
@@ -46,7 +46,7 @@ void ConvNet::DestroyNet() {
 
 void ConvNet::AddSubnet(config::Model& model, const config::Subnet& subnet) {
   config::Model submodel;
-  ReadModel(subnet.model_file(), submodel);
+  ReadPbtxt<config::Model>(subnet.model_file(), submodel);
 
   // Recursively add subnets.
   for (const config::Subnet& s : submodel.subnet()) {
@@ -315,7 +315,7 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
 
   config::DatasetConfig train_data_config;
-  ReadDataConfig(train_data_config_file, train_data_config);
+  ReadPbtxt<config::DatasetConfig>(train_data_config_file, train_data_config);
   train_dataset_ = new DataHandler(train_data_config);
   if (localizer_) {
     train_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
@@ -327,7 +327,7 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
   cout << "Training data set size " << dataset_size << endl;
   if (!val_data_config_file.empty()) {
     config::DatasetConfig val_data_config;
-    ReadDataConfig(val_data_config_file, val_data_config);
+    ReadPbtxt<config::DatasetConfig>(val_data_config_file, val_data_config);
     val_dataset_ = new DataHandler(val_data_config);
     if (localizer_) {
       val_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
@@ -377,7 +377,7 @@ Layer* ConvNet::GetLayerByName(const string& name) {
 
 void ConvNet::ExtractFeatures(const string& config_file) {
   config::FeatureExtractorConfig config;
-  ReadFeatureExtractorConfig(config_file, config);
+  ReadPbtxt<config::FeatureExtractorConfig>(config_file, config);
   ExtractFeatures(config);
 }
 
