@@ -25,12 +25,7 @@ int main(int argc, char** argv) {
   }
 
   vector<int> boards;
-  for (auto b:board) {
-    string currBoard;
-    currBoard.push_back(b);
-    boards.push_back(atoi(currBoard.c_str()));
-  }
-  
+  ParseBoardIds(board, boards);
   bool multi_gpu = boards.size() > 1; 
 
   // Setup GPU boards.

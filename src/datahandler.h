@@ -27,6 +27,7 @@ class DataHandler {
               const int pad2, const int patch_size, const int num_fov_x,
               const int num_fov_y);
   void AllocateMemory();
+  int GetDims(const string& layer_name) const;
 
  protected:
   void SetupShuffler();

@@ -98,7 +98,7 @@ def localOutp(images, hidSums, targets, imgSizeY, numModulesY, numModulesX, filt
   assert targets.shape == (numFilters, numImgColors * filterSize * filterSize * numModulesX * numModulesY), '%s %d %d-%d-%d' % (targets.shape.__str__(), numFilters, numImgColors, filterSize, filterSize)
   _ConvNet.convOutp(images.p_mat, hidSums.p_mat, targets.p_mat, imgSizeY, numModulesY, numModulesX, filterSize, -paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1)
 
-def MaxPool(images, targets, numChannels, subsX, startX, strideX, outputsX):
+def MaxPool(images, targets, numChannels, kernel_size, padding, stride, num_modules_x):
   """
   images - (n_images, img_w**2 * n_chans)
   numChannels - number of filter/color channels
@@ -109,9 +109,9 @@ def MaxPool(images, targets, numChannels, subsX, startX, strideX, outputsX):
   """
   numImages = images.shape[0]
 
-  assert targets.shape == (numImages, numChannels * outputsX * outputsX)
+  assert targets.shape == (numImages, numChannels * num_modules_x**2)
   
-  _ConvNet.MaxPool(images.p_mat, targets.p_mat, numChannels, subsX, startX, strideX, outputsX)
+  _ConvNet.MaxPool(images.p_mat, targets.p_mat, numChannels, kernel_size, -padding, stride, num_modules_x)
 
 def ProbMaxPool(images, rnd, targets, numChannels, subsX, startX, strideX, outputsX):
   """
@@ -135,8 +135,7 @@ def ProbMaxPool(images, rnd, targets, numChannels, subsX, startX, strideX, outpu
   """
 
 
-def MaxPoolUndo(images, targets, grad, maxes,
-        subsX, startX, strideX, outputsX):
+def MaxPoolUndo(images, targets, grad, maxes, kernel_size, padding, stride, num_modules_x):
   """
   images - (n_images, img_w**2 * n_chans)
   grad - (n_images, outputsX**2 * n_chans) cudamat of deltas/gradients of loss wrt layer outputs.
@@ -148,7 +147,7 @@ def MaxPoolUndo(images, targets, grad, maxes,
   """
   assert targets.shape == images.shape
 
-  _ConvNet.MaxPoolUndo(images.p_mat, grad.p_mat, maxes.p_mat, targets.p_mat, subsX, startX, strideX, outputsX)
+  _ConvNet.MaxPoolUndo(images.p_mat, grad.p_mat, maxes.p_mat, targets.p_mat, kernel_size, -padding, stride, num_modules_x)
 
 def ResponseNorm(images, denoms, targets, numChannels, sizeX, addScale, powScale):
   assert targets.shape == images.shape

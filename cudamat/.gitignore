@@ -1,0 +1,5 @@
+*.o
+*.so
+*.pyc
+cudamat_experimental.*
+test_cudamat_experimental.*
