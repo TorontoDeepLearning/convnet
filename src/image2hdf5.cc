@@ -4,8 +4,12 @@
 
 #include "image_iterators.h"
 #include "hdf5.h"
+#include "util.h"
+
 #include <opencv2/core.hpp>
+
 #include <string>
+#include <vector>
 #include <iostream>
 
 using namespace std;
@@ -32,8 +36,10 @@ int main(int argc, char ** argv) {
     exit(1);
   }
 
+  vector<string> filenames;
+  readFileList(file_list, filenames);
   RawImageFileIterator<unsigned char> it = RawImageFileIterator<unsigned char>(
-      file_list, image_size, big_image_size, false, false, false);
+      filenames, image_size, big_image_size, false, false, false);
   const int dataset_size = it.GetDataSetSize();
   const int num_dims = image_size * image_size * 3;
   unsigned char* image_buf = new unsigned char[num_dims];
