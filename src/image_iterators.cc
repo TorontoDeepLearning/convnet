@@ -20,7 +20,7 @@ using namespace cv;
 
 inline void resizeOCV(Mat &img, unsigned int width, unsigned int height) {
   Mat out;
-  resize(img, out, Size(width, height));
+  resize(img, out, Size(width, height), 0, 0, INTER_LINEAR);
   img = out;
 }
 
@@ -32,9 +32,8 @@ inline void rotateOCV(Mat &img, float angle) {
 }
 
 inline void cropOCV(Mat &img, Mat &out, int left, int top, int right, int bottom) {
-  Size s(right - left, bottom - top);
-  Point2f center(left + s.width/2, top + s.height/2);
-  getRectSubPix(img, s, center, out);
+  Mat ref(img, Rect(left, top, right-left, bottom-top));
+  ref.copyTo(out);
 }
 
 inline void cropOCV(Mat &img, int left, int top, int right, int bottom) {
@@ -84,25 +83,19 @@ void getData(Mat &image, T* data_ptr) {
 
 template <typename T>
 RawImageFileIterator<T>::RawImageFileIterator(
-    const string& filelist, const int image_size, const int raw_image_size,
+    const vector<string>& filelist, const int image_size, const int raw_image_size,
     const bool flip, const bool translate, const bool random_jitter,
     const int max_angle, const float min_scale) :
-    row_(0), image_id_(-1), position_(0), image_size_(image_size),
+    row_(0),
+    image_id_(-1),
+    position_(0),
+    filenames_(filelist),
+    image_size_(image_size),
     num_positions_((flip ? 2 : 1) * (translate ? 5 : 1)),
-    raw_image_size_(raw_image_size), random_jitter_(random_jitter),
-    max_angle_(max_angle), min_scale_(min_scale) {
-
-  ifstream f(filelist, ios::in);
-  if (!f.is_open()) {
-    cerr << "Could not open data file : " << filelist << endl;
-    exit(1);
-  }
-  while (!f.eof()) {
-    string str;
-    f >> str;
-    if (!f.eof()) filenames_.push_back(str);
-  }
-  f.close();
+    raw_image_size_(raw_image_size),
+    random_jitter_(random_jitter),
+    max_angle_(max_angle),
+    min_scale_(min_scale) {
   dataset_size_ = filenames_.size();
   distribution_ = random_jitter_ ? new uniform_real_distribution<float>(0, 1) : NULL;
 }
@@ -360,7 +353,7 @@ template class SlidingWindowIterator<unsigned char>;
 
 template <typename T>
 BBoxImageFileIterator<T>::BBoxImageFileIterator(
-  const string& filelist, const string& bbox_file, const int image_size,
+  const vector<string>& filelist, const string& bbox_file, const int image_size,
   const int raw_image_size, const bool flip, const bool translate,
   const bool random_jitter, const int max_angle, const float min_scale,
   const float context_factor, const bool center_on_bbox) :
