@@ -9,6 +9,21 @@
 
 using namespace std;
 
+void readFileList(const string& list_name, vector<string>& filenames)
+{
+  ifstream f(list_name, ios::in);
+  if (!f.is_open()) {
+    cerr << "Could not open data file : " << list_name << endl;
+    exit(1);
+  }
+  while (!f.eof()) {
+    string str;
+    f >> str;
+    if (!f.eof()) filenames.push_back(str);
+  }
+  f.close();
+}
+
 void ParseBoardIds(const string& board, vector<int>& boards) {
   for (auto b:board)  {
     string currBoard;

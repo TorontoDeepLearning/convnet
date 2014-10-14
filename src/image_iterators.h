@@ -21,7 +21,7 @@ typedef struct {
 template<typename T>
 class RawImageFileIterator {
 public:
-  RawImageFileIterator(const string& filelist, const int image_size,
+  RawImageFileIterator(const vector<string> &filelist, const int image_size,
                        const int raw_image_size, const bool flip,
                        const bool translate, const bool random_jitter,
                        const int max_angle=0, const float min_scale=1.0);
@@ -83,7 +83,7 @@ private:
 template<typename T>
 class BBoxImageFileIterator : public RawImageFileIterator<T> {
 public:
-  BBoxImageFileIterator(const string& filelist, const string& bbox_file,
+  BBoxImageFileIterator(const vector<string>& filelist, const string& bbox_file,
                         const int image_size, const int raw_image_size,
                         const bool flip, const bool translate,
                         const bool random_jitter, const int max_angle=0,

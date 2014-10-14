@@ -628,15 +628,17 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
   image_size_(config.image_size()) {
   
   bool avg10_full_image = config.avg10_full_image();
- 
+
+  vector<string> filenames;
+  readFileList(file_pattern_, filenames);
   if (config.bbox_file().empty()) {
     it_ = new RawImageFileIterator<unsigned char>(
-        file_pattern_, image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        filenames, image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
         config.random_rotate_raw_image(), config.random_rotate_max_angle(),
         config.min_scale());
   } else {
     it_ = new BBoxImageFileIterator<unsigned char>(
-        file_pattern_, config.bbox_file(), image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        filenames, config.bbox_file(), image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
         config.random_rotate_raw_image(), config.random_rotate_max_angle(),
         config.min_scale(), config.context_factor(), config.center_on_bbox());
   }
