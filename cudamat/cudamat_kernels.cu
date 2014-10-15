@@ -1368,7 +1368,7 @@ __global__ void kSumRowwise(float* mat, float* target, unsigned int width, unsig
   if (row < height) {
     float sum = 0;
     float *data = mat + row;
-    for (unsigned int i = 0; i < width; i++) sum += data[i];
+    for (unsigned int i = 0; i < width; i++) sum += data[i*height];
     __syncthreads();
     target[row] = p * target[row] + mult * sum;
   }
