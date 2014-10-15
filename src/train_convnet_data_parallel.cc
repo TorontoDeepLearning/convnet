@@ -33,11 +33,7 @@ int main(int argc, char** argv) {
   }
 
   vector<int> boards;
-  for (auto b:board) {
-    string currBoard;
-    currBoard.push_back(b);
-    boards.push_back(atoi(currBoard.c_str()));
-  }
+  ParseBoardIds(board, boards);
   
   // Setup GPU boards.
   Matrix::SetupCUDADevice(boards[myID]);
@@ -52,5 +48,9 @@ int main(int argc, char** argv) {
   net->AllocateMemory(false);
   net->Train();
   delete net;
+
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
   return 0;
 }

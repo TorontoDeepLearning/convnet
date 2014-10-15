@@ -238,9 +238,6 @@ void ConvNet::AllocateEdgeMemory(bool fprop_only) {
     }
   }
   if (num_processes_ > 1) Broadcast(parameters_);
-
-  parameters_.Print();
-
 }
 
 void ConvNet::Sort() {
@@ -388,7 +385,7 @@ void ConvNet::ComputeDeriv() {
 void ConvNet::GetLoss(vector<float>& error) {
   error.clear();
   for (Layer* l: output_layers_) {
-    error.push_back(l->GetLoss());
+    error.push_back(l->GetPerformanceMetric());
   }
 }
 

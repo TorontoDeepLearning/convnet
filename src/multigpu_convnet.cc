@@ -68,7 +68,7 @@ void MultiGPUConvNet::GetLoss(vector<float>& error) {
   error.clear();
   for (Layer* l: output_layers_) {
     Matrix::SetDevice(l->GetGPUId());
-    error.push_back(l->GetLoss());
+    error.push_back(l->GetPerformanceMetric());
   }
 }
 

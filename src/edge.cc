@@ -70,7 +70,9 @@ Edge::Edge(const config::Edge& edge_config) :
   is_tied_(!tied_edge_name_.empty()),
   img_display_(NULL),
   gpu_id_(edge_config.gpu_id()),
-  display_(edge_config.display()) {
+  display_(edge_config.display()),
+  grad_check_(edge_config.grad_check()),
+  grad_check_num_params_(edge_config.grad_check_num_params()) {
 
   stringstream ss;
   ss << source_node_;
@@ -78,6 +80,10 @@ Edge::Edge(const config::Edge& edge_config) :
   ss << ":" << dest_node_;
   if (!dest_node_slice_.empty()) ss << "_" << dest_node_slice_;
   name_ = string(ss.str());
+  for (float v : edge_config.grad_check_epsilon()) {
+    grad_check_epsilon_.push_back(v);
+  }
+
 
 #ifdef USE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &process_id_);
@@ -135,6 +141,13 @@ void Edge::SetGradMemory(Matrix& p) {
 
 size_t Edge::GetParameterMemoryRequirement() {
   return 0;
+}
+
+void Edge::GradCheckEpsilon(vector<float>& epsilon_values) const {
+  epsilon_values.clear();
+  for (const float& v : grad_check_epsilon_) {
+    epsilon_values.push_back(v);
+  }
 }
 
 void Edge::DisplayWeights() {

@@ -132,6 +132,9 @@ class Edge {
   string GetTiedEdgeName();
   bool IsTied();
   int GetGPUId() const { return gpu_id_; }
+  bool GradCheck() const { return grad_check_;}
+  int GradCheckNumParams() const { return grad_check_num_params_;}
+  void GradCheckEpsilon(vector<float>& epsilon_values) const;
 
   /** Selects the appropriate derived class for the edge config.*/
   static Edge* ChooseEdgeClass(const config::Edge& edge_config);
@@ -153,6 +156,9 @@ class Edge {
   int process_id_;  // MPI rank.
   int num_processes_;  // Number of data parallel processes.
   bool is_root_;  // The process that is root.
+  const bool grad_check_;
+  const int grad_check_num_params_;
+  vector<float> grad_check_epsilon_;
 
 };
 #endif

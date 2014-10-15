@@ -30,7 +30,10 @@ Matrix::~Matrix() {
   if (mat_.owns_data == 1) {
     if(mat_.data_host != NULL) free(mat_.data_host);
     free_device_memory(&mat_);
-    gpu_memory_[name_] = 0;
+    auto it = gpu_memory_.find(name_);
+    if (it != gpu_memory_.end()) {
+      it->second = 0;
+    }
   }
 }
 
@@ -58,10 +61,6 @@ void Matrix::Tie(Matrix &m) {
 void Matrix::SetupTranspose() {
   mat_t_ = mat_;
   mat_t_.is_trans = 1 - mat_.is_trans;
-}
-
-void Matrix::SetupTextureObject() {
-  SetupTexture(&mat_);
 }
 
 void Matrix::AllocateGPUMemory(const size_t rows, const size_t cols) {
@@ -165,6 +164,32 @@ void Matrix::Set(Matrix& val) {
   }
 }
 
+void Matrix::WriteValue(int index, float val) {
+  WriteValue(index % mat_.size[0], index / mat_.size[0], val);
+}
+
+float Matrix::ReadValue(int index) {
+  return ReadValue(index % mat_.size[0], index / mat_.size[0]);
+}
+
+void Matrix::WriteValue(int row, int col, float val) {
+  int err_code = write_at(&mat_, row, col, val);
+  if (err_code != 0) {
+    cerr << "Error: Could not write value : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+float Matrix::ReadValue(int row, int col) {
+  int err_code;
+  float res = read_from(&mat_, row, col, &err_code);
+  if (err_code != 0) {
+    cerr << "Error: Could not read value : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+  return res;
+}
+
 void Matrix::CopyP2PAsync(Matrix& val) {
   int err_code = copy_on_device_p2p_async(val.GetMat(), &mat_, val.GetGPUId(), gpu_id_);  // source, dest.
   if (err_code != 0) {
@@ -199,7 +224,7 @@ float Matrix::Sum() {
   size_t cols = mat_.size[1];
   reshape(&mat_, 1, -1);
   GetOnes(1, rows * cols, ones);
-  int err;
+  int err = 0;
   float res = vdot(ones.GetMat(), &mat_, &err);
   if (err != 0) {
     cerr << "Error in vdot " << GetStringError(err) << endl;
@@ -241,7 +266,7 @@ float Matrix::EuclidNorm() {
 void Matrix::Subtract(Matrix& m, Matrix& target) {
   int err_code = subtract_elementwise(&mat_, m.GetMat(), target.GetMat());
   if (err_code != 0) {
-    cerr << "Error in compute deriv of linear unit." << endl;
+    cerr << "Error in subtract." << endl;
     exit(1);
   }
 }

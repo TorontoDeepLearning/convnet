@@ -22,12 +22,6 @@ Layer* Layer::ChooseLayerClass(const config::Layer& config) {
     case config::Layer::SOFTMAX_DIST :
       l = new SoftmaxDistLayer(config);
       break;
-    case config::Layer::HINGE_LINEAR :
-      l = new HingeLinearLayer(config);
-      break;
-    case config::Layer::HINGE_QUADRATIC :
-      l = new HingeQuadraticLayer(config);
-      break;
     default:
       cerr << "Undefined layer type." << endl;
       exit(1);
@@ -52,7 +46,12 @@ Layer::Layer(const config::Layer& config) :
   scale_targets_(0),
   image_size_(0),
   img_display_(NULL),
-  gpu_id_(config.gpu_id()){
+  gpu_id_(config.gpu_id()),
+  store_dropout_noise_(dropprob_ > 0),
+  loss_(NULL),
+  performance_(NULL),
+  loss_function_(config.loss_function()),
+  performance_metric_(config.performance_metric()) {
 
   add_or_overwrite_state_[""] = true;
   add_or_overwrite_deriv_[""] = true;
@@ -66,6 +65,8 @@ Layer::Layer(const config::Layer& config) :
 
 Layer:: ~Layer() {
   if (img_display_ != NULL) delete img_display_;
+  if (loss_ != NULL) delete loss_;
+  if (performance_ != NULL) delete performance_;
 }
 
 void Layer::AddIncoming(Edge* e) {
@@ -228,13 +229,18 @@ void Layer::AllocateMemory(int batch_size) {
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
 
-  if (gaussian_dropout_) {
-    rand_gaussian_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " gaussian dropout");
+  if (is_input_) store_dropout_noise_ = false;
+  if (store_dropout_noise_) {
+    dropout_noise_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " dropout");
   }
   SetupSlices();
 
   AllocateMemoryOnOtherGPUs();
   Matrix::SetDevice(gpu_id_);
+  if (is_output_) {
+    loss_ = LossFunction::ChooseLossFunction(loss_function_);
+    performance_ = LossFunction::ChooseLossFunction(performance_metric_);
+  }
 }
 
 Matrix& Layer::GetState() {
@@ -317,10 +323,10 @@ Matrix& Layer::GetDeriv(const string& slice) {
 void Layer::ApplyDropoutAtTrainTime() {
   if (dropprob_ > 0) {
     if (gaussian_dropout_) {
-      rand_gaussian_.FillWithRandn();
-      rand_gaussian_.Mult(dropprob_);
-      rand_gaussian_.Add(1);
-      state_.Mult(rand_gaussian_);
+      dropout_noise_.FillWithRandn();
+      dropout_noise_.Mult(dropprob_);
+      dropout_noise_.Add(1);
+      state_.Mult(dropout_noise_);
       if (max_act_gaussian_dropout_ > 0) {
         // Clip the activations so that |act| <= max_act_gaussian_dropout_
         state_.UpperBoundMod(max_act_gaussian_dropout_);
@@ -328,7 +334,18 @@ void Layer::ApplyDropoutAtTrainTime() {
     } else {  //  Standard binary dropout.
       float scale = dropout_scale_up_at_train_time_ ?
                     (1.0 / (1 - dropprob_)) : 1.0;
-      state_.Dropout(dropprob_, 0, scale);
+      if (store_dropout_noise_) {
+        dropout_noise_.FillWithRand();
+        dropout_noise_.Mult(scale);
+        state_.Mult(dropout_noise_);
+      } else {
+        // Does the same thing as above, but doesn't remember the noise.
+        // The only reason to do this is to save memory on the gpu.
+        // This is ok to do for layers
+        // (1) whose activation function has a slope of 0 when the activation is 0 (logistic, relu).
+        // (2) which we don't want to backprop through (e.g. input layers).
+        state_.Dropout(dropprob_, 0, scale);
+      }
     }
   }
 }
@@ -336,28 +353,40 @@ void Layer::ApplyDropoutAtTrainTime() {
 void Layer::ApplyDerivativeofDropout() {
   if (dropprob_ > 0) {
     if (gaussian_dropout_) {
-      deriv_.Mult(rand_gaussian_);
+      deriv_.Mult(dropout_noise_);
       // The real state must be used for backproping through the non linearity.
       // The gradient for the layer above has already been computed.
       // Undo dropout.
-      state_.Divide(rand_gaussian_);
-    } else if (dropout_scale_up_at_train_time_) {
-      deriv_.Mult(1. / (1 - dropprob_));
+      state_.Divide(dropout_noise_);
+    } else {
+      if (store_dropout_noise_) {
+        deriv_.Mult(dropout_noise_);
+      } else if (dropout_scale_up_at_train_time_) {
+        deriv_.Mult(1. / (1 - dropprob_));
+      }
     }
   }
 }
 
 void Layer::ApplyDropoutAtTestTime() {
   if (dropprob_ > 0) {
-    // Scale down.
     if (!dropout_scale_up_at_train_time_ && !gaussian_dropout_) {
+      // Scale down.
       state_.Mult(1 - dropprob_);
     }
   }
 }
 
-float Layer::GetLoss2() {
-  return GetLoss();
+float Layer::GetPerformanceMetric() {
+  return performance_->GetLoss(state_, data_);
+}
+
+void Layer::ComputeDeriv() {
+  loss_->GetLossDerivative(state_, data_, deriv_);
+}
+
+float Layer::GetLoss() {
+  return loss_->GetLoss(state_, data_);
 }
 
 void Layer::Display() {
@@ -381,29 +410,16 @@ void Layer::ApplyDropout(bool train) {
   }
 }
 
-LinearLayer::LinearLayer(const config::Layer& config) : Layer(config)
-{}
+LinearLayer::LinearLayer(const config::Layer& config) : Layer(config) {
+}
 
 void LinearLayer::ApplyActivation(bool train) {
-  // Linear layer, do nothing.
+  // Linear layer, do nothing to activate.
   ApplyDropout(train);
 }
 
 void LinearLayer::ApplyDerivativeOfActivation() {
   ApplyDerivativeofDropout();
-}
-
-void LinearLayer::ComputeDeriv() {
-  state_.Subtract(data_, deriv_);
-}
-
-float LinearLayer::GetLoss() {
-  Matrix temp;
-  Matrix::GetTemp(data_.GetRows(), data_.GetCols(), temp);
-  state_.Subtract(data_, temp);
-  float norm = temp.EuclidNorm();
-  float res = 0.5 * norm * norm;
-  return res;
 }
 
 void LinearLayer::AllocateMemory(int batch_size) {
@@ -413,8 +429,9 @@ void LinearLayer::AllocateMemory(int batch_size) {
 }
 
 ReLULayer::ReLULayer(const config::Layer& config) :
-  LinearLayer(config), rectify_after_gaussian_dropout_(false)
-{}
+  LinearLayer(config), rectify_after_gaussian_dropout_(false) {
+  store_dropout_noise_ = false;
+}
 
 void ReLULayer::ApplyActivation(bool train) {
   state_.LowerBound(0);
@@ -445,26 +462,6 @@ void SoftmaxLayer::ApplyDerivativeOfActivation() {
   exit(1);
 }
 
-void SoftmaxLayer::ComputeDeriv() {
-  Matrix::SoftmaxCEDeriv(state_, data_, deriv_);
-}
-
-float SoftmaxLayer::GetLoss() {
-  Matrix temp;
-  Matrix::GetTemp(data_.GetRows(), 1, temp);
-  Matrix::SoftmaxCorrect(state_, data_, temp);
-  float res = temp.Sum();
-  return res;
-}
-
-float SoftmaxLayer::GetLoss2() {
-  Matrix temp;
-  Matrix::GetTemp(data_.GetRows(), 1, temp);
-  Matrix::SoftmaxCE(state_, data_, temp);
-  float res = temp.Sum();
-  return res;
-}
-
 void SoftmaxDistLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
   const int numdims = state_.GetCols();
@@ -472,15 +469,8 @@ void SoftmaxDistLayer::AllocateMemory(int batch_size) {
   if (is_output_) data_.AllocateGPUMemory(batch_size, numdims, GetName() + " data");
 }
 
-void SoftmaxDistLayer::ComputeDeriv() {
-  state_.Subtract(data_, deriv_);
-}
-
-float SoftmaxDistLayer::GetLoss() {
-  Matrix temp;
-  Matrix::GetTemp(data_.GetRows(), data_.GetCols(), temp);
-  Matrix::SoftmaxDistCE(state_, data_, temp);
-  return temp.Sum();
+LogisticLayer::LogisticLayer(const config::Layer& config) : Layer(config) {
+  store_dropout_noise_ = false; 
 }
 
 void LogisticLayer::AllocateMemory(int batch_size) {
@@ -497,37 +487,4 @@ void LogisticLayer::ApplyActivation(bool train) {
 void LogisticLayer::ApplyDerivativeOfActivation() {
   ApplyDerivativeofDropout();
   deriv_.ApplyDerivativeOfLogistic(state_);
-}
-
-void LogisticLayer::ComputeDeriv() {
-  Matrix::LogisticCEDeriv(state_, data_, deriv_);
-}
-
-float LogisticLayer::GetLoss() {
-  Matrix temp;
-  Matrix::GetTemp(data_.GetRows(), 1, temp);
-  Matrix::LogisticCorrect(state_, data_, temp);
-  return temp.Sum();
-}
-
-HingeQuadraticLayer::HingeQuadraticLayer(const config::Layer& config) :
-  SoftmaxLayer(config), margin_(config.hinge_margin()) {}
-
-void HingeQuadraticLayer::ApplyActivation(bool train) {
-  ApplyDropout(train);
-}
-
-void HingeQuadraticLayer::ApplyDerivativeOfActivation() {
-  ApplyDerivativeofDropout();
-}
-
-void HingeQuadraticLayer::ComputeDeriv() {
-  Matrix::HingeLossDeriv(state_, data_, deriv_, true, margin_);
-}
-
-HingeLinearLayer::HingeLinearLayer(const config::Layer& config) :
-  HingeQuadraticLayer(config) {}
-
-void HingeLinearLayer::ComputeDeriv() {
-  Matrix::HingeLossDeriv(state_, data_, deriv_, false, margin_);
 }

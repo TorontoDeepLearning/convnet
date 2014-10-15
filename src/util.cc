@@ -162,6 +162,18 @@ void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name
   H5Dclose(dataset);
 }
 
+void WriteHDF5CPU(hid_t file, vector<float>& mat, int rows, int cols, const string& name) {
+  int size = mat.size();
+  if (rows * cols != size) {
+    cerr << "Size mismatch " << endl;
+    exit(1);
+  }
+  float* data = new float[size];
+  for (int i = 0; i < size; i++) data[i] = mat[i];
+  WriteHDF5CPU(file, data, rows, cols, name);
+  delete[] data;
+}
+
 void ReadHDF5ShapeFromFile(const string& file_name, const string& dataset_name, int* rows, int* cols) {
   hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   ReadHDF5Shape(file, dataset_name, rows, cols);

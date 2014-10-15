@@ -1205,6 +1205,75 @@ __global__ void kFCNorm(cudaTextureObject_t imgs, cudaTextureObject_t meanDiffs,
         }
     }
 }
+/*
+ * Block size B_YxB_X
+ * blockIdx.x determines pixel.x, image idx in batches of B_X*imgsPerThread
+ * blockIdx.y determines pixel.y, filter idx in batches of B_Y
+ *
+ * So each block does one pixel for some number of images/filters.
+ *
+ * threadIdx.x determines img idx
+ * threadIdx.y determines filter idx
+ *
+ * imgs:        (numFilters, imgPixels, numImages)
+ * meanDiffs:   (numFilters, imgPixels, numImages)
+ * denoms:      (numFilters, imgPixels, numImages) (out)
+ * target:      (numFilters, imgPixels, numImages) (out)
+ *
+ * numImages must be divisible by B_X*imgsPerThread if checkCaseBounds is false
+ * numFilters must be divisible by B_Y
+ */
+template<int B_Y, int B_X, int imgsPerThread, bool checkCaseBounds, bool blocked>
+__global__ void kFCNorm_notex(float* imgs, float* meanDiffs, float* target, const int imgSize,
+                          const int numFilters, const int numImages, const int sizeF,
+                          const float addScale, const float powScale, const float minDiv) {
+    const int imgPixels = imgSize * imgSize;
+    const int numImgBlocks = DIVUP(numImages, B_X*imgsPerThread);
+    const int numFilterBlocks = numFilters/B_Y;
+    const int pxIdxX = blockIdx.x / numImgBlocks;
+    const int pxIdxY = blockIdx.y / numFilterBlocks;
+    const int blockImgIdx = (blockIdx.x % numImgBlocks) * B_X * imgsPerThread;
+    const int filterIdx = (blockIdx.y % numFilterBlocks) * B_Y + threadIdx.y;
+    
+    const int pxIdx = pxIdxY * imgSize + pxIdxX;
+
+    
+    const int imgIdx = blockImgIdx + threadIdx.x;
+//    const int imgOffset = ((filterIdx) * imgPixels + pxIdx) * numImages + imgIdx;
+//    const int meanDiffsOffset = pxIdx * numImages + imgIdx;
+    imgs += ((filterIdx) * imgPixels + pxIdx) * numImages + imgIdx;
+    meanDiffs += pxIdx * numImages + imgIdx;
+    target += ((filterIdx) * imgPixels + pxIdx) * numImages + imgIdx;
+    
+    float prod[imgsPerThread];
+    #pragma unroll
+    for (int i = 0; i < imgsPerThread; i++) {
+        if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+            prod[i] = 0;
+        }
+    }
+
+    const int startF = blocked ? (filterIdx / sizeF) * sizeF : -sizeF/2 + filterIdx;
+    const int loopStartF = blocked ? startF : MAX(0, startF);
+    const int loopEndF = MIN(numFilters, startF + sizeF);
+ 
+    for (int f = loopStartF; f < loopEndF; ++f) {
+        #pragma unroll
+        for (int i = 0; i < imgsPerThread; i++) {
+            if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+                prod[i] += square(meanDiffs[f * imgPixels * numImages + i * B_X]);
+            }
+        }
+    }
+
+    #pragma unroll
+    for (int i = 0; i < imgsPerThread; i++) {
+        if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
+            prod[i] = minDiv + addScale * prod[i];
+            target[i * B_X] = imgs[i * B_X] * __powf(prod[i], -powScale);
+        }
+    }
+}
 
 /*
  * Block size B_YxB_X
@@ -2832,25 +2901,50 @@ void convContrastNormCrossMap(cudamat* images, cudamat* meanDiffs, cudamat* targ
     cudaStream_t stream = 0;  // NVMatrix::getDefaultStream();
 //    printf("convContrastNormCrossMap imgs: %p, meanDiffs: %p, denoms: %p, target: %p, imgSize: %d, numFilters: %d, numImages: %d, sizeF: %d, addScale: %f, powScale: %f, minDiv: %f, blocked: %d\n",
 //            images->data_device, meanDiffs->data_device, denoms->data_device, target->data_device, imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv, blocked);
+    bool use_texture = FitsAsTexture(images) & FitsAsTexture(meanDiffs);
     if (blocked) {
         if (checkCaseBounds) {
+          if (use_texture) {
             cudaFuncSetCacheConfig(kFCNorm<4, 32, 4, true, true>, cudaFuncCachePreferL1);
             kFCNorm<4, 32, 4, true, true><<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(meanDiffs), target->data_device,
                                                                 imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          } else {
+            cudaFuncSetCacheConfig(kFCNorm_notex<4, 32, 4, true, true>, cudaFuncCachePreferL1);
+            kFCNorm_notex<4, 32, 4, true, true><<<blocks, threads, 0, stream>>>(images->data_device, meanDiffs->data_device, target->data_device,
+                                                                imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          }
         } else {
+          if (use_texture) {
             cudaFuncSetCacheConfig(kFCNorm<4, 32, 4, false, true>, cudaFuncCachePreferL1);
             kFCNorm<4, 32, 4, false, true><<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(meanDiffs), target->data_device,
                                                                 imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          } else {
+            cudaFuncSetCacheConfig(kFCNorm_notex<4, 32, 4, false, true>, cudaFuncCachePreferL1);
+            kFCNorm_notex<4, 32, 4, false, true><<<blocks, threads, 0, stream>>>(images->data_device, meanDiffs->data_device, target->data_device,
+                                                                imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          }
         }
     } else {
         if (checkCaseBounds) {
+          if (use_texture) {
             cudaFuncSetCacheConfig(kFCNorm<4, 32, 4, true, false>, cudaFuncCachePreferL1);
             kFCNorm<4, 32, 4, true, false><<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(meanDiffs), target->data_device,
                                                                 imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          } else {
+            cudaFuncSetCacheConfig(kFCNorm_notex<4, 32, 4, true, false>, cudaFuncCachePreferL1);
+            kFCNorm_notex<4, 32, 4, true, false><<<blocks, threads, 0, stream>>>(images->data_device, meanDiffs->data_device, target->data_device,
+                                                                imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          }
         } else {
+          if (use_texture) {
             cudaFuncSetCacheConfig(kFCNorm<4, 32, 4, false, false>, cudaFuncCachePreferL1);
             kFCNorm<4, 32, 4, false, false><<<blocks, threads, 0, stream>>>(getTextureObject(images), getTextureObject(meanDiffs), target->data_device,
                                                                 imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          } else {
+            cudaFuncSetCacheConfig(kFCNorm_notex<4, 32, 4, false, false>, cudaFuncCachePreferL1);
+            kFCNorm_notex<4, 32, 4, false, false><<<blocks, threads, 0, stream>>>(images->data_device, meanDiffs->data_device, target->data_device,
+                                                                imgSize, numFilters, numImages, sizeF, addScale, powScale, minDiv);
+          }
         }
     }
 

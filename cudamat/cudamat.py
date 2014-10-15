@@ -71,6 +71,7 @@ _cudamat.mult_by_scalar.restype = ct.c_int
 _cudamat.divide_by_scalar.restype = ct.c_int
 _cudamat.add_scalar.restype = ct.c_int
 
+_cudamat.read_from.restype = ct.c_float
 _cudamat.euclid_norm.restype = ct.c_float
 _cudamat.selectRows.restype = ct.c_int
 _cudamat.setSelectedRows.restype = ct.c_int
@@ -394,6 +395,27 @@ class CUDAMatrix(object):
             raise generate_exception(err_code)
 
         return self
+
+    def write_value(self, row, col, val):
+        """Assign val to self[row, col], where val is a scalar. """
+
+        err_code = _cudamat.write_at(self.p_mat, row, col, ct.c_float(val))
+            
+        if err_code:
+            raise generate_exception(err_code)
+
+        return self
+
+    def read_value(self, row, col):
+        """Assign val to self[row, col], where val is a scalar. """
+
+        err_code = ct.c_int(0)
+        res = _cudamat.read_from(self.p_mat, row, col, ct.byref(err_code))
+            
+        if err_code:
+            raise generate_exception(err_code)
+
+        return res
 
     def free_device_memory(self):
         """
@@ -1124,7 +1146,6 @@ class CUDAMatrix(object):
         if err_code:
             raise generate_exception(err_code)
         return self
->>>>>>> master
 
     def sign(self, target = None):
         """

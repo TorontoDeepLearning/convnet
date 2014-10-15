@@ -2362,6 +2362,34 @@ int assign_scalar(cudamat* mat, float alpha) {
     return 0;
 }
 
+int write_at(cudamat* mat, int row, int col, float val) {
+    if (!mat->on_device)
+        return ERROR_NOT_ON_DEVICE;
+    if (row >= mat->size[0] || col >= mat->size[1] || row < 0 || col < 0)
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    cudaMemcpy(mat->data_device + col * mat->size[0] + row, &val, sizeof(float), cudaMemcpyHostToDevice);
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
+float read_from(cudamat* mat, int row, int col, int* err_code) {
+    *err_code = 0;
+    if (!mat->on_device)
+        *err_code = ERROR_NOT_ON_DEVICE;
+    if (row >= mat->size[0] || col >= mat->size[1] || row < 0 || col < 0)
+        *err_code = ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    float val = 0;
+    cudaMemcpy(&val, mat->data_device + col * mat->size[0] + row, sizeof(float), cudaMemcpyDeviceToHost);
+    if (checkCUDAError())
+        *err_code = CUDA_ERROR;
+
+    return val;
+}
+
 int mult_by_scalar(cudamat* mat, float alpha, cudamat* target) {
     int len = mat->size[0]*mat->size[1];
 

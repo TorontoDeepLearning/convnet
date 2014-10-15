@@ -21,8 +21,6 @@ message Layer {
     RECTIFIED_LINEAR = 2;
     SOFTMAX = 3;
     SOFTMAX_DIST = 4;  // not one-of-K, but a distribution over K.
-    HINGE_LINEAR = 5;
-    HINGE_QUADRATIC = 6;
   }
   optional Activation activation = 6 [default=LINEAR];
   optional bool display = 9 [default=false];
@@ -32,6 +30,19 @@ message Layer {
   optional int32 gpu_id = 13 [default = 0];
   optional float hinge_margin = 14 [default=0];
   repeated LayerSlice layer_slice = 15;  // Sublayers.
+  enum LossFunction {
+    SQUARED_ERROR = 0;
+    LINEAR_ERROR = 1;
+    CROSS_ENTROPY_MULTINOMIAL = 2;
+    CROSS_ENTROPY_BINARY = 3;
+    CROSS_ENTROPY_MULTINOMIAL_DISTRIBUTED = 4;
+    CLASSIFICATION_MULTINOMIAL = 5;
+    CLASSIFICATION_BINARY = 6;
+    HINGE_LINEAR = 7;
+    HINGE_QUADRATIC = 8;
+  }
+  optional LossFunction loss_function = 16 [default=CROSS_ENTROPY_MULTINOMIAL];
+  optional LossFunction performance_metric = 17 [default=CLASSIFICATION_MULTINOMIAL];
 }
 
 message Optimizer {
@@ -160,6 +171,11 @@ message Edge {
   // Layer slices.
   optional string source_slice = 28;
   optional string dest_slice = 29;
+
+  // Grad check.
+  optional bool grad_check = 30 [default=false];
+  optional int32 grad_check_num_params = 31 [default=0];
+  repeated float grad_check_epsilon = 32;
 }
 
 message Subnet {

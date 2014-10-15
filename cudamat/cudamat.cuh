@@ -92,6 +92,8 @@ int allocate_device_memory(cudamat* mat);
 int allocate_device_memory_bbox(cudamat_bbox* mat);
 int allocate_device_memory_sparse(cudamat_sparse* mat);
 int destroy_tex(cudamat* mat);
+int write_at(cudamat* mat, int row, int col, float val);
+float read_from(cudamat* mat, int row, int col, int* err_code);
 int copy_to_host(cudamat* mat);
 int copy_to_host_slice(cudamat* mat, size_t start, size_t end);
 int copy_bbox_to_host(cudamat_bbox* mat);

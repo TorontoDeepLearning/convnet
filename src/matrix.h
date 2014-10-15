@@ -17,12 +17,15 @@ class Matrix {
   
   void Tie(Matrix &m);
   void SetupTranspose();
-  void SetupTextureObject();
   void AllocateGPUMemory(const size_t rows, const size_t cols, const string& name);
   void AllocateGPUMemory(const size_t rows, const size_t cols);
   void AllocateMainMemory(const size_t rows, const size_t cols);
   void Set(const float val);
   void Set(Matrix& val);
+  float ReadValue(int row, int col);
+  float ReadValue(int index);
+  void WriteValue(int row, int col, float val);
+  void WriteValue(int index, float val);
   void CopyP2PAsync(Matrix& val);
   void GetSlice(Matrix& slice, size_t start, size_t end);
   void FillWithRand();

@@ -1,6 +1,7 @@
 #ifndef LAYER_H_
 #define LAYER_H_
 #include "edge.h"
+#include "loss_functions.h"
 #include <set>
 
 /** The base class for all layers.
@@ -35,17 +36,17 @@ class Layer {
   /** Compute derivative of loss function.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual void ComputeDeriv() = 0;
+  virtual void ComputeDeriv();
 
-  /** Compute the value of the loss function that is displayed during training.
+  /** Compute the performance metric that is displayed during training.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual float GetLoss() = 0;
+  virtual float GetPerformanceMetric();
 
   /** Compute the value of the actual loss function.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual float GetLoss2();
+  virtual float GetLoss();
 
   /** Apply dropout to this layer.
    * @param train If train is true, drop units stochastically,
@@ -139,7 +140,7 @@ class Layer {
   Matrix state_;  /** State (activation) of the layer. */
   Matrix deriv_;  /** Deriv of the loss function w.r.t. the state. */
   Matrix data_;   /** Data (targets) associated with this layer. */
-  Matrix rand_gaussian_;  /** Need to store random variates when doing gaussian dropout. */
+  Matrix dropout_noise_;  /** If we need to store random variates when doing dropout. */
   map<int, Matrix> other_states_; /** Copies of this layer's state on other gpus.*/
   map<int, Matrix> other_derivs_; /** Copies of this layer's deriv on other gpus.*/
   map<int, bool> state_copied_;
@@ -150,6 +151,9 @@ class Layer {
   map<string, Matrix> state_slices_, deriv_slices_;
   map<string, int> slice_channels_;
   map<string, bool> add_or_overwrite_state_, add_or_overwrite_deriv_;
+  bool store_dropout_noise_;
+  LossFunction *loss_, *performance_;
+  config::Layer::LossFunction loss_function_, performance_metric_;
 };
 
 /** Implements a layer with a linear activation function.*/
@@ -159,8 +163,6 @@ class LinearLayer : public Layer {
   virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
-  virtual void ComputeDeriv();
-  virtual float GetLoss();
 };
 
 /** Implements a layer with a rectified linear activation function.*/
@@ -182,9 +184,6 @@ class SoftmaxLayer : public Layer {
   virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
-  virtual void ComputeDeriv();
-  virtual float GetLoss();
-  virtual float GetLoss2();
 };
 
 /** Implements a layer with a softmax activation function.
@@ -195,8 +194,6 @@ class SoftmaxDistLayer : public SoftmaxLayer {
  public:
   SoftmaxDistLayer(const config::Layer& config) : SoftmaxLayer(config) {};
   virtual void AllocateMemory(int batch_size);
-  virtual void ComputeDeriv();
-  virtual float GetLoss();
 
  private:
   Matrix cross_entropy_;
@@ -206,31 +203,9 @@ class SoftmaxDistLayer : public SoftmaxLayer {
  */ 
 class LogisticLayer : public Layer {
  public:
-  LogisticLayer(const config::Layer& config) : Layer(config) {};
+  LogisticLayer(const config::Layer& config);
   virtual void AllocateMemory(int batch_size);
   virtual void ApplyActivation(bool train);
   virtual void ApplyDerivativeOfActivation();
-  virtual void ComputeDeriv();
-  virtual float GetLoss();
 };
-
-/** Implements a layer with a linear activation and hinge loss.*/
-class HingeQuadraticLayer : public SoftmaxLayer {
- public:
-  HingeQuadraticLayer(const config::Layer& config);
-  virtual void ApplyActivation(bool train);
-  virtual void ApplyDerivativeOfActivation();
-  virtual void ComputeDeriv();
- protected:
-  const float margin_;
-};
-
-/** Implements a layer with a linear activation and hinge loss.*/
-class HingeLinearLayer : public HingeQuadraticLayer {
- public:
-  HingeLinearLayer(const config::Layer& config);
-  virtual void ComputeDeriv();
-};
-
-
 #endif

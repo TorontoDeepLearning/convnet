@@ -43,6 +43,7 @@ template<class T> void ReadPbtxt(const string& pbtxt_file, T& model);
 void WriteModelBinary(const string& output_file, const config::Model& model);
 void ReadModelBinary(const string& input_file, config::Model& model);
 void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name);
+void WriteHDF5CPU(hid_t file, vector<float>& mat, int rows, int cols, const string& name);
 void ReadHDF5IntAttr(hid_t file, const string& name, int* val);
 void WriteHDF5IntAttr(hid_t file, const string& name, const int* val);
 
