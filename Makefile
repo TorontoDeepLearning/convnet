@@ -8,7 +8,7 @@ LOCAL_BIN=$(HOME)/local/bin
 # CUDA.
 CUDA_ROOT=/pkgs_local/cuda-5.5
 
-USE_MPI=yes
+USE_MPI=no
 #####################################
 
 CUDA_INC=$(CUDA_ROOT)/include
