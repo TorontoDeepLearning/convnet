@@ -44,7 +44,8 @@ Layer::Layer(const config::Layer& config) :
   gaussian_dropout_(config.gaussian_dropout()),
   max_act_gaussian_dropout_(config.max_act_gaussian_dropout()),
   scale_targets_(0),
-  image_size_(0),
+  image_size_y_(config.image_size_y()),
+  image_size_x_(config.image_size_x()),
   img_display_(NULL),
   gpu_id_(config.gpu_id()),
   store_dropout_noise_(dropprob_ > 0),
@@ -201,20 +202,22 @@ void Layer::CopyDerivToGPU(int dest_gpu) {
   }
 }
 
-void Layer::SetSize(int image_size) {
-  image_size_ = image_size;
+void Layer::SetSize(int image_size_y, int image_size_x) {
+  image_size_y_ = image_size_y;
+  image_size_x_ = image_size_x;
+  cout << "Layer " << name_ << ": " << image_size_y << "x" << image_size_x << endl;
   if (display_) {
     if (num_channels_ == 3) {
-      img_display_ = new ImageDisplayer(image_size_, image_size_, num_channels_, false, name_);
+      img_display_ = new ImageDisplayer(image_size_x, image_size_y, num_channels_, false, name_);
     } else {
-      img_display_ = new ImageDisplayer(image_size_, image_size_, num_channels_, true, name_);
+      img_display_ = new ImageDisplayer(image_size_x, image_size_y, num_channels_, true, name_);
     }
   }
 }
 
 void Layer::SetupSlices() {
   int start = 0, end;
-  const int num_pixels = image_size_ * image_size_;
+  const int num_pixels = image_size_y_ * image_size_x_;
   for (auto& kv : slice_channels_) {
     end = start + num_pixels * kv.second;
     state_.GetSlice(state_slices_[kv.first], start, end);
@@ -224,7 +227,7 @@ void Layer::SetupSlices() {
 }
 
 void Layer::AllocateMemory(int batch_size) {
-  const int num_pixels = image_size_ * image_size_;
+  const int num_pixels = image_size_y_ * image_size_x_;
   Matrix::SetDevice(gpu_id_);
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
@@ -413,18 +416,17 @@ void Layer::ApplyDropout(bool train) {
 LinearLayer::LinearLayer(const config::Layer& config) : Layer(config) {
 }
 
-void LinearLayer::ApplyActivation(bool train) {
-  // Linear layer, do nothing to activate.
-  ApplyDropout(train);
+void LinearLayer::ApplyActivation() {
+  // Do nothing.
 }
 
 void LinearLayer::ApplyDerivativeOfActivation() {
-  ApplyDerivativeofDropout();
+  // Do nothing.
 }
 
 void LinearLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
-  const int num_pixels = image_size_ * image_size_;
+  const int num_pixels = image_size_y_ * image_size_x_;
   if (is_output_) data_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " data");
 }
 
@@ -433,16 +435,18 @@ ReLULayer::ReLULayer(const config::Layer& config) :
   store_dropout_noise_ = false;
 }
 
-void ReLULayer::ApplyActivation(bool train) {
+void ReLULayer::ApplyActivation() {
   state_.LowerBound(0);
-  ApplyDropout(train);
+}
+
+void ReLULayer::ApplyDropout(bool train) {
+  Layer::ApplyDropout(train);
   if (gaussian_dropout_ && rectify_after_gaussian_dropout_) {
-    state_.LowerBound(0);
+    ApplyActivation();
   }
 }
 
 void ReLULayer::ApplyDerivativeOfActivation() {
-  ApplyDerivativeofDropout();
   deriv_.ApplyDerivativeOfReLU(state_);
 }
 
@@ -452,9 +456,8 @@ void SoftmaxLayer::AllocateMemory(int batch_size) {
   Matrix::RegisterTempMemory(batch_size);
 }
 
-void SoftmaxLayer::ApplyActivation(bool train) {
+void SoftmaxLayer::ApplyActivation() {
   state_.ApplySoftmax();
-  ApplyDropout(train);
 }
 
 void SoftmaxLayer::ApplyDerivativeOfActivation() {
@@ -479,12 +482,10 @@ void LogisticLayer::AllocateMemory(int batch_size) {
   if (is_output_) data_.AllocateGPUMemory(batch_size, num_channels_, GetName() + " data");
 }
 
-void LogisticLayer::ApplyActivation(bool train) {
+void LogisticLayer::ApplyActivation() {
   state_.ApplyLogistic();
-  ApplyDropout(train);
 }
 
 void LogisticLayer::ApplyDerivativeOfActivation() {
-  ApplyDerivativeofDropout();
   deriv_.ApplyDerivativeOfLogistic(state_);
 }

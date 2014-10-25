@@ -9,6 +9,10 @@ data_config {
   can_flip: true
   pca_noise_stddev: 0.1;
   num_colors: 3
+  image_size_y: 256
+  image_size_x: 256
+  gpu_image_size_y: 224
+  gpu_image_size_x: 224
 }
 
 data_config {

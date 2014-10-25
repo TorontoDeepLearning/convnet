@@ -6,6 +6,10 @@ data_config {
   mean_file: "/ais/gobi3/u/nitish/imagenet/pixel_mean.h5"
   pixelwise_normalize: true
   num_colors: 3
+  image_size_y: 256
+  image_size_x: 256
+  gpu_image_size_y: 224
+  gpu_image_size_x: 224
 }
 
 data_config {

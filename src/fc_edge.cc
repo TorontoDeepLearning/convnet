@@ -6,13 +6,13 @@ FCEdge::FCEdge(const config::Edge& edge_config) :
 
 size_t FCEdge::GetParameterMemoryRequirement() {
   if (is_tied_) return 0;
-  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  size_t input_size = image_size_y_ * image_size_x_ * num_input_channels_;
   return num_output_channels_ * (input_size + (has_no_bias_ ? 0 : 1));
 }
 
 string FCEdge::GetDescription() {
   stringstream ss;
-  ss << name_ << " Fully Connected :" << image_size_ << "-" << image_size_
+  ss << name_ << " Fully Connected :" << image_size_y_ << "-" << image_size_x_
      << "-" << num_input_channels_ << ":" << num_output_channels_;
   return ss.str();
 }
@@ -21,7 +21,7 @@ void FCEdge::SetMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetMemory(p);
   
-  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  size_t input_size = image_size_y_ * image_size_x_ * num_input_channels_;
   p.Reshape(num_output_channels_, -1);
   p.GetSlice(weights_, 0, input_size);
   if (!has_no_bias_) {
@@ -33,7 +33,7 @@ void FCEdge::SetMemory(Matrix& p) {
 void FCEdge::SetGradMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetGradMemory(p);
-  size_t input_size = image_size_ * image_size_ * num_input_channels_;
+  size_t input_size = image_size_y_ * image_size_x_ * num_input_channels_;
   p.Reshape(num_output_channels_, -1);
   p.GetSlice(grad_weights_, 0, input_size);
 

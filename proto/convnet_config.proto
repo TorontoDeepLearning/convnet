@@ -23,6 +23,8 @@ message Layer {
     SOFTMAX_DIST = 4;  // not one-of-K, but a distribution over K.
   }
   optional Activation activation = 6 [default=LINEAR];
+  optional int32 image_size_y = 7 [default=1];
+  optional int32 image_size_x = 8 [default=1];
   optional bool display = 9 [default=false];
   optional bool is_output = 10 [default=false];  // DEPRECATED
   optional bool gaussian_dropout = 11 [default=false];
@@ -158,9 +160,6 @@ message Edge {
   optional float pow_scale = 21 [default = 0];
   optional float frac_of_filters_response_norm = 22 [default=0];
 
-  // Polyak averaging.
-  optional int32 polyak_queue_size = 23 [default = 0];
-
   optional int32 gpu_id = 24 [default = 0];
 
   optional string pretrained_model = 25;
@@ -184,7 +183,7 @@ message Subnet {
   optional string parameters_file = 3;
   message MergeLayer {
     required string subnet_layer = 1;
-    required string net_layer = 2;
+    required string net_layer = 2; 
   }
   repeated MergeLayer merge_layer = 4;
   optional bool block_backprop = 5 [default=false];
@@ -229,7 +228,11 @@ message Model {
   // Include other networks.
   repeated Subnet subnet = 26;
 
+  // The dataset configs used to train this model.
+  optional DatasetConfig train_dataset = 27;
+  optional DatasetConfig valid_dataset = 28;
 }
+
 message DataStreamConfig {
   required string file_pattern = 1;
   required string layer_name = 2;
@@ -250,10 +253,15 @@ message DataStreamConfig {
   optional DataType data_type = 4 [default=HDF5];
 
   // Options applicable to image data -
-  // Resize the original image so that the shorter side is raw_image_size,
-  // then take an image_size patch.
+  // Resize the original image so that a box of size
+  // raw_image_size_y x raw_image_size_x fits tightly inside it.
+  // then take a image_size_y x image_size_x patch.
+  
+  // DEPRECATED: use raw_image_size_y, raw_image_size_x
   optional int32 raw_image_size = 5 [default=0];
-  optional int32 image_size = 6;   // resize to this.
+  // DEPRECATED: use image_size_y, image_size_x
+  optional int32 image_size = 6;
+
   optional bool can_translate = 7 [default=false];
   optional bool can_flip = 8 [default=false];
   optional bool pixelwise_normalize = 9 [default=false];
@@ -290,6 +298,18 @@ message DataStreamConfig {
   optional float context_factor = 23 [default=1.0];  // Applicable to IMAGE_RAW.
   optional bool center_on_bbox = 24 [default=false];  // Applicable to IMAGE_RAW.
   optional bool warp_bbox = 25 [default=false];
+  
+  optional int32 gpu_image_size_y = 26 [default=0];
+  optional int32 gpu_image_size_x = 27 [default=0];
+  optional int32 raw_image_size_y = 28 [default=0];
+  optional int32 raw_image_size_x = 29 [default=0];
+  optional int32 image_size_y = 30 [default=0];
+  optional int32 image_size_x = 31 [default=0];
+  
+  optional bool is_sequence = 32 [default=false];
+  optional int32 seq_length = 33 [default=0];
+  optional string boundary_file = 34;
+  optional bool pick_first = 35 [default=false];
 }
 
 message DatasetConfig {

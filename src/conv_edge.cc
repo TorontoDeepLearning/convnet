@@ -21,10 +21,10 @@ void ConvEdge::SetTiedTo(Edge* e) {
   shared_bias_ = ee->GetSharedBias();
 }
 
-void ConvEdge::SetImageSize(int image_size) {
-  Edge::SetImageSize(image_size);
-  num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
-
+void ConvEdge::SetImageSize(int image_size_y, int image_size_x) {
+  Edge::SetImageSize(image_size_y, image_size_x);
+  num_modules_y_ = (image_size_y + 2 * padding_ - kernel_size_) / stride_ + 1;
+  num_modules_x_ = (image_size_x + 2 * padding_ - kernel_size_) / stride_ + 1;
 }
 
 string ConvEdge::GetDescription() {
@@ -32,8 +32,8 @@ string ConvEdge::GetDescription() {
   ss << name_
      << " Convolutional Kernel: " << kernel_size_ << "-" << kernel_size_ << "-"
      << num_input_channels_ << " : " << num_output_channels_
-     << " Layer: " << image_size_ << "-" << image_size_ << "-"
-     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << " Layer: " << image_size_y_ << "-" << image_size_x_ << "-"
+     << num_input_channels_ << " : " << num_modules_y_ << "-" << num_modules_x_
      << "-" << num_output_channels_;
   return ss.str();
 }
@@ -42,8 +42,8 @@ void ConvEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
   *size = kernel_size_ + stride_ * ((*size) - 1);
   *sep = (*sep) * stride_;
   *pad1 = (*pad1) * stride_ + padding_;
-  int k = (image_size_ + 2*padding_ - kernel_size_) / stride_;
-  int effective_right_pad = k * stride_ - (image_size_ + padding_ - kernel_size_);
+  int k = (image_size_x_ + 2*padding_ - kernel_size_) / stride_;
+  int effective_right_pad = k * stride_ - (image_size_x_ + padding_ - kernel_size_);
   *pad2 = (*pad2) * stride_ + effective_right_pad;
 }
 
@@ -57,7 +57,7 @@ void ConvEdge::DisplayWeights() {
 size_t ConvEdge::GetParameterMemoryRequirement() {
   if (is_tied_) return 0;
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
-  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
+  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_);
   return num_output_channels_ *  (input_size + (has_no_bias_ ? 0 : bias_locs));
 }
 
@@ -66,7 +66,7 @@ void ConvEdge::SetMemory(Matrix& p) {
   Edge::SetMemory(p);
 
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
-  int bias_locs = shared_bias_ ? 1: (num_modules_ * num_modules_);
+  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_);
   
   // Weights for this convolution.
   p.Reshape(num_output_channels_, -1);
@@ -88,7 +88,7 @@ void ConvEdge::SetMemory(Matrix& p) {
 
 void ConvEdge::SetGradMemory(Matrix& p) {
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_;
-  int num_locs = num_modules_ * num_modules_;
+  int num_locs = num_modules_y_ * num_modules_x_;
   int bias_locs = shared_bias_ ? 1 : num_locs;
 
   if (!is_tied_) {
@@ -98,7 +98,7 @@ void ConvEdge::SetGradMemory(Matrix& p) {
   }
 
   if (partial_sum_ > 0) {
-    int partial_sums = DIVUP(num_modules_, partial_sum_) * DIVUP(num_modules_, partial_sum_);
+    int partial_sums = DIVUP(num_modules_y_, partial_sum_) * DIVUP(num_modules_x_, partial_sum_);
     Matrix::RegisterTempMemory(num_output_channels_ * input_size * partial_sums,
                                "partial sums " + GetName());
     Matrix::RegisterOnes(partial_sums);
@@ -117,14 +117,14 @@ void ConvEdge::SetGradMemory(Matrix& p) {
 void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   float scale_targets = overwrite ? 0 : 1;
-  Matrix::ConvUp(input, w, output, image_size_, num_modules_, num_modules_,
+  Matrix::ConvUp(input, w, output, image_size_y_, num_modules_y_, num_modules_x_,
                  padding_, stride_, num_input_channels_, scale_targets);
   if (!has_no_bias_) {
     Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
     if (shared_bias_) {
       output.Reshape(-1, num_output_channels_);
       output.AddRowVec(b);
-      output.Reshape(-1, num_output_channels_ * num_modules_ * num_modules_);
+      output.Reshape(-1, num_output_channels_ * num_modules_y_ * num_modules_x_);
     } else {
       output.AddRowVec(b);
     }
@@ -136,8 +136,8 @@ void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
   
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   float scale_targets = overwrite ? 0 : 1;
-  Matrix::ConvDown(deriv_output, w, deriv_input, image_size_, image_size_,
-                   num_modules_, padding_, stride_, num_input_channels_,
+  Matrix::ConvDown(deriv_output, w, deriv_input, image_size_y_, image_size_x_,
+                   num_modules_y_, padding_, stride_, num_input_channels_,
                    scale_targets);
 }
 
@@ -151,11 +151,11 @@ void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
     Matrix dw_temp;
 
     int filter_input_size = num_input_channels_ * kernel_size_ * kernel_size_;
-    int partial_sums = DIVUP(num_modules_, partial_sum_) * DIVUP(num_modules_, partial_sum_);
+    int partial_sums = DIVUP(num_modules_y_, partial_sum_) * DIVUP(num_modules_x_, partial_sum_);
     Matrix::GetTemp(num_output_channels_, filter_input_size * partial_sums, dw_temp);
     
-    Matrix::ConvOutp(input, deriv_output, dw_temp, image_size_, num_modules_,
-                     num_modules_, kernel_size_, padding_, stride_,
+    Matrix::ConvOutp(input, deriv_output, dw_temp, image_size_y_, num_modules_y_,
+                     num_modules_x_, kernel_size_, padding_, stride_,
                      num_input_channels_, partial_sum_, 0, 1);
 
     dw_temp.Reshape(num_output_channels_ * filter_input_size, partial_sums);
@@ -163,9 +163,10 @@ void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
     dw_temp.SumCols(dw, scale_targets, scale_gradients_ / batch_size);
     dw.Reshape(num_output_channels_, filter_input_size);
   } else {
-    Matrix::ConvOutp(input, deriv_output, dw, image_size_, num_modules_,
-                     num_modules_, kernel_size_, padding_, stride_,
-                     num_input_channels_, num_modules_, scale_targets,
+    // TODO: partial_sum for rect image ?
+    Matrix::ConvOutp(input, deriv_output, dw, image_size_y_, num_modules_y_,
+                     num_modules_x_, kernel_size_, padding_, stride_,
+                     num_input_channels_, num_modules_x_, scale_targets,
                      scale_gradients_ / batch_size);
   }
 

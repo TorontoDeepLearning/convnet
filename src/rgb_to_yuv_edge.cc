@@ -1,11 +1,11 @@
 #include "rgb_to_yuv_edge.h"
 
 RGBToYUVEdge::RGBToYUVEdge(const config::Edge& edge_config) :
-  Edge(edge_config), image_size_(0) {}
+  Edge(edge_config) {}
 
 string RGBToYUVEdge::GetDescription() {
   stringstream ss;
-  ss << name_ << " RGB to YUV " << image_size_ << "-" << image_size_;
+  ss << name_ << " RGB to YUV " << image_size_y_ << "-" << image_size_x_;
   return ss.str();
 }
 

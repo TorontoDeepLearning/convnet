@@ -12,7 +12,7 @@ class ResponseNormEdge : public Edge {
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
-  virtual void SetImageSize(int image_size);
+  virtual void SetImageSize(int image_size_y, int image_size_x);
 
   bool Blocked() const { return blocked_; }
   float AddScale() const { return add_scale_; }

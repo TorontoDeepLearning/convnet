@@ -10,9 +10,5 @@ class RGBToYUVEdge : public Edge {
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
-  virtual int GetNumModules() const { return image_size_; }
-
- private:
-  int image_size_;
 };
 #endif

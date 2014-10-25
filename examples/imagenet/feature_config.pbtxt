@@ -15,8 +15,12 @@ input {
     mean_file: "pixel_mean.h5"
     pixelwise_normalize: true
     num_colors: 3
-    raw_image_size: 256
-    image_size: 256
+    raw_image_size_y: 256
+    raw_image_size_x: 256
+    image_size_y: 256
+    image_size_x: 256
+    gpu_image_size_y: 224
+    gpu_image_size_x: 224
   }
   batch_size : 10
   chunk_size: 10

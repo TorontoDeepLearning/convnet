@@ -28,6 +28,8 @@ class DataHandler {
               const int num_fov_y);
   void AllocateMemory();
   int GetDims(const string& layer_name) const;
+  int GetImageSizeY(const string& layer_name) const;
+  int GetImageSizeX(const string& layer_name) const;
 
  protected:
   void SetupShuffler();
@@ -79,11 +81,12 @@ class DataIterator {
   virtual void SetNoiseSource(DataIterator* it);
 
   int GetDims() const;
+  int GetImageSizeY() const { return gpu_image_size_y_; }
+  int GetImageSizeX() const { return gpu_image_size_x_; }
   int GetDataSetSize() const;
+  int GetGPUId() const { return gpu_id_;}
   void AddPCANoise(Matrix& m);
   void SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id);
-  void Jitter(Matrix& source, Matrix& dest);
-  int GetGPUId() const { return gpu_id_;}
   bool DoParallelDiskAccess() const { return parallel_disk_access_; }
   bool NeedsNoiseFromLayer() const { return !noise_layer_name_.empty(); }
   const string& GetNoiseLayerName() const { return noise_layer_name_; }
@@ -94,7 +97,6 @@ class DataIterator {
   int GetNumColors() const { return num_colors_; }
   static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
 
-
  protected:
   void LoadMeans(const string& data_file);
 
@@ -102,11 +104,11 @@ class DataIterator {
   Matrix mean_, std_, pca_noise1_, pca_noise2_, eig_values_, eig_vectors_,
          width_offset_, height_offset_, flip_bit_;
   const string file_pattern_, noise_layer_name_;
-  const int num_colors_, gpu_id_;
+  const int image_size_y_, image_size_x_, gpu_image_size_y_, gpu_image_size_x_,
+            num_colors_, gpu_id_;
   const bool translate_, flip_, normalize_, pixelwise_normalize_,
              add_pca_noise_, parallel_disk_access_;
   const float pca_noise_stddev_;
-  bool jitter_used_;
   DataIterator* noise_source_;
 };
 
@@ -152,7 +154,7 @@ class ImageDataIterator : public DataIterator {
  protected:
   RawImageFileIterator<unsigned char> *it_;
   unsigned char* buf_;
-  const int raw_image_size_, image_size_;
+  const int raw_image_size_y_, raw_image_size_x_;
 };
 
 class CropDataIterator : public DataIterator {
@@ -231,6 +233,28 @@ class BoundingBoxIterator : public DataIterator {
   Matrix fovs_;
   vector<box> fov_box_;
   ImageDataIterator* jitter_source_;
+};
+
+/** An iterator over a sequences of a dataset.
+ * T specifies the underlying DataIterator.*/
+class SequenceDataIterator : public DataIterator {
+ public:
+  SequenceDataIterator(const config::DataStreamConfig& config);
+  virtual ~SequenceDataIterator();
+  virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
+  virtual void Prep(const int chunk_size);
+  virtual void Seek(int row);
+  virtual int Tell() const;
+  virtual void SetMaxDataSetSize(int max_dataset_size);
+
+ protected:
+  void SetupRowMapping(const vector<int>& num_frames);
+  
+  DataIterator* it_;
+  int seq_length_, frame_size_;
+  vector<int> row_mapping_;
+  const bool pick_first_;
 };
 
 #endif

@@ -33,11 +33,6 @@ class EdgeWithWeight : public Edge {
   float GetDecayedEpsilon(float base_epsilon) const;
   float GetMomentum() const;
 
-  virtual void InsertPolyak();
-  virtual void BackupCurrent();
-  virtual void LoadCurrentOnGPU();
-  virtual void LoadPolyakOnGPU();
-
  protected:
   
   // Tied edge management.
@@ -49,12 +44,7 @@ class EdgeWithWeight : public Edge {
   Optimizer * const bias_optimizer_;
   EdgeWithWeight* tied_edge_;
 
-  vector<Matrix> polyak_weights_, polyak_bias_;
-  Matrix weights_backup_, bias_backup_;
   const config::Edge::Initialization initialization_;
-  const int polyak_queue_size_;
-  int polyak_index_;
-  bool polyak_queue_full_;
 
   // Hyperparams.
   const float init_wt_, init_bias_;

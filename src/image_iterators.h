@@ -21,10 +21,11 @@ typedef struct {
 template<typename T>
 class RawImageFileIterator {
 public:
-  RawImageFileIterator(const vector<string> &filelist, const int image_size,
-                       const int raw_image_size, const bool flip,
+  RawImageFileIterator(const vector<string> &filelist, const int image_size_y,
+                       const int image_size_x, const int raw_image_size_y,
+                       const int raw_image_size_x, const bool flip,
                        const bool translate, const bool random_jitter,
-                       const int max_angle=0, const float min_scale=1.0);
+                       const int max_angle, const float min_scale);
   virtual ~RawImageFileIterator();
 
   // Memory must already be allocated : num_dims * num_dims * 3.
@@ -39,6 +40,13 @@ public:
   virtual void SampleNoiseDistributions(const int chunk_size);
   virtual void RectifyBBox(box& b, int width, int height, int row) const;
 
+  // Transform image into a (size_x, size_y) image preserving aspect ratio.
+  // Rotate by angle (in degrees), translate by (trans_x, trans_y) and scale by factor.
+  // Translations are numbers between 0 and 1 (fraction of max translation).
+  // Scale must be bigger than 1.0.
+  static void Transform(cv::Mat &image, float angle, float trans_x,
+                        float trans_y, float scale, int size_x, int size_y);
+
 protected:
   virtual void LoadImageFile(const int row, cv::Mat &image);
 
@@ -50,11 +58,12 @@ private:
 
   default_random_engine generator_;
   uniform_real_distribution<float> * distribution_;
-  vector<float> angles_, trans_x_, trans_y_, scale_;
+  vector<float> angles_, trans_y_, trans_x_, scale_;
   int dataset_size_, row_, image_id_, position_;
   vector<string> filenames_;
   cv::Mat image_;
-  const int image_size_, num_positions_, raw_image_size_;
+  const int image_size_y_, image_size_x_, num_positions_, raw_image_size_y_,
+            raw_image_size_x_;
   const bool random_jitter_;
   const int max_angle_;
   const float min_scale_;
@@ -84,11 +93,12 @@ template<typename T>
 class BBoxImageFileIterator : public RawImageFileIterator<T> {
 public:
   BBoxImageFileIterator(const vector<string>& filelist, const string& bbox_file,
-                        const int image_size, const int raw_image_size,
+                        const int image_size_y, const int image_size_x,
+                        const int raw_image_size_y, const int raw_image_size_x,
                         const bool flip, const bool translate,
-                        const bool random_jitter, const int max_angle=0,
-                        const float min_scale=1.0, const float context_factor=1,
-                        const bool center_on_bbox=false);
+                        const bool random_jitter, const int max_angle,
+                        const float min_scale, const float context_factor,
+                        const bool center_on_bbox);
   virtual ~BBoxImageFileIterator();
   
   virtual void SampleNoiseDistributions(const int chunk_size);

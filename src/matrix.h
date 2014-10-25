@@ -168,8 +168,8 @@ class Matrix {
 
   static void ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
                              Matrix& height_offset, Matrix& flip_bit,
-                             int image_width, int image_height, int patch_width,
-                             int patch_height);
+                             int image_size_y, int image_size_x, int patch_size_y,
+                             int patch_size_x);
 
   static void GetOnes(size_t rows, size_t cols, Matrix& ones);
   static void RegisterTempMemory(size_t size);

@@ -4,9 +4,10 @@
 ConvOneToOneEdge::ConvOneToOneEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config) {}
 
-void ConvOneToOneEdge::SetImageSize(int image_size) {
-  Edge::SetImageSize(image_size);
-  num_modules_ = image_size;
+void ConvOneToOneEdge::SetImageSize(int image_size_y, int image_size_x) {
+  Edge::SetImageSize(image_size_y, image_size_x);
+  num_modules_y_ = image_size_y;
+  num_modules_x_ = image_size_x;
 }
 
 size_t ConvOneToOneEdge::GetParameterMemoryRequirement() {
@@ -18,8 +19,8 @@ string ConvOneToOneEdge::GetDescription() {
   ss << name_ << " "
      << " One-to-One Convolutional Kernel: "
      << num_input_channels_ << " : " << num_output_channels_
-     << " Layer: " << image_size_ << "-" << image_size_ << "-"
-     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << " Layer: " << image_size_y_ << "-" << image_size_x_ << "-"
+     << num_input_channels_ << " : " << num_modules_y_ << "-" << num_modules_x_
      << "-" << num_output_channels_;
   return ss.str();
 }

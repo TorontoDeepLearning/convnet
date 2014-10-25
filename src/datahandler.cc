@@ -86,6 +86,23 @@ int DataHandler::GetDims(const string& layer_name) const {
   }
   return it->second->GetDims();
 }
+int DataHandler::GetImageSizeY(const string& layer_name) const {
+  auto it = data_it_.find(layer_name);
+  if (it == data_it_.end()) {
+    cerr << "Layer name " << layer_name << " not found." << endl;
+    exit(1);
+  }
+  return it->second->GetImageSizeY();
+}
+int DataHandler::GetImageSizeX(const string& layer_name) const {
+  auto it = data_it_.find(layer_name);
+  if (it == data_it_.end()) {
+    cerr << "Layer name " << layer_name << " not found." << endl;
+    exit(1);
+  }
+  return it->second->GetImageSizeX();
+}
+
 
 void DataHandler::SetupShuffler() {
   rand_perm_indices_.AllocateGPUMemory(1, chunk_size_);
@@ -299,6 +316,9 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
   DataIterator* it = NULL;
   hid_t file, dataset, datatype;
   int size;
+  if (config.is_sequence()) {
+    return new SequenceDataIterator(config);
+  }
   switch (config.data_type()) {
     case config::DataStreamConfig::DUMMY:
       it = new DummyDataIterator(config);
@@ -358,6 +378,10 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   num_dims_(0), dataset_size_(0), row_(0),
   file_pattern_(config.file_pattern()),
   noise_layer_name_(config.noise_layer_name()),
+  image_size_y_(config.has_image_size_y() ? config.image_size_y() : config.image_size()),
+  image_size_x_(config.has_image_size_x() ? config.image_size_x() : config.image_size()),
+  gpu_image_size_y_(config.has_gpu_image_size_y() ? config.gpu_image_size_y() : image_size_y_),
+  gpu_image_size_x_(config.has_gpu_image_size_x() ? config.gpu_image_size_x() : image_size_x_),
   num_colors_(config.num_colors()),
   gpu_id_(config.gpu_id()),
   translate_(config.can_translate()),
@@ -367,7 +391,6 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   add_pca_noise_(config.pca_noise_stddev() > 0),
   parallel_disk_access_(config.parallel_disk_access()),
   pca_noise_stddev_(config.pca_noise_stddev()),
-  jitter_used_(true),
   noise_source_(NULL) {}
 
 void DataIterator::SetMaxDataSetSize(int max_dataset_size) {
@@ -449,10 +472,12 @@ void DataIterator::AddPCANoise(Matrix& m) {
   m.AddToEachPixel(pca_noise2_, pca_noise_stddev_);
 }
 
-
 void DataIterator::AddNoise(Matrix& input, Matrix& output) {
-  if (flip_ || translate_ || (output.GetCols() <  input.GetRows())) {
-    Jitter(input, output);
+  if (image_size_y_ != gpu_image_size_y_ || image_size_x_ != gpu_image_size_x_
+      || flip_) {
+    Matrix::ExtractPatches(
+        input, output, width_offset_, height_offset_, flip_bit_,
+        image_size_y_, image_size_x_, gpu_image_size_y_, gpu_image_size_x_);
   } else {
     input.CopyTranspose(output);
   }
@@ -462,11 +487,11 @@ void DataIterator::AddNoise(Matrix& input, Matrix& output) {
 }
 
 void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id) {
-  if (dest_num_dims != num_dims_ || flip_) {
-    int patch_size = (int)sqrt(dest_num_dims / num_colors_);
-    int image_size = (int)sqrt(num_dims_ / num_colors_);
-    int max_offset = image_size - patch_size;
-    dest_num_dims_ = dest_num_dims;
+  if (image_size_y_ != gpu_image_size_y_
+      || image_size_x_ != gpu_image_size_x_
+      || flip_) {
+    int max_offset_y = image_size_y_ - gpu_image_size_y_;
+    int max_offset_x = image_size_x_ - gpu_image_size_x_;
 
     if (width_offset_.GetCols() != batch_size) {
       width_offset_.AllocateGPUMemory(1, batch_size);
@@ -475,21 +500,21 @@ void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplici
     }
 
     if (translate_) {  // Random jitter.
-      width_offset_.FillWithRand();
       height_offset_.FillWithRand();
-      width_offset_.Mult(max_offset + 1);  // Rounded down.
-      height_offset_.Mult(max_offset + 1);  // Rounded down.
+      width_offset_.FillWithRand();
+      height_offset_.Mult(max_offset_y + 1);  // Rounded down.
+      width_offset_.Mult(max_offset_x + 1);  // Rounded down.
     } else {  // Take center or corner patch.
       int w = 0, h = 0;
       switch (multiplicity_id % 5) {
-        case 0: w = max_offset/2; h = max_offset/2; break;
+        case 0: w = max_offset_x/2; h = max_offset_y/2; break;
         case 1: w = 0; h = 0; break;
-        case 2: w = max_offset; h = 0; break;
-        case 3: w = max_offset; h = max_offset; break;
-        case 4: w = 0; h = max_offset; break;
+        case 2: w = max_offset_x; h = 0; break;
+        case 3: w = max_offset_x; h = max_offset_y; break;
+        case 4: w = 0; h = max_offset_y; break;
       }
-      width_offset_.Set(w);
       height_offset_.Set(h);
+      width_offset_.Set(w);
     }
     if (flip_) {
       flip_bit_.FillWithRand();  // flip if > 0.5.
@@ -497,14 +522,6 @@ void DataIterator::SampleNoise(int batch_size, int dest_num_dims, int multiplici
       flip_bit_.Set(multiplicity_id/5);
     }
   }
-}
-
-void DataIterator::Jitter(Matrix& source, Matrix& dest) {
-  int patch_size = (int)sqrt(dest.GetCols() / num_colors_);
-  int image_size = (int)sqrt(source.GetRows() / num_colors_);
-
-  // Extract jittered images.
-  Matrix::ExtractPatches(source, dest, width_offset_, height_offset_, flip_bit_, image_size, image_size, patch_size, patch_size);
 }
 
 void DataIterator::SetFOV(const int size, const int stride,
@@ -564,13 +581,13 @@ HDF5DataIterator<T>::HDF5DataIterator(const config::DataStreamConfig& config):
    */
   htri_t avail = H5Zfilter_avail(H5Z_FILTER_DEFLATE);
   if (!avail) {
-    printf ("gzip filter not available.\n");
+    cout << "gzip filter not available." << endl;
   }
   unsigned int filter_info;
   H5Zget_filter_info (H5Z_FILTER_DEFLATE, &filter_info);
   if ( !(filter_info & H5Z_FILTER_CONFIG_ENCODE_ENABLED) ||
       !(filter_info & H5Z_FILTER_CONFIG_DECODE_ENABLED) ) {
-    printf ("gzip filter not available for encoding and decoding.\n");
+    cout << "gzip filter not available for encoding and decoding" << endl;
   }
   if (normalize_) {
     LoadMeans(config.mean_file());
@@ -624,8 +641,8 @@ void HDF5DataIterator<T>::GetNext(float* data_ptr) {
 
 ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
   DataIterator(config),
-  raw_image_size_(config.raw_image_size()),
-  image_size_(config.image_size()) {
+  raw_image_size_y_(config.has_raw_image_size_y() ? config.raw_image_size_y() : config.raw_image_size()),
+  raw_image_size_x_(config.has_raw_image_size_x() ? config.raw_image_size_x() : config.raw_image_size()) {
   
   bool avg10_full_image = config.avg10_full_image();
 
@@ -633,18 +650,22 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
   readFileList(file_pattern_, filenames);
   if (config.bbox_file().empty()) {
     it_ = new RawImageFileIterator<unsigned char>(
-        filenames, image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        filenames,
+        image_size_y_, image_size_x_, raw_image_size_y_, raw_image_size_x_,
+        avg10_full_image, avg10_full_image,
         config.random_rotate_raw_image(), config.random_rotate_max_angle(),
         config.min_scale());
   } else {
     it_ = new BBoxImageFileIterator<unsigned char>(
-        filenames, config.bbox_file(), image_size_, raw_image_size_, avg10_full_image, avg10_full_image,
+        filenames, config.bbox_file(),
+        image_size_y_, image_size_x_, raw_image_size_y_, raw_image_size_x_,
+        avg10_full_image, avg10_full_image,
         config.random_rotate_raw_image(), config.random_rotate_max_angle(),
         config.min_scale(), config.context_factor(), config.center_on_bbox());
   }
 
   dataset_size_ = it_->GetDataSetSize();
-  num_dims_ = image_size_ * image_size_ * num_colors_;
+  num_dims_ = image_size_y_ * image_size_x_ * num_colors_;
   buf_ = new unsigned char[num_dims_];
   if (normalize_) {
     LoadMeans(config.mean_file());
@@ -679,7 +700,7 @@ void ImageDataIterator::RectifyBBox(box& b, int width, int height, int row) cons
 
 void ImageDataIterator::GetNext(float* data_out) {
   it_->GetNext(buf_);
-  for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
+  for (int i = 0; i < num_dims_; i++) {
     data_out[i] = static_cast<float>(buf_[i]);
   }
 }
@@ -687,7 +708,7 @@ void ImageDataIterator::GetNext(float* data_out) {
 void ImageDataIterator::Get(float* data_out, const int row) const {
   unsigned char* buf = new unsigned char[num_dims_];
   it_->Get(buf, row, 0);
-  for (int i = 0; i < image_size_ * image_size_ * num_colors_; i++) {
+  for (int i = 0; i < num_dims_; i++) {
     data_out[i] = static_cast<float>(buf[i]);
   }
   delete[] buf;
@@ -993,4 +1014,97 @@ void BoundingBoxIterator::SetNoiseSource(DataIterator* it) {
   DataIterator::SetNoiseSource(it);
   jitter_source_ = dynamic_cast<ImageDataIterator*>(it);
   // It's fine if this turns out to be NULL. 
+}
+
+SequenceDataIterator::SequenceDataIterator(const config::DataStreamConfig& config):
+  DataIterator(config),
+  it_(NULL),
+  seq_length_(config.seq_length()),
+  pick_first_(config.pick_first()) {
+    config::DataStreamConfig base_config(config);
+    base_config.set_is_sequence(false);
+    it_ = DataIterator::ChooseDataIterator(base_config);
+    frame_size_ = it_->GetDims();
+    if (frame_size_ == 0) {
+      cerr << "Base has zero dimensions. Probably hasn't been set yet." << endl;
+      exit(1);
+    }
+    int base_dataset_size = it_->GetDataSetSize();
+    num_dims_ = frame_size_ * (pick_first_ ? 1 : seq_length_);
+
+    const string& boundary_file = config.boundary_file();
+    vector<int> num_frames;
+    if (boundary_file.empty()) {
+      cerr << "No boundary file found. Assuming entire dataset is one sequence." << endl;
+      num_frames.push_back(base_dataset_size);
+    } else {
+      ifstream f(boundary_file, ios::in);
+      if (!f.is_open()) {
+        cerr << "Could not open boundary file : " << boundary_file << endl;
+        exit(1);
+      }
+      int num, total = 0;
+      while (!f.eof()) {
+        f >> num;
+        if (!f.eof()) {
+          num_frames.push_back(num);
+          total += num;
+        }
+      }
+      f.close();
+      if (total != base_dataset_size) {
+        cerr << "Error: Dataset has " << base_dataset_size << " frames "
+             << "but boundary_file adds up to " << total << endl;
+        exit(1);
+      }
+    }
+    SetupRowMapping(num_frames);
+    dataset_size_ = row_mapping_.size();
+}
+
+SequenceDataIterator::~SequenceDataIterator() {
+  delete it_;
+}
+
+void SequenceDataIterator::SetupRowMapping(const vector<int>& num_frames) {
+  int start = 0;
+  for (int num_f : num_frames) {
+    for (int i = 0; i < num_f - seq_length_ + 1; i++) {
+      row_mapping_.push_back(start + i);
+    }
+    start += num_f;
+  }
+}
+
+void SequenceDataIterator::GetNext(float* data_out) {
+  Get(data_out, row_);
+  row_++;
+  if (row_ == dataset_size_) row_ = 0;
+}
+
+void SequenceDataIterator::Get(float* data_out, const int row) const {
+  int mapped_row = row_mapping_[row];
+  if (pick_first_) {
+      it_->Get(data_out, mapped_row);
+  } else {
+    for (int i = 0; i < seq_length_; i++) {
+      it_->Get(data_out + i * frame_size_, mapped_row + i);
+    }
+  }
+}
+
+void SequenceDataIterator::Prep(const int chunk_size) {
+  it_->Prep(chunk_size);
+}
+
+void SequenceDataIterator::Seek(int row) {
+  it_->Seek(row);
+}
+
+int SequenceDataIterator::Tell() const {
+  return it_->Tell();
+}
+
+void SequenceDataIterator::SetMaxDataSetSize(int max_dataset_size) {
+  it_->SetMaxDataSetSize(max_dataset_size);
 }

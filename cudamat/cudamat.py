@@ -72,6 +72,7 @@ _cudamat.divide_by_scalar.restype = ct.c_int
 _cudamat.add_scalar.restype = ct.c_int
 
 _cudamat.read_from.restype = ct.c_float
+_cudamat.sum_all.restype = ct.c_float
 _cudamat.euclid_norm.restype = ct.c_float
 _cudamat.selectRows.restype = ct.c_int
 _cudamat.setSelectedRows.restype = ct.c_int
@@ -313,6 +314,9 @@ class CUDAMatrix(object):
           n = mlen / m
 
         err_code = _cudamat.reshape(self.p_mat, ct.c_uint(m), ct.c_uint(n))
+        if err_code:
+            raise generate_exception(err_code)
+        err_code = _cudamat.reshape(self.T.p_mat, ct.c_uint(m), ct.c_uint(n))
         if err_code:
             raise generate_exception(err_code)
 
@@ -793,7 +797,12 @@ class CUDAMatrix(object):
         created for storing the result.
         """
         if axis is None:
-          return vdot(self, CUDAMatrix.ones.slice(0, self.shape[0]*self.shape[1])) * mult
+          err_code = ct.c_int(0)
+          res = _cudamat.sum_all(self.p_mat, ct.byref(err_code))
+          if err_code:
+              raise generate_exception(err_code)
+          return res
+          #return vdot(self, CUDAMatrix.ones.slice(0, self.shape[0]*self.shape[1])) * mult
         else:
           return sum(self, axis, target, mult)
 

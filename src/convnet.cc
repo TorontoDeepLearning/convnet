@@ -9,13 +9,16 @@
 #include <queue>
 #include <chrono>
 #include <csignal>
+#include <iomanip>
 
 using namespace std;
 ConvNet::ConvNet(const string& model_file):
   max_iter_(0), batch_size_(0), current_iter_(0),
   lr_reduce_counter_(0),
   train_dataset_(NULL), val_dataset_(NULL),
-  model_filename_(model_file) {
+  model_filename_(model_file),
+  polyak_index_(0),
+  polyak_queue_full_(false) {
 
 #ifdef USE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &process_id_);
@@ -33,6 +36,7 @@ ConvNet::ConvNet(const string& model_file):
   for (const config::Subnet& subnet : model_.subnet()) {
     AddSubnet(model_, subnet);
   }
+  model_.clear_subnet();
   Matrix::InitRandom(model_.seed() + process_id_);
   srand(model_.seed() + process_id_);
   localizer_ = model_.localizer();
@@ -44,6 +48,8 @@ ConvNet::ConvNet(const string& model_file):
     timestamp_ = model_.timestamp(num_tstampts - 1);
   }
   BuildNet();  // Build a net using the connectivity specified in model_.
+  polyak_queue_size_ = model_.polyak_queue_size();
+  polyak_parameters_.resize(polyak_queue_size_);
 }
 
 ConvNet::~ConvNet() {
@@ -65,6 +71,7 @@ void ConvNet::AddSubnet(config::Model& model, const config::Subnet& subnet) {
   for (const config::Subnet& s : submodel.subnet()) {
     AddSubnet(submodel, s);
   }
+  submodel.clear_subnet();
 
   const string& name = subnet.name();
   int gpu_offset = subnet.gpu_id_offset();
@@ -162,13 +169,20 @@ void ConvNet::BuildNet() {
     }
   }
 
-  int image_size;
+  int image_size_y, image_size_x;
   for (Layer* l : layers_) {
-    image_size = l->IsInput() ? model_.patch_size() :
-                                l->incoming_edge_[0]->GetNumModules();
-    l->SetSize(image_size);
+    if (l->IsInput()) {
+      image_size_y = l->GetSizeY();
+      image_size_x = l->GetSizeX();
+      if (image_size_y <= 0) image_size_y = model_.patch_size();
+      if (image_size_x <= 0) image_size_x = model_.patch_size();
+    } else {
+      image_size_y = l->incoming_edge_[0]->GetNumModulesY();
+      image_size_x = l->incoming_edge_[0]->GetNumModulesX();
+    }
+    l->SetSize(image_size_y, image_size_x);
     for (Edge* e: l->outgoing_edge_) {
-      e->SetImageSize(image_size);
+      e->SetImageSize(image_size_y, image_size_x);
     }
   }
 
@@ -190,8 +204,8 @@ void ConvNet::FieldsOfView() {
   cout << "FOV: " << fov_size_ << " " << fov_stride_ << " " << fov_pad1_ << " " << fov_pad2_ << endl;
   cout << "Image size " << image_size << endl;
   
-  num_fov_x_ = output_layers_[0]->GetSize();
-  num_fov_y_ = output_layers_[0]->GetSize();
+  num_fov_x_ = output_layers_[0]->GetSizeX();
+  num_fov_y_ = output_layers_[0]->GetSizeY();
 }
 
 void ConvNet::AllocateLayerMemory() {
@@ -312,11 +326,8 @@ void ConvNet::Fprop(bool train) {
     for (Edge* e : l->incoming_edge_) {
       Fprop(*(e->GetSource()), *l, *e);
     }
-    if (l->IsInput()) {
-      l->ApplyDropout(train);
-    } else {
-      l->ApplyActivation(train);
-    }
+    if (!l->IsInput()) l->ApplyActivation();
+    l->ApplyDropout(train);
   }
 }
 
@@ -327,7 +338,8 @@ void ConvNet::Bprop() {
     for (Edge* e : l->outgoing_edge_) {
       Bprop(*(e->GetDest()), *l, *e);
     }
-    if (!l->IsInput() && l->outgoing_edge_.size() > 0) {
+    l->ApplyDerivativeofDropout();
+    if (!l->IsInput() && !l->IsOutput()) {
       l->ApplyDerivativeOfActivation();
     }
   }
@@ -410,9 +422,26 @@ void ConvNet::SetBatchsize(const int batch_size) {
 void ConvNet::SetupDataset(const string& train_data_config_file,
                            const string& val_data_config_file) {
 
-  config::DatasetConfig train_data_config;
-  ReadPbtxt<config::DatasetConfig>(train_data_config_file, train_data_config);
-  train_dataset_ = new DataHandler(train_data_config);
+  if (!train_data_config_file.empty()) {
+    model_.clear_train_dataset();
+    ReadPbtxt<config::DatasetConfig>(train_data_config_file,
+                                     *(model_.mutable_train_dataset()));
+  }
+  if (!val_data_config_file.empty()) {
+    model_.clear_valid_dataset();
+    ReadPbtxt<config::DatasetConfig>(val_data_config_file,
+                                     *(model_.mutable_valid_dataset()));
+  }
+
+  if (!model_.has_train_dataset()) {
+    cerr << "Error: No training set provided." << endl;
+    exit(1);
+  }
+  if (!model_.has_valid_dataset()) {
+    cerr << "Warning: No validation set provided." << endl;
+  }
+
+  train_dataset_ = new DataHandler(model_.train_dataset());
   if (localizer_) {
     train_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
                            model_.patch_size(), num_fov_x_, num_fov_y_);
@@ -421,10 +450,8 @@ void ConvNet::SetupDataset(const string& train_data_config_file,
   int dataset_size = train_dataset_->GetDataSetSize();
   train_dataset_->AllocateMemory();
   cout << "Training data set size " << dataset_size << endl;
-  if (!val_data_config_file.empty()) {
-    config::DatasetConfig val_data_config;
-    ReadPbtxt<config::DatasetConfig>(val_data_config_file, val_data_config);
-    val_dataset_ = new DataHandler(val_data_config);
+  if (model_.has_valid_dataset()) {
+    val_dataset_ = new DataHandler(model_.valid_dataset());
     if (localizer_) {
       val_dataset_->SetFOV(fov_size_, fov_stride_, fov_pad1_, fov_pad2_,
                            model_.patch_size(), num_fov_x_, num_fov_y_);
@@ -519,7 +546,6 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
   if (display && localizer_) {
     SetupLocalizationDisplay();
   }
-
  
   cout << "Extracting features for dataset of size " << dataset_size
        << " # batches " << num_batches
@@ -558,7 +584,13 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
 }
 
 void ConvNet::Save() {
-  Save(GetCheckpointFilename());
+  const string& fname = GetCheckpointFilename();
+  Save(fname);
+  if (model_.polyak_after() > 0) {
+    LoadPolyakWeights();  // Load averaged weights.
+    Save(fname + "polyak");
+    LoadCurrentWeights();  // Restore original weights.
+  }
 }
 
 void ConvNet::Save(const string& output_file) {
@@ -579,18 +611,49 @@ void ConvNet::Save(const string& output_file) {
 }
 
 void ConvNet::InsertPolyak() {
-  for (Edge* e : edges_) e->InsertPolyak();
-}
+  if (polyak_queue_size_ == 0) return;
+  
+  // Weights are stored in main memory to minimize GPU memory usage.
+  // This means that we have to copy parameters to the main memory.
+  // But that should be ok because this needs to be done a few times
+  // only before validation and checkpointing, and not all the time.
+  Matrix& w = polyak_parameters_[polyak_index_];
+  if (w.GetNumEls() == 0) {
+    w.AllocateMainMemory(parameters_.GetRows(), parameters_.GetCols());
+  }
+  parameters_.CopyToHost();
+  w.CopyFromMainMemory(parameters_);
 
-void ConvNet::LoadPolyakWeights() {
-  for (Edge* e : edges_) {
-    e->BackupCurrent();
-    e->LoadPolyakOnGPU();
+  polyak_index_++;
+  if (polyak_index_ == polyak_queue_size_) {
+    polyak_index_ = 0;
+    polyak_queue_full_ = true;
   }
 }
 
+void ConvNet::LoadPolyakWeights() {
+  if (polyak_queue_size_ == 0) return;
+  if (parameters_backup_.GetNumEls() == 0) {
+    parameters_backup_.AllocateMainMemory(parameters_.GetRows(), parameters_.GetCols());
+  }
+  parameters_.CopyToHost();
+  parameters_backup_.CopyFromMainMemory(parameters_);
+
+  int max_ind = polyak_queue_full_ ? polyak_queue_size_: polyak_index_;
+
+  float *parameter_avg = parameters_.GetHostData(), *w;
+  for (int j = 0; j < parameters_.GetNumEls(); j++) parameter_avg[j] = 0;
+  for (int i = 0; i < max_ind; i++) {
+    w = polyak_parameters_[i].GetHostData();
+    for (int j = 0; j < parameters_.GetNumEls(); j++) parameter_avg[j] += w[j];
+  }
+  for (int j = 0; j < parameters_.GetNumEls(); j++) parameter_avg[j] /= max_ind;
+  parameters_.CopyToDevice();
+}
+
 void ConvNet::LoadCurrentWeights() {
-  for (Edge* e : edges_) e->LoadCurrentOnGPU();
+  parameters_.CopyFromMainMemory(parameters_backup_);
+  parameters_.CopyToDevice();
 }
 
 string ConvNet::GetCheckpointFilename() {
@@ -694,7 +757,9 @@ void ConvNet::Validate(vector<float>& error) {
 void ConvNet::TimestampModel() {
   timestamp_ = GetTimeStamp();
   string fname = checkpoint_dir_ + "/" + model_name_ + "_" + timestamp_;
-  TimestampModelFile(model_filename_, fname + ".pbtxt", timestamp_);
+  cout << "Checkpointing at " << fname << endl;
+  model_.add_timestamp(timestamp_);
+  WritePbtxt<config::Model>(fname + ".pbtxt", model_);
   log_file_ = fname + "_train.log";
   val_log_file_ = fname + "_valid.log";
 }
@@ -750,7 +815,8 @@ void ConvNet::Train() {
             validate_after = model_.validate_after(),
             save_after = model_.save_after(),
             polyak_after = model_.polyak_after(),
-            start_polyak_queue = validate_after - polyak_after * model_.polyak_queue_size();
+            start_polyak_queue_val = validate_after - polyak_after * model_.polyak_queue_size(),
+            start_polyak_queue_save = save_after - polyak_after * model_.polyak_queue_size();
 
   const bool display = model_.display(), print_weights = model_.print_weights();
 
@@ -794,15 +860,17 @@ void ConvNet::Train() {
       if (is_root_) {
         end_t = chrono::system_clock::now();
         time_diff = end_t - start_t;
-        printf(" Time %f s Train Acc :", time_diff.count());
+        cout << setprecision(5);
+        cout << " Time " << time_diff.count() << " s";
+        cout << " Train Acc :";
         for (float& err : train_error) err /= print_after * batch_size_ * num_processes_;
-        for (const float& err : train_error) printf(" %.5f", err);
+        for (const float& err : train_error) cout << " " << err;
         WriteLog(current_iter_, time_diff.count(), train_error);
         if (print_weights) {
-          printf(" Weight length: " );
+          cout << " Weight length:";
           for (Edge* e : edges_) {
             if (e->HasNoParameters() || e->IsTied()) continue;
-            printf(" %.3f", e->GetRMSWeight());
+            cout << " " << e->GetRMSWeight();
           }
         }
         start_t = end_t;
@@ -811,20 +879,25 @@ void ConvNet::Train() {
       newline = true;
     }
 
-    if (polyak_after > 0 && (i+1) % polyak_after == 0 && ((i+1) % validate_after) >= start_polyak_queue) {
+    // Start inserting parameters into a queue so that they can be averaged
+    // for validation or for checkpointing.
+    if (polyak_after > 0 && (i+1) % polyak_after == 0 &&
+        (((i+1) % validate_after) >= start_polyak_queue_val ||
+         ((i+1) % save_after) >= start_polyak_queue_save)) {
       InsertPolyak();
     }
 
-    if (val_dataset_ != NULL && validate_after > 0 && (i+1) % validate_after == 0) {
-      if (polyak_after > 0) LoadPolyakWeights();
+    if (val_dataset_ != NULL && validate_after > 0 &&
+        (i+1) % validate_after == 0) {
+      if (polyak_after > 0) LoadPolyakWeights();  // Load averaged weights.
       train_dataset_->Sync();
       Validate(this_val_error);
-      if (polyak_after > 0) LoadCurrentWeights();
+      //if (polyak_after > 0) LoadCurrentWeights();  // Restore original weights.
 
       val_error.push_back(this_val_error[0]);
       if (is_root_) {
         cout << " Val Acc :";
-        for (const float& val: this_val_error) printf(" %.5f", val);
+        for (const float& val: this_val_error) cout << " " << val;
         WriteValLog(current_iter_, this_val_error);
       }
 
@@ -838,7 +911,6 @@ void ConvNet::Train() {
           ReduceLearningRate(learning_rate_reduce_factor);
         }
       }
-
       newline = true;
     }
     if (is_root_ && newline) cout << endl;

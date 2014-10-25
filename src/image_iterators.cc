@@ -19,9 +19,13 @@
 using namespace cv;
 
 inline void resizeOCV(Mat &img, unsigned int width, unsigned int height) {
-  Mat out;
-  resize(img, out, Size(width, height), 0, 0, INTER_LINEAR);
-  img = out;
+  Mat out1, out2;
+  
+  // Seems to give sharper-looking resized image by doing it in 2 steps.
+  resize(img, out1, Size(width, img.rows), 0, 0, INTER_LINEAR);
+  resize(out1, out2, Size(width, height), 0, 0, INTER_LINEAR);
+  
+  img = out2;
 }
 
 inline void rotateOCV(Mat &img, float angle) {
@@ -83,16 +87,19 @@ void getData(Mat &image, T* data_ptr) {
 
 template <typename T>
 RawImageFileIterator<T>::RawImageFileIterator(
-    const vector<string>& filelist, const int image_size, const int raw_image_size,
-    const bool flip, const bool translate, const bool random_jitter,
-    const int max_angle, const float min_scale) :
+    const vector<string>& filelist, const int image_size_y,
+    const int image_size_x, const int raw_image_size_y,
+    const int raw_image_size_x, const bool flip, const bool translate,
+    const bool random_jitter, const int max_angle, const float min_scale) :
     row_(0),
     image_id_(-1),
     position_(0),
     filenames_(filelist),
-    image_size_(image_size),
+    image_size_y_(image_size_y),
+    image_size_x_(image_size_x),
     num_positions_((flip ? 2 : 1) * (translate ? 5 : 1)),
-    raw_image_size_(raw_image_size),
+    raw_image_size_y_(raw_image_size_y),
+    raw_image_size_x_(raw_image_size_x),
     random_jitter_(random_jitter),
     max_angle_(max_angle),
     min_scale_(min_scale) {
@@ -135,8 +142,8 @@ void RawImageFileIterator<T>::GetCoordinates(
     int width, int height, int position, int* left, int* top, bool* flip) const {
   *flip = position >= 5;
   position %= 5;
-  int x_slack = width - image_size_;
-  int y_slack = height - image_size_;
+  int x_slack = width - image_size_x_;
+  int y_slack = height - image_size_y_;
   switch(position) {
     case 0 :  // Center. 
             *left = x_slack / 2;
@@ -164,15 +171,15 @@ void RawImageFileIterator<T>::GetCoordinates(
 template <typename T>
 void RawImageFileIterator<T>::Resize(Mat &image) const {
   int width = image.cols, height = image.rows;
-  if (width != raw_image_size_ || height != raw_image_size_) {
-    int new_width, new_height;
-    if (width > height) {
-      new_height = raw_image_size_;
-      new_width = (width * raw_image_size_) / height;
-    } else {
-      new_width = raw_image_size_;
-      new_height = (height * raw_image_size_) / width;
-    }
+  int new_width, new_height;
+  if (raw_image_size_x_ * height < raw_image_size_y_ * width) {
+    new_height = raw_image_size_y_;
+    new_width = (width * raw_image_size_y_) / height;
+  } else {
+    new_height = (height * raw_image_size_x_) / width;
+    new_width = raw_image_size_x_;
+  }
+  if (new_width != width || new_height != height) {
     resizeOCV(image, new_width, new_height);
   }
 }
@@ -194,6 +201,7 @@ void RawImageFileIterator<T>::SampleNoiseDistributions(const int chunk_size) {
 
 template<typename T>
 void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row) const {
+  /*
   float trans_x = 0.5, trans_y = 0.5, scale = 1;
   if (random_jitter_) {
     int ind = row % angles_.size();
@@ -202,7 +210,11 @@ void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row
     trans_y = trans_y_[ind];
     scale = 1; //scale_[ind];
   }
+  */
 
+  cerr << "Rectification not implemented." << endl;
+  exit(1);
+  /*
   int size = (int)(scale * ((width < height) ? width : height));
   int left = (int)((width - size) * trans_x);
   int top = (int)((height - size) * trans_y);
@@ -211,36 +223,63 @@ void RawImageFileIterator<T>::RectifyBBox(box& b, int width, int height, int row
   b.ymin = (b.ymin - top) * resize_scale;
   b.xmax = (b.xmax - left) * resize_scale;
   b.ymax = (b.ymax - top) * resize_scale;
+  */
 }
 
 template<typename T>
 void RawImageFileIterator<T>::AddRandomJitter(Mat &image, int row) const {
   // Add Random rotation, scale, translation.
-
   int ind = row % angles_.size();
   float angle = angles_[ind];
   float trans_x = trans_x_[ind];
   float trans_y = trans_y_[ind];
   float scale = scale_[ind];
+  Transform(image, angle, trans_x, trans_y, scale, raw_image_size_x_, raw_image_size_y_);
+}
 
+template<typename T>
+void RawImageFileIterator<T>::Transform(
+    Mat &image, float angle, float trans_x, float trans_y, float scale,
+    int size_x, int size_y) {
   // Translation.
+  // Crop a maximal region of same aspect ratio as (size_x, size_y)
   int width = image.cols, height = image.rows;
-  int size = (int)(scale * ((width < height) ? width : height));
-  int left = (int)((width - size) * trans_x);
-  int top = (int)((height - size) * trans_y);
-  cropOCV(image, left, top, left + size, top + size);
+  int scaled_size_x, scaled_size_y;
+  if (size_x * height < size_y * width) {
+    scaled_size_x = (size_x * height) / size_y;
+    scaled_size_y = height;
+  } else {
+    scaled_size_x = width;
+    scaled_size_y = (size_y * width) / size_x;
+  }
 
-  // Resize (so that after rotation, we can crop out the central raw_image_size_ * raw_image_size_ image).
-  int rot_adjusted_size = (int)(raw_image_size_ * (sin(fabs(angle)*PI/180) + cos(fabs(angle)*PI/180)));
-  resizeOCV(image, rot_adjusted_size, rot_adjusted_size);
+  // Scaling.
+  if (scale > 1.0) {
+    scaled_size_x = (int) (scaled_size_x / scale);
+    scaled_size_y = (int) (scaled_size_y / scale);
+  }
 
-  // Rotation.
-  rotateOCV(image, angle);
+  int left = (int)((width - scaled_size_x) * trans_x);
+  int top = (int)((height - scaled_size_y) * trans_y);
+  cropOCV(image, left, top, left + scaled_size_x, top + scaled_size_y);
 
-  // Crop out the border created by rotation.
-  left = image.cols / 2 - raw_image_size_ / 2;
-  top = image.rows / 2 - raw_image_size_ / 2;
-  cropOCV(image, left, top, left + raw_image_size_, top + raw_image_size_);
+  if (angle != 0.0) {
+    // Rotation.
+    // Resize (so that after rotation there are no border areas in the central
+    // size_x * size_y patch).
+    float rot_scale = sin(fabs(angle)*PI/180) + cos(fabs(angle)*PI/180);
+    int rot_adjusted_size_x = (int)(size_x * rot_scale);
+    int rot_adjusted_size_y = (int)(size_y * rot_scale);
+    resizeOCV(image, rot_adjusted_size_x, rot_adjusted_size_y);
+    
+    rotateOCV(image, angle);
+    // Crop out the border created by rotation.
+    left = image.cols / 2 - size_x / 2;
+    top = image.rows / 2 - size_y / 2;
+    cropOCV(image, left, top, left + size_x, top + size_y);
+  } else {
+    resizeOCV(image, size_x, size_y);
+  }
 }
 
 template <typename T>
@@ -287,7 +326,7 @@ void RawImageFileIterator<T>::ExtractRGB(Mat &image, T* data_ptr, int position) 
   GetCoordinates(width, height, position, &left, &top, &flip);
 
   Mat out;
-  cropOCV(image, out, left, top, left + image_size_, top + image_size_);
+  cropOCV(image, out, left, top, left + image_size_x_, top + image_size_y_);
   if (flip) mirrorOCV(out);
   getData(out, data_ptr);
 }
@@ -353,11 +392,12 @@ template class SlidingWindowIterator<unsigned char>;
 
 template <typename T>
 BBoxImageFileIterator<T>::BBoxImageFileIterator(
-  const vector<string>& filelist, const string& bbox_file, const int image_size,
-  const int raw_image_size, const bool flip, const bool translate,
+  const vector<string>& filelist, const string& bbox_file,
+  const int image_size_y, const int image_size_x, const int raw_image_size_y,
+  const int raw_image_size_x, const bool flip, const bool translate,
   const bool random_jitter, const int max_angle, const float min_scale,
   const float context_factor, const bool center_on_bbox) :
-  RawImageFileIterator<T>(filelist, image_size, raw_image_size, flip, translate, random_jitter, max_angle, min_scale),
+  RawImageFileIterator<T>(filelist, image_size_y, image_size_x, raw_image_size_y, raw_image_size_x, flip, translate, random_jitter, max_angle, min_scale),
   context_factor_(context_factor), center_on_bbox_(center_on_bbox) {
   ifstream f(bbox_file, ios::in);
   string line;

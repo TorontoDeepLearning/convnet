@@ -3,7 +3,6 @@ seed: 42
 max_iter: 100000
 print_after: 1000
 save_after: 10000
-patch_size: 28
 validate_after: 1000
 reduce_lr_factor: 0.5
 reduce_lr_num_steps: 6
@@ -18,6 +17,8 @@ layer {
   num_channels: 1
   display: true
   dropprob: 0.2
+  image_size_y: 28
+  image_size_x: 28
 }
 
 layer {

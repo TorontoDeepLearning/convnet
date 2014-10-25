@@ -119,7 +119,9 @@ void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
     if (l2_decay_ > 0) gradient_history_.Add(parameter, l2_decay_ * (other_way_ ? epsilon : 1));
    
     // Clip gradients to prevent explosions.
-    if (gradient_clip_ > 0) gradient.UpperBoundMod(gradient_clip_);
+    if (gradient_clip_ > 0) {
+      gradient.UpperBoundMod(gradient_clip_);
+    }
 
     if (other_way_) {
       gradient_history_.Add(gradient, epsilon);

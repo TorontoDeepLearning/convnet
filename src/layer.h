@@ -21,9 +21,8 @@ class Layer {
   /** Apply the activation function.
    * Derived classes must implement this. This method applies the activation
    * function to the state_ and overwrites it.
-   * @param train If true, use dropout.
    */ 
-  virtual void ApplyActivation(bool train) = 0;
+  virtual void ApplyActivation() = 0;
 
   /** Apply the derivative of the activation.
    * Derived classes must implement this. Computes the derivative w.r.t the
@@ -52,12 +51,12 @@ class Layer {
    * @param train If train is true, drop units stochastically,
    * else use all the units.
    */ 
-  void ApplyDropout(bool train);
+  virtual void ApplyDropout(bool train);
 
   /** Apply derivative of dropout.
    * This method scales the derivative to compensate for dropout.
    */ 
-  void ApplyDerivativeofDropout();
+  virtual void ApplyDerivativeofDropout();
 
   // Methods for preventing race conditions when using multiple GPUs.
   void AccessStateBegin();
@@ -91,11 +90,12 @@ class Layer {
   const string& GetName() const { return name_; }
   int GetNumChannels() const { return num_channels_; }
   int GetNumChannels(const string& slice) const;
-  int GetSize() const { return image_size_; }
+  int GetSizeY() const { return image_size_y_; }
+  int GetSizeX() const { return image_size_x_; }
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
 
-  void SetSize(int image_size);
+  void SetSize(int image_size_x, int image_size_y);
   int GetGPUId() const { return gpu_id_; }
   void AllocateMemoryOnOtherGPUs();
   Matrix& GetOtherState(int gpu_id);
@@ -135,7 +135,7 @@ class Layer {
   // This is needed to prevent blow ups due to sampling large values.
   const float max_act_gaussian_dropout_;
 
-  int scale_targets_, image_size_;
+  int scale_targets_, image_size_y_, image_size_x_;
 
   Matrix state_;  /** State (activation) of the layer. */
   Matrix deriv_;  /** Deriv of the loss function w.r.t. the state. */
@@ -161,7 +161,7 @@ class LinearLayer : public Layer {
  public:
   LinearLayer(const config::Layer& config);
   virtual void AllocateMemory(int batch_size);
-  virtual void ApplyActivation(bool train);
+  virtual void ApplyActivation();
   virtual void ApplyDerivativeOfActivation();
 };
 
@@ -169,8 +169,9 @@ class LinearLayer : public Layer {
 class ReLULayer : public LinearLayer {
  public:
   ReLULayer(const config::Layer& config);
-  virtual void ApplyActivation(bool train);
+  virtual void ApplyActivation();
   virtual void ApplyDerivativeOfActivation();
+  virtual void ApplyDropout(bool train);
  protected:
   const bool rectify_after_gaussian_dropout_;
 };
@@ -182,7 +183,7 @@ class SoftmaxLayer : public Layer {
  public:
   SoftmaxLayer(const config::Layer& config) : Layer(config) {};
   virtual void AllocateMemory(int batch_size);
-  virtual void ApplyActivation(bool train);
+  virtual void ApplyActivation();
   virtual void ApplyDerivativeOfActivation();
 };
 
@@ -205,7 +206,7 @@ class LogisticLayer : public Layer {
  public:
   LogisticLayer(const config::Layer& config);
   virtual void AllocateMemory(int batch_size);
-  virtual void ApplyActivation(bool train);
+  virtual void ApplyActivation();
   virtual void ApplyDerivativeOfActivation();
 };
 #endif

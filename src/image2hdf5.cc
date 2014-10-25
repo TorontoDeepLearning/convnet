@@ -39,7 +39,7 @@ int main(int argc, char ** argv) {
   vector<string> filenames;
   readFileList(file_list, filenames);
   RawImageFileIterator<unsigned char> it = RawImageFileIterator<unsigned char>(
-      filenames, image_size, big_image_size, false, false, false);
+      filenames, image_size, image_size, big_image_size, big_image_size, false, false, false, 0, 1);
   const int dataset_size = it.GetDataSetSize();
   const int num_dims = image_size * image_size * 3;
   unsigned char* image_buf = new unsigned char[num_dims];

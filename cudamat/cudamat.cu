@@ -1557,6 +1557,30 @@ int sqsum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) 
     return 0;
 }
 
+// Avoids using ones vector.
+float sum_all(cudamat* mat, int* err_code) {
+    unsigned int len = mat->size[0] * mat->size[1];
+    if (!mat->on_device)
+        return ERROR_NOT_ON_DEVICE;
+    const int max_num_blocks = 8;  // Should be around max number of concurrent blocks.
+    float res_host[max_num_blocks];
+    float* res_device;
+    int num_blocks = MIN(max_num_blocks, DIVUP(len, 4 * NUM_VECTOR_OP_THREADS_PER_BLOCK));
+    cudaMalloc((void**)&res_device, num_blocks * sizeof(float));
+    int shared_mem_size = NUM_VECTOR_OP_THREADS_PER_BLOCK * sizeof(float) ;
+    int left_over = len % num_blocks;
+    int len_per_block = len / num_blocks;
+    kSumAll<<<num_blocks, NUM_VECTOR_OP_THREADS_PER_BLOCK, shared_mem_size>>>(mat->data_device, res_device, len, len_per_block, left_over);
+    cudaMemcpy(res_host, res_device, num_blocks * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(res_device);
+    float val = 0;
+    for (int i = 0; i < num_blocks; i++) val += res_host[i];
+    if (checkCUDAError())
+        *err_code = CUDA_ERROR;
+    return val;
+}
+
+
 int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
     unsigned int h = mat->size[0],
                  w = mat->size[1];
@@ -1580,12 +1604,11 @@ int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
         if (target->size[1] != 1 || target->size[0] != mat->size[0])
             return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-
-        int num_blocks = DIVUP(h, 32);
+        int num_blocks = DIVUP(h, NUM_VECTOR_OP_THREADS_PER_BLOCK);
         int h1 = floor(sqrt(num_blocks));
         int h2 = DIVUP(num_blocks, h1);
         dim3 gridDim(h1, h2, 1);
-        kSumRowwise<<<gridDim, 32>>>(mat->data_device, target->data_device, w, h, mult, p);
+        kSumRowwise<<<gridDim, NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, target->data_device, w, h, mult, p);
     } else
         return ERROR_UNSUPPORTED;
 
@@ -1963,19 +1986,21 @@ int reciprocal(cudamat* mat, cudamat* target) {
     return 0;
 }
 
-// target = beta * target + alpha * mat * mat2
+// target = beta * target + alpha * mat1 * mat2
 int dot(cudamat* mat1, cudamat* mat2, cudamat* target, float beta, float alpha) {
     if (!mat1->on_device || !mat2->on_device || !target->on_device)
         return ERROR_NOT_ON_DEVICE;
 
-    if (get_leading_dimension(mat1) != get_leading_dimension(target) ||
-        get_nonleading_dimension(mat2) != get_nonleading_dimension(target) ||
-        get_nonleading_dimension(mat1) != get_leading_dimension(mat2)) {
+    int m = get_leading_dimension(mat1),
+        k2 = get_nonleading_dimension(mat1),
+        k = get_leading_dimension(mat2),
+        n = get_nonleading_dimension(mat2),
+        m2 = get_leading_dimension(target),
+        n2 = get_nonleading_dimension(target);
+    if (m != m2 || n != n2 || k != k2) {
+        printf("%d %d %d %d %d %d\n", m, k2, k, n, m2, n2);
         return ERROR_INCOMPATIBLE_DIMENSIONS;
     }
-    int m = get_leading_dimension(mat1),
-        k = get_leading_dimension(mat2),
-        n = get_nonleading_dimension(mat2);
 
     cublasSgemm(get_transpose_char(mat1), get_transpose_char(mat2), 
                 m, n, k,
@@ -2547,16 +2572,16 @@ int extract_patches(cudamat* images, cudamat* patches, cudamat* width_offset, cu
   if (flip->size[0] * flip->size[1] != num_images)
     return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    unsigned int grid_x = patch_height / COPY_BLOCK_SIZE;
+    unsigned int grid_y = patch_height / COPY_BLOCK_SIZE;
     if (patch_height % COPY_BLOCK_SIZE)
-        grid_x++;
-
-    unsigned int grid_y = patch_width / COPY_BLOCK_SIZE;
-    if (patch_width % COPY_BLOCK_SIZE)
         grid_y++;
 
-    dim3 grid(grid_x, grid_y, num_images);
-    dim3 threads(COPY_BLOCK_SIZE, COPY_BLOCK_SIZE, num_colors);
+    unsigned int grid_x = patch_width / COPY_BLOCK_SIZE;
+    if (patch_width % COPY_BLOCK_SIZE)
+        grid_x++;
+
+    dim3 grid(grid_x, grid_y, num_images * num_colors);
+    dim3 threads(COPY_BLOCK_SIZE, COPY_BLOCK_SIZE);
 
 
   kExtractPatches2<<<grid, threads>>>(

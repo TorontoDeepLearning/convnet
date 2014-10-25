@@ -44,12 +44,11 @@ void MultiGPUConvNet::Fprop(bool train) {
     }
     
     Matrix::SetDevice(l->GetGPUId());
-    if (l->IsInput()) {
-      l->ApplyDropout(train);
-    } else {
+    if (!l->IsInput()) {
       l->AccumulateState();
-      l->ApplyActivation(train);
+      l->ApplyActivation();
     }
+    l->ApplyDropout(train);
     l->GetState().SetReady();  // l->BroadcastState will wait for this.
     if (broadcast_) {
       l->BroadcastState();
@@ -120,6 +119,7 @@ void MultiGPUConvNet::Bprop(bool update_weights) {
       Matrix::SetDevice(l->GetGPUId());
       if (!l->IsOutput()) {
         l->AccumulateDeriv();
+        l->ApplyDerivativeofDropout();
         l->ApplyDerivativeOfActivation();
       }
       l->GetDeriv().SetReady(); // l->BroadcastDeriv will wait for this.

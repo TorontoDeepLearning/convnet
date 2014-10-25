@@ -182,6 +182,12 @@ class ConvNet {
   // a+=b;
   static void AddVectors(vector<float>& a, vector<float>& b);
   ImageDisplayer* localization_display_;
+
+  // Polyak averaging.
+  vector<Matrix> polyak_parameters_;
+  Matrix parameters_backup_;
+  int polyak_queue_size_, polyak_index_;
+  bool polyak_queue_full_;
 };
 
 #endif

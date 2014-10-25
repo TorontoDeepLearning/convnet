@@ -88,6 +88,20 @@ template void ReadPbtxt<config::DatasetConfig>(const string&, config::DatasetCon
 template void ReadPbtxt<config::DataStreamConfig>(const string&, config::DataStreamConfig&);
 template void ReadPbtxt<config::Layer>(const string&, config::Layer&);
 
+template <class T>
+void WritePbtxt(const string& pbtxt_file, const T& model) {
+  string output;
+  if (!google::protobuf::TextFormat::PrintToString(model, &output)) {
+    cerr << "Could not write text proto buffer as string." << endl;
+    exit(1);
+  }
+  ofstream dst(pbtxt_file, ios::binary);
+  dst << output;
+  dst.close();
+}
+template void WritePbtxt<config::Model>(const string&, const config::Model&);
+
+
 /*
 void ReadModelText(const string& model_file, config::Model& model) {
   stringstream ss;

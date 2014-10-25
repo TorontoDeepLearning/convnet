@@ -30,19 +30,13 @@ OBJ=obj
 BIN=bin
 PYT=py
 EDGES_SRC := $(wildcard $(SRC)/*_edge.cc)
-EDGES_OBJS := $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(EDGES_SRC)) $(OBJ)/optimizer.o
+EDGES_OBJS :=  $(OBJ)/optimizer.o $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(EDGES_SRC))
 DATAHANDLER_SRC := $(SRC)/image_iterators.cc $(SRC)/datahandler.cc $(SRC)/datawriter.cc
-DATAHANDLER_OBJS := $(OBJ)/image_iterators.o $(OBJ)/datahandler.o $(OBJ)/datawriter.o
-COMMONOBJS = $(OBJ)/convnet_config.pb.o $(OBJ)/matrix.o $(DATAHANDLER_OBJS) $(OBJ)/layer.o $(OBJ)/loss_functions.o $(OBJ)/util.o $(EDGES_OBJS)
-TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/image2hdf5 $(BIN)/compute_mean
+DATAHANDLER_OBJS :=  $(OBJ)/image_iterators.o $(OBJ)/datahandler.o $(OBJ)/datawriter.o
+COMMONOBJS = $(OBJ)/convnet_config.pb.o $(OBJ)/util.o $(OBJ)/matrix.o $(OBJ)/loss_functions.o $(OBJ)/layer.o $(DATAHANDLER_OBJS) $(EDGES_OBJS)
+TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/image2hdf5 $(BIN)/compute_mean $(BIN)/test_data_handler
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
-
-$(BIN)/test_mpi: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/test_mpi.o
-	mpic++.mpich2 $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
-
-$(OBJ)/test_mpi.o: $(SRC)/test_mpi.cc
-	mpic++.mpich2 -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(BIN)/train_convnet_data_parallel: $(COMMONOBJS) $(OBJ)/convnet.o  $(OBJ)/train_convnet_data_parallel.o 
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
@@ -51,6 +45,9 @@ $(BIN)/train_convnet: $(COMMONOBJS) $(OBJ)/convnet.o  $(OBJ)/train_convnet.o $(O
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/compute_mean: $(COMMONOBJS) $(OBJ)/compute_mean.o
+	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
+
+$(BIN)/test_data_handler: $(COMMONOBJS) $(OBJ)/test_data_handler.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/extract_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/multigpu_convnet.o $(OBJ)/extract_representation.o 

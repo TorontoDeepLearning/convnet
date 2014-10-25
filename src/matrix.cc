@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <iomanip>
 
 vector<rnd_struct> Matrix::rnd_;
 vector<Matrix> Matrix::ones_, Matrix::temp_;
@@ -325,21 +326,22 @@ void Matrix::Print() {
     cerr << "Error: Could not copy to host : " << GetStringError(err_code) << endl;
     exit(1);
   }
+  cout << setprecision(12);
   for (size_t i = 0; i < mat_.size[0]; i++) {
     if (i < 10) {
       for (size_t j = 0; j < mat_.size[1]; j++) {
         if (j < 10) {
-          printf("%.12f ", mat_.data_host[j * mat_.size[0] + i]);
+          cout << mat_.data_host[j * mat_.size[0] + i] << " " ;
         } else {
-          printf(". . . ");
+          cout << ". . . ";
           break;
         }
       }
     } else {
-      printf(". . .\n");
+      cout << ". . .\n";
       break;
     }
-    printf("\n");
+    cout << '\n';
   }
 }
 
@@ -853,12 +855,12 @@ void Matrix::ConvRGBToYUV(Matrix& input, Matrix& output) {
 
 void Matrix::ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
                             Matrix& height_offset, Matrix& flip_bit,
-                            int image_width, int image_height, int patch_width,
-                            int patch_height) {
+                            int image_size_y, int image_size_x, int patch_size_y,
+                            int patch_size_x) {
   int err_code = extract_patches(source.GetMat(), dest.GetMat(),
                                  width_offset.GetMat(), height_offset.GetMat(),
-                                 flip_bit.GetMat(), image_width, image_height,
-                                 patch_width, patch_height);
+                                 flip_bit.GetMat(), image_size_x, image_size_y,
+                                 patch_size_x, patch_size_y);
   if (err_code != 0) {
     cerr << "Error extracting patches " << GetStringError(err_code) << endl;
     exit(1);

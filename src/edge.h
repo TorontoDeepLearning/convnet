@@ -59,10 +59,15 @@ class Edge {
   /** Returns whether the edge has any parameters.*/
   virtual bool HasNoParameters() const;
 
-  /** Returns the number of modules.
+  /** Returns the number of modules along y-axis.
    * This is relevant for convolution-like edges.
    */ 
-  virtual int GetNumModules() const;
+  virtual int GetNumModulesY() const;
+
+  /** Returns the number of modules along x-axis.
+   * This is relevant for convolution-like edges.
+   */ 
+  virtual int GetNumModulesX() const;
 
   /** Displays the weights.
    * Supportsinput layer weights only.
@@ -103,7 +108,7 @@ class Edge {
   //virtual bool RequiresMemoryForDeriv() const;
   
   /** Set the spatial size of the input to this edge.*/
-  virtual void SetImageSize(int image_size);
+  virtual void SetImageSize(int image_size_y, int image_size_x);
 
   /** Returns the size of the input field of view corresponding to an output
    * of 'size'.*/
@@ -146,7 +151,9 @@ class Edge {
         tied_edge_name_;
   string name_;
   Edge* tied_edge_;  /* The edge to which this edge is tied.*/
-  int num_input_channels_, num_output_channels_, image_size_, num_modules_;
+  int num_input_channels_, num_output_channels_,
+      image_size_y_, image_size_x_,
+      num_modules_y_, num_modules_x_;
   bool mark_;  /** A marker. Used for topological sorting.*/
   const bool block_backprop_, is_tied_;
   ImageDisplayer *img_display_;

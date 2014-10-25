@@ -71,6 +71,7 @@ __global__ void kUpperBoundModScalar(float* mat, float val, float* target, unsig
 __global__ void kMaxColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kArgMaxColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
+__global__ void kSumAll(float* mat, float* target, unsigned int len, unsigned int len_per_block, unsigned int left_over);
 __global__ void kSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);

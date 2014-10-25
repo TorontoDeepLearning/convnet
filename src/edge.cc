@@ -63,8 +63,10 @@ Edge::Edge(const config::Edge& edge_config) :
   tied_edge_(NULL),
   num_input_channels_(0),
   num_output_channels_(0),
-  image_size_(0),
-  num_modules_(1),
+  image_size_y_(1),
+  image_size_x_(1),
+  num_modules_y_(1),
+  num_modules_x_(1),
   mark_(false),
   block_backprop_(edge_config.block_backprop()),
   is_tied_(!tied_edge_name_.empty()),
@@ -222,8 +224,12 @@ bool Edge::HasNoParameters() const {
   return true;
 }
 
-int Edge::GetNumModules() const {
-  return num_modules_;
+int Edge::GetNumModulesY() const {
+  return num_modules_y_;
+}
+
+int Edge::GetNumModulesX() const {
+  return num_modules_x_;
 }
 
 string Edge::GetTiedEdgeName() {
@@ -234,8 +240,9 @@ bool Edge::IsTied() {
   return is_tied_;
 }
 
-void Edge::SetImageSize(int image_size) {
-  image_size_ = image_size;
+void Edge::SetImageSize(int image_size_y, int image_size_x) {
+  image_size_y_ = image_size_y;
+  image_size_x_ = image_size_x;
 }
 
 void Edge::FOV(int* size, int* sep, int* pad1, int* pad2) const {

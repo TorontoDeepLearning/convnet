@@ -1,7 +1,6 @@
 #include "cudamat_kernels.cuh"
 #include "float.h"
-const int NUM_THREADS = 32;
-
+template<int NUM_THREADS>
 __device__ void reduceToMax(float* sdata, unsigned int tid){
 
   //Synchronize threads to share shared memory data
@@ -46,6 +45,10 @@ __device__ void reduceToMax(float* sdata, unsigned int tid){
   }
 }
 
+template __device__ void reduceToMax<32>(float* sdata, unsigned int tid);
+template __device__ void reduceToMax<NUM_VECTOR_OP_THREADS_PER_BLOCK>(float* sdata, unsigned int tid);
+
+template<int NUM_THREADS>
 __device__ void reduceToSumLocal(float* sdata, unsigned int tid)
 {
 
@@ -90,6 +93,8 @@ __device__ void reduceToSumLocal(float* sdata, unsigned int tid)
     }
   }
 }
+template __device__ void reduceToSumLocal<32>(float* sdata, unsigned int tid);
+template __device__ void reduceToSumLocal<NUM_VECTOR_OP_THREADS_PER_BLOCK>(float* sdata, unsigned int tid);
 
 /* ------------------------- Random number generation ------------------------- */
 
@@ -1110,7 +1115,7 @@ __global__ void kSoftMax(float* mat, float* target, unsigned int width, unsigned
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax(max_vals, threadIdx.x);
+    reduceToMax<32>(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ; 
     __syncthreads();
@@ -1119,7 +1124,7 @@ __global__ void kSoftMax(float* mat, float* target, unsigned int width, unsigned
       val += __expf(cur_data[i]-cur_max);
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal(max_vals, threadIdx.x);
+    reduceToSumLocal<32>(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     float *cur_target = &target[column * height] ; 
@@ -1144,7 +1149,7 @@ __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int h
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax(max_vals, threadIdx.x);
+    reduceToMax<32>(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ;
     __syncthreads();
@@ -1154,7 +1159,7 @@ __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int h
       val += cur_data[i];
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal(max_vals, threadIdx.x);
+    reduceToSumLocal<32>(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
@@ -1178,7 +1183,7 @@ __global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int he
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax(max_vals, threadIdx.x);
+    reduceToMax<32>(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ;
     __syncthreads();
@@ -1188,7 +1193,7 @@ __global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int he
       val += cur_data[i * height];
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal(max_vals, threadIdx.x);
+    reduceToSumLocal<32>(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
@@ -1275,7 +1280,7 @@ __global__ void kMaxColumnwise(float* mat, float* target, unsigned int width, un
       if (val > cur_max) cur_max = val;
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax(max_vals, threadIdx.x);
+    reduceToMax<32>(max_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = max_vals[0];
   }
@@ -1323,7 +1328,7 @@ __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, 
       cur_sum += cur_data[i] * cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal(sum_vals, threadIdx.x);
+    reduceToSumLocal<32>(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = p * target[column] + mult * sum_vals[0];
   }
@@ -1339,10 +1344,27 @@ __global__ void kSumColumnwise(float* mat, float* target, unsigned int width, un
       cur_sum += cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal(sum_vals, threadIdx.x);
+    reduceToSumLocal<32>(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = p * target[column] + mult * sum_vals[0];
   }
+}
+
+__global__ void kSumAll(float* mat, float* target, unsigned int len, unsigned int len_per_block, unsigned int left_over) {
+  extern __shared__ float sum_vals[];
+  float cur_sum = 0;
+  int block_id = blockIdx.x;
+  mat += block_id * len_per_block + (block_id < left_over ? block_id : left_over);
+  int l = len_per_block + (block_id < left_over ? 1 : 0);
+  
+  __syncthreads();
+  for (unsigned int i = threadIdx.x; i < l; i += blockDim.x) {
+    cur_sum += mat[i];
+  }
+  sum_vals[threadIdx.x] = cur_sum;
+  reduceToSumLocal<NUM_VECTOR_OP_THREADS_PER_BLOCK>(sum_vals, threadIdx.x);
+  __syncthreads();
+  if (threadIdx.x == 0) target[block_id] = sum_vals[0];
 }
 
 __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p) {
@@ -1355,7 +1377,7 @@ __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, uns
       cur_sum += cur_data[i * height] * cur_data[i * height];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal(sum_vals, threadIdx.x);
+    reduceToSumLocal<32>(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[row] = p * target[row] + mult * sum_vals[0];
   }
@@ -1386,7 +1408,7 @@ __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsi
       cur_sum += cur_data[i] * cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal(sum_vals, threadIdx.x);
+    reduceToSumLocal<32>(sum_vals, threadIdx.x);
     __syncthreads();
     cur_sum = sqrt(sum_vals[0]);
     cur_sum = (constraint == 1 || cur_sum > norm) ? (norm / cur_sum) : 1;
@@ -1408,7 +1430,7 @@ __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigne
       cur_sum += cur_data[i * height] * cur_data[i * height];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal(sum_vals, threadIdx.x);
+    reduceToSumLocal<32>(sum_vals, threadIdx.x);
     __syncthreads();
     cur_sum = sqrt(sum_vals[0]);
     cur_sum = (constraint == 1 || cur_sum > norm) ? (norm / cur_sum) : 1;
@@ -1473,10 +1495,10 @@ __global__ void kExtractPatches(float* images, float* patches, float* indices, f
 }
 
 __global__ void kExtractPatches2(float* images, float* patches, float* width_offset, float* height_offset, float* flip, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors) {
-  int image_id = blockIdx.z;
+  int image_id = blockIdx.z % num_images;
+  int color = blockIdx.z / num_images;
   int dest_col = blockIdx.x * blockDim.x + threadIdx.x;
   int dest_row = blockIdx.y * blockDim.y + threadIdx.y;
-  int color = threadIdx.z;
 
   if (dest_col < patch_width && dest_row < patch_height) {
     int source_row = int(height_offset[image_id]) + dest_row;

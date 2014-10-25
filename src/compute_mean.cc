@@ -39,13 +39,14 @@ int main(int argc, char** argv) {
   ReadPbtxt<config::Layer>(layer_config_file, layer_config);
   Layer *l = Layer::ChooseLayerClass(layer_config);
   int num_colors = l->GetNumChannels();
-  int image_size = (int)sqrt(dataset_->GetDims(l->GetName()) / num_colors);
-  l->SetSize(image_size);
+  int image_size_y = dataset_->GetImageSizeY(l->GetName());
+  int image_size_x = dataset_->GetImageSizeX(l->GetName());
+  l->SetSize(image_size_y, image_size_x);
   l->AllocateMemory(batch_size);
   vector<Layer*> layers;
   layers.push_back(l);
   int num_batches = dataset_size / batch_size;
-  cout << "Image size " << image_size << endl;
+  cout << "Image size " << image_size_y << "x" << image_size_x << endl;
 
   Matrix& state = l->GetState();
   int num_dims = state.GetCols();

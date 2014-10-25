@@ -39,6 +39,7 @@ using namespace std;
 string GetStringError(int err_code);
 
 template<class T> void ReadPbtxt(const string& pbtxt_file, T& model);
+template<class T> void WritePbtxt(const string& pbtxt_file, const T& model);
 
 void WriteModelBinary(const string& output_file, const config::Model& model);
 void ReadModelBinary(const string& input_file, config::Model& model);

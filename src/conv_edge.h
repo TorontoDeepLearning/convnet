@@ -17,8 +17,7 @@ class ConvEdge : public EdgeWithWeight {
 
   virtual void SetTiedTo(Edge* e);
   virtual void DisplayWeights();
-  virtual int GetNumModules() const { return num_modules_; }
-  virtual void SetImageSize(int image_size);
+  virtual void SetImageSize(int image_size_y, int image_size_x);
   virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
  
   int GetKernelSize() const { return kernel_size_; }

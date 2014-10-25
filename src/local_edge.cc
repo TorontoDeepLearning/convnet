@@ -27,23 +27,24 @@ string LocalEdge::GetDescription() {
   ss << name_ << " "
      << " Local Kernel: " << kernel_size_ << "-" << kernel_size_ << "-"
      << num_input_channels_ << " : " << num_output_channels_
-     << " Layer: " << image_size_ << "-" << image_size_ << "-"
-     << num_input_channels_ << " : " << num_modules_ << "-" << num_modules_
+     << " Layer: " << image_size_y_ << "-" << image_size_x_ << "-"
+     << num_input_channels_ << " : " << num_modules_y_ << "-" << num_modules_x_
      << "-" << num_output_channels_ << endl;
   return ss.str();
 }
 
-void LocalEdge::SetImageSize(int image_size) {
-  Edge::SetImageSize(image_size);
-  num_modules_ = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
+void LocalEdge::SetImageSize(int image_size_y, int image_size_x) {
+  Edge::SetImageSize(image_size_y, image_size_x);
+  num_modules_y_ = (image_size_y + 2 * padding_ - kernel_size_) / stride_ + 1;
+  num_modules_x_ = (image_size_x + 2 * padding_ - kernel_size_) / stride_ + 1;
 }
 
 void LocalEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
   *size = kernel_size_ + stride_ * ((*size) - 1);
   *sep = (*sep) * stride_;
   *pad1 = (*pad1) * stride_ + padding_;
-  int k = (image_size_ + 2*padding_ - kernel_size_) / stride_;
-  int effective_right_pad = k * stride_ - (image_size_ + padding_ - kernel_size_);
+  int k = (image_size_x_ + 2*padding_ - kernel_size_) / stride_;
+  int effective_right_pad = k * stride_ - (image_size_x_ + padding_ - kernel_size_);
   *pad2 = (*pad2) * stride_ + effective_right_pad;
 }
 
@@ -52,8 +53,8 @@ size_t LocalEdge::GetParameterMemoryRequirement() {
   if (is_tied_) return 0;
  
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_
-                   * num_modules_ * num_modules_;
-  int bias_locs = num_modules_ * num_modules_;
+                   * num_modules_y_ * num_modules_x_;
+  int bias_locs = num_modules_y_ * num_modules_x_;
   return num_output_channels_ * (input_size + (has_no_bias_ ? 0 : bias_locs));
 }
 
@@ -62,8 +63,8 @@ void LocalEdge::SetMemory(Matrix& p) {
   Edge::SetMemory(p);
  
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_
-                   * num_modules_ * num_modules_;
-  int bias_locs = num_modules_ * num_modules_;
+                   * num_modules_y_ * num_modules_x_;
+  int bias_locs = num_modules_y_ * num_modules_x_;
   p.Reshape(num_output_channels_, -1);
   p.GetSlice(weights_, 0, input_size);
 
@@ -86,8 +87,8 @@ void LocalEdge::SetGradMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetGradMemory(p);
   int input_size = kernel_size_ * kernel_size_ * num_input_channels_
-                   * num_modules_ * num_modules_;
-  int bias_locs = num_modules_ * num_modules_;
+                   * num_modules_y_ * num_modules_x_;
+  int bias_locs = num_modules_y_ * num_modules_x_;
   // Matrix for storing the current gradient.
 
   p.Reshape(num_output_channels_, -1);
@@ -105,7 +106,7 @@ void LocalEdge::SetGradMemory(Matrix& p) {
 void LocalEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  Matrix::LocalUp(input, w, output, image_size_, num_modules_, num_modules_,
+  Matrix::LocalUp(input, w, output, image_size_y_, num_modules_y_, num_modules_x_,
                   padding_, stride_, num_input_channels_, scale_targets);
   if (!has_no_bias_) {
     Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
@@ -117,8 +118,8 @@ void LocalEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
-  Matrix::LocalDown(deriv_output, w, deriv_input, image_size_, image_size_,
-                    num_modules_, padding_, stride_, num_input_channels_,
+  Matrix::LocalDown(deriv_output, w, deriv_input, image_size_y_, image_size_x_,
+                    num_modules_y_, padding_, stride_, num_input_channels_,
                     scale_targets);
 }
 
@@ -127,8 +128,8 @@ void LocalEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
   int batch_size = input.GetRows();
   int scale_targets = GetNumGradsReceived() > 0 ? 1 : 0;
 
-  Matrix::LocalOutp(input, deriv_output, dw, image_size_, num_modules_,
-                    num_modules_, kernel_size_, padding_, stride_,
+  Matrix::LocalOutp(input, deriv_output, dw, image_size_y_, num_modules_y_,
+                    num_modules_x_, kernel_size_, padding_, stride_,
                     num_input_channels_, scale_targets,
                     scale_gradients_ / batch_size);
 
