@@ -17,7 +17,9 @@ class Layer(object):
     self.is_output_ = True
     self.incoming_edge_ = []
     self.outgoing_edge_ = []
-    self.image_size_ = 1
+    self.image_size_ = layer_proto.image_size_y
+    # TODO: Add support for non-square images.
+    assert layer_proto.image_size_y == layer_proto.image_size_x
     self.name_ = layer_proto.name
     self.dropprob_ = layer_proto.dropprob
     self.dropout_scale_up_at_train_time_ = True
@@ -35,6 +37,9 @@ class Layer(object):
 
   def SetSize(self, image_size):
     self.image_size_ = image_size
+
+  def GetSize(self):
+    return self.image_size_
 
   def AllocateMemory(self, batch_size):
     layer_size = self.num_channels_ * self.image_size_**2

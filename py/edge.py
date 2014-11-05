@@ -66,11 +66,11 @@ class EdgeWithWeight(Edge):
   def LoadParams(self, f):
     w_name = '%s:weight' % self.name_
     w = f[w_name].value.T
-    assert self.weights_.shape == w.shape
+    assert self.weights_.shape == w.shape, "Shape mismatch %s %s %s" % (w_name, self.weights_.shape, w.shape)
     self.weights_.overwrite(w)
     b_name = '%s:bias' % self.name_
     b = f[b_name].value.reshape(1, -1)
-    assert self.bias_.shape == b.shape
+    assert self.bias_.shape == b.shape, "Shape mismatch %s" % (b_name, self.bias_.shape, b.shape)
     self.bias_.overwrite(b)
 
 class ConvEdge(EdgeWithWeight):
