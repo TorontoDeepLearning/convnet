@@ -9,7 +9,8 @@ ConvNet is a fast C++ based GPU implementation of Convolutional Neural Nets.
 ### Pre-trained Models
 Pre-trained models and examples for training and feature extraction are provided for
 - [Imagenet Classification (ILSVRC 2013)](https://github.com/torontodeeplearning/convnet/tree/master/examples/imagenet)
-- [MNIST](https://github.com/torontodeeplearning/convnet/tree/master/examples/mnist)
+- [MNIST, Feed-forward Neural Net](https://github.com/torontodeeplearning/convnet/tree/master/examples/mnist-ff)
+- [MNIST, Convolutional Neural Net](https://github.com/torontodeeplearning/convnet/tree/master/examples/mnist-conv)
 
 ### Tutorials
 Coming soon.
