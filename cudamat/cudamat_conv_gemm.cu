@@ -12,7 +12,7 @@
 #define getLastCudaError(msg)   __getLastCudaError (msg, __FILE__, __LINE__)
 #define MAX_MEMORY_BYTES (200 * (1 << 20))
 
-void GetTempMemory(int num_images, int input_size, int num_output_channels,
+inline void GetTempMemory(int num_images, int input_size, int num_output_channels,
                    int num_modules, float *input, float *output,
                    int* batch_size) {
   int input_memory_size  = num_images * input_size * sizeof(float);
@@ -31,7 +31,8 @@ void GetTempMemory(int num_images, int input_size, int num_output_channels,
     err1 = cudaMalloc((void**)&input,  input_memory_size);
     err2 = cudaMalloc((void**)&output, output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
-      printf("Out of memory on GPU!\n");
+      printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
+      printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
     } 
     *batch_size = 1;
   } else {
@@ -448,8 +449,31 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     
     float *expanded_images = NULL, *expanded_target = NULL;
     int num_modules_batch;
-    GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
-                  expanded_images, expanded_target, &num_modules_batch);
+    
+    int input_memory_size  = num_images * input_size * sizeof(float);
+    int output_memory_size = num_images * num_output_channels * sizeof(float);
+    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
+    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MAX(max_batch_size, 1);
+
+    cudaError_t err1, err2;
+    err1 = cudaMalloc((void**)&expanded_images,  max_batch_size * input_memory_size);
+    err2 = cudaMalloc((void**)&expanded_target, max_batch_size * output_memory_size);
+    if (cudaSuccess != err1 || cudaSuccess != err2) {
+      if (cudaSuccess == err1) cudaFree(expanded_images);
+      if (cudaSuccess == err2) cudaFree(expanded_target);
+      err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
+      err2 = cudaMalloc((void**)&expanded_target, output_memory_size);
+      if (cudaSuccess != err1 || cudaSuccess != err2) {
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
+      } 
+      num_modules_batch = 1;
+    } else {
+      num_modules_batch = max_batch_size;
+    }
+
     int num_iter = DIVUP(num_modules, num_modules_batch);
 
     int module_id_start = 0;
@@ -548,8 +572,34 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     int num_threads_x = MIN(num_images, 128); // Batchsize be multiple of 128 for max utilization, will still work if is isn't.
     float *expanded_target = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
-    GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
-                  expanded_target, expanded_derivs, &num_modules_batch);
+    //GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
+    //              expanded_target, expanded_derivs, &num_modules_batch);
+
+
+    int input_memory_size  = num_images * input_size * sizeof(float);
+    int output_memory_size = num_images * num_output_channels * sizeof(float);
+    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
+    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MAX(max_batch_size, 1);
+
+    cudaError_t err1, err2;
+    err1 = cudaMalloc((void**)&expanded_target,  max_batch_size * input_memory_size);
+    err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
+    if (cudaSuccess != err1 || cudaSuccess != err2) {
+      if (cudaSuccess == err1) cudaFree(expanded_target);
+      if (cudaSuccess == err2) cudaFree(expanded_derivs);
+      err1 = cudaMalloc((void**)&expanded_target,  input_memory_size);
+      err2 = cudaMalloc((void**)&expanded_derivs, output_memory_size);
+      if (cudaSuccess != err1 || cudaSuccess != err2) {
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
+      } 
+      num_modules_batch = 1;
+    } else {
+      num_modules_batch = max_batch_size;
+    }
+
     int num_iter = DIVUP(num_modules, num_modules_batch);
     
     if (scaleTargets == 0) {
@@ -650,8 +700,34 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     
     float *expanded_images = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
-    GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
-                  expanded_images, expanded_derivs, &num_modules_batch);
+    //GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
+    //              expanded_images, expanded_derivs, &num_modules_batch);
+
+
+    int input_memory_size  = num_images * input_size * sizeof(float);
+    int output_memory_size = num_images * num_output_channels * sizeof(float);
+    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
+    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MAX(max_batch_size, 1);
+
+    cudaError_t err1, err2;
+    err1 = cudaMalloc((void**)&expanded_images,  max_batch_size * input_memory_size);
+    err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
+    if (cudaSuccess != err1 || cudaSuccess != err2) {
+      if (cudaSuccess == err1) cudaFree(expanded_images);
+      if (cudaSuccess == err2) cudaFree(expanded_derivs);
+      err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
+      err2 = cudaMalloc((void**)&expanded_derivs, output_memory_size);
+      if (cudaSuccess != err1 || cudaSuccess != err2) {
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
+        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
+      } 
+      num_modules_batch = 1;
+    } else {
+      num_modules_batch = max_batch_size;
+    }
+
     int num_iter = DIVUP(num_modules, num_modules_batch);
 
     if (scaleTargets == 0) {

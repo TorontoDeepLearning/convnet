@@ -3,7 +3,7 @@ from convnet import *
 import numpy as np
 import conv_cpu
 
-test_gemm = False
+test_gemm = True
 
 def DivUp(a, b):
   return (a + b - 1) / b
