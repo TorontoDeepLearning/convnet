@@ -17,8 +17,8 @@ layer {
   num_channels: 1
   display: true
   dropprob: 0.2
-  image_size_y: 28
-  image_size_x: 28
+  image_size_y: 1
+  image_size_x: 784
 }
 
 layer {
