@@ -20,15 +20,15 @@ class ConvEdge : public EdgeWithWeight {
   virtual void SetImageSize(int image_size_y, int image_size_x);
   virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
  
-  int GetKernelSize() const { return kernel_size_; }
-  int GetStride() const { return stride_; }
-  int GetPadding() const { return padding_; }
-  int GetPartialSum() const { return partial_sum_; }
+  ConvDesc GetConvDesc() const { return conv_desc_; }
+  int GetPartialSumY() const { return partial_sum_y_; }
+  int GetPartialSumX() const { return partial_sum_x_; }
   bool GetSharedBias() const { return shared_bias_; }
 
  private:
   Matrix grad_weights_partial_sum_;
-  int kernel_size_, stride_, padding_, partial_sum_;
+  ConvDesc conv_desc_;
+  int partial_sum_y_, partial_sum_x_;
   bool shared_bias_;
 };
 #endif

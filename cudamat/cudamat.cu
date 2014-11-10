@@ -573,6 +573,16 @@ int set_shape(cudamat* mat, unsigned int m, unsigned int n) {
     return 0;
 }
 
+int set_shape4d(Shape4D* shape, unsigned int s1, unsigned int s2, unsigned s3, unsigned s4) {
+
+    shape->shape[0] = s1;
+    shape->shape[1] = s2;
+    shape->shape[2] = s3;
+    shape->shape[3] = s4;
+
+    return 0;
+}
+
 
 int reshape(cudamat* mat, int m, int n) {
     if (m < 0 && n < 0)
@@ -3116,20 +3126,43 @@ int expand_and_add(cudamat* source, cudamat* mat, cudamat* indices, cudamat* tar
         return 0;
 }
 
-int adagrad(cudamat* w, cudamat* grad, cudamat* sum_grad_sq, float decay, float epsilon) {
-    int len = w->size[0] * w->size[1];
-    int trans = w->is_trans;
+int adagrad(cudamat* history, cudamat* grad, float delta) {
+    int len = history->size[0] * history->size[1];
+    int trans = history->is_trans;
 
-    if (!w->on_device || !grad->on_device || !sum_grad_sq->on_device)
+    if (!history->on_device || !grad->on_device)
         return ERROR_NOT_ON_DEVICE;
 
-    if (trans != grad->is_trans || trans != sum_grad_sq->is_trans)
+    if (trans != grad->is_trans)
         return ERROR_TRANSPOSEDNESS;
 
-    if (len != grad->size[0] * grad->size[1] || len != sum_grad_sq->size[0] * sum_grad_sq->size[1])
+    if (len != grad->size[0] * grad->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kAdagrad<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(w->data_device, grad->data_device, sum_grad_sq->data_device, len, decay, epsilon);
+    kAdagrad<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+        history->data_device, grad->data_device, delta, len);
+
+    if (check_cublas_error())
+        return CUBLAS_ERROR;
+
+    return 0;
+}
+
+int rms_prop(cudamat* history, cudamat* grad, float factor) {
+    int len = history->size[0] * history->size[1];
+    int trans = history->is_trans;
+
+    if (!history->on_device || !grad->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (trans != grad->is_trans)
+        return ERROR_TRANSPOSEDNESS;
+
+    if (len != grad->size[0] * grad->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kRMSProp<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+        history->data_device, grad->data_device, factor, len);
 
     if (check_cublas_error())
         return CUBLAS_ERROR;

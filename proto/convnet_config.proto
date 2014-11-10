@@ -45,12 +45,19 @@ message Layer {
   }
   optional LossFunction loss_function = 16 [default=CROSS_ENTROPY_MULTINOMIAL];
   optional LossFunction performance_metric = 17 [default=CLASSIFICATION_MULTINOMIAL];
+  optional float loss_function_weight = 18 [default=1.0];
+
+  // The data (input or target) at this layer should be tied to the data
+  // at 'tied_data'.
+  optional string tied_data = 19;
 }
 
 message Optimizer {
   enum OptimizerType {
     STOCHASTIC_GRADIENT_DESCENT = 0;
     LBFGS = 1;
+    ADAGRAD_SGD = 2;
+    RMSPROP_SGD = 3;
   }
   optional OptimizerType optimizer_type = 1 [default = STOCHASTIC_GRADIENT_DESCENT];
   optional float epsilon = 2 [default = 0.0];
@@ -78,6 +85,15 @@ message Optimizer {
   optional int32 lbfgs_memory = 13 [default=0];
 
   optional int32 start_optimization_after = 14 [default=0];
+
+  // Adagrad delta.
+  optional float adagrad_delta = 15 [default=1];
+
+  // Running avg factor for rms_prop. Default (0) same as rprop.
+  optional float rms_prop_factor = 16 [default=0];
+
+  // Use Nesterov momentum.
+  optional bool nesterov_momentum = 17 [default=false];
 }
 
 message Edge {
@@ -97,6 +113,7 @@ message Edge {
     RGBTOYUV = 7;
     AVERAGE_POOL = 8;
     CONV_ONETOONE = 9;
+    CONV_3D = 10;
   }
   optional EdgeType edge_type = 3 [default=FC];
 
@@ -175,6 +192,10 @@ message Edge {
   optional bool grad_check = 30 [default=false];
   optional int32 grad_check_num_params = 31 [default=0];
   repeated float grad_check_epsilon = 32;
+
+  // Conv 3D.
+  optional int32 temporal_kernel_size = 33 [default=0];
+  optional int32 temporal_kernel_stride = 34 [default=0];
 }
 
 message Subnet {
@@ -231,6 +252,15 @@ message Model {
   // The dataset configs used to train this model.
   optional DatasetConfig train_dataset = 27;
   optional DatasetConfig valid_dataset = 28;
+
+  // The default optimizer to be used when no optimizer is specified
+  // for a parameter.
+  optional Optimizer default_weight_optimizer = 29;
+  optional Optimizer default_bias_optimizer = 30;
+
+  // Use this layer's performance metric for determining when to
+  // reduce learning rates. Useful when there are many output layers. 
+  optional string reduce_lr_layer_name = 31;
 }
 
 message DataStreamConfig {
@@ -285,7 +315,7 @@ message DataStreamConfig {
   // Makes sense for reading raw image files.
   optional bool parallel_disk_access = 16 [default=false];
 
-  optional bool random_rotate_raw_image = 17 [default=false];
+  optional bool jitter_raw_image = 17 [default=false];
   optional float random_rotate_max_angle = 18 [default=0];
   optional float min_scale = 19 [default=0];
 

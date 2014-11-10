@@ -23,6 +23,7 @@ class EdgeWithWeight : public Edge {
   virtual void DisplayWeights();
   virtual void DisplayWeightStats();
   virtual void SetTiedTo(Edge* e);
+  virtual void NotifyStart();
 
   virtual void UpdateWeights();
   Matrix& GetWeight() { return weights_;}

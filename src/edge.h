@@ -117,6 +117,9 @@ class Edge {
   /** Returns whether back prop is blocked through this edge.*/
   bool IsBackPropBlocked() const { return block_backprop_; }
 
+  /** Tell edge that optimization step is about to start.*/
+  virtual void NotifyStart();
+
   void SetSource(Layer* source);
   void SetDest(Layer* dest);
   Layer* GetSource();
@@ -143,7 +146,11 @@ class Edge {
 
   /** Selects the appropriate derived class for the edge config.*/
   static Edge* ChooseEdgeClass(const config::Edge& edge_config);
-  
+  static bool HasParameters(const config::Edge& edge_config);
+  static ConvDesc GetConvDesc(const config::Edge& edge_config);
+  static void GetNumModules(const ConvDesc conv_desc, int image_size_y, int image_size_x, int& num_modules_y, int& num_modules_x);
+  static string GetDescription(const ConvDesc conv_desc);
+ 
  protected:
   Layer *source_;  /** The source layer for this edge.*/
   Layer *dest_;  /** The destination layer for this edge.*/
@@ -166,6 +173,5 @@ class Edge {
   const bool grad_check_;
   const int grad_check_num_params_;
   vector<float> grad_check_epsilon_;
-
 };
 #endif

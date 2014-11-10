@@ -23,7 +23,7 @@
  * threadIdx.x determines case.
  * threadIdx.y determines pixel.
  *
- * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
+ * derivs:     (numFilters, numModulesY, numModulesX, numImages)
  * filters:     (numColors, filterPixels, numFilters)                               if conv
  *              (numModulesY, numModulesX, numColors, filterPixels, numFilters)     otherwise
  * targets:     (numColors, imgSizeY, imgSizeX, numImages)
@@ -43,7 +43,7 @@
 #include "cudamat_conv_util.cuh"
 
 template <int imgsPerThread, int numColors, bool scale, bool checkCaseBounds, bool conv>
-__global__ void img_acts_color(const float* hidActs, const float* filters, float* targets,
+__global__ void img_acts_color(const float* derivs, const float* filters, float* targets,
                                    const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                    const int filterSize, const int imgSizeY, const int imgSizeX,
                                    const int paddingStart, const int moduleStride,
@@ -69,7 +69,7 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
     const int tidx = threadIdx.y * 16 + threadIdx.x;
     const int loadY = tidx / 32, loadX = tidx % 32;
 
-    hidActs += blockCaseIdx + loadY * numImages * numModules + loadX;
+    derivs += blockCaseIdx + loadY * numImages * numModules + loadX;
     filters += threadIdx.x;
     targets += pxIdx * numImages + blockCaseIdx + threadIdx.x;
 
@@ -106,7 +106,7 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
 
             for (int f = 0; f < numFilters; f += 16) { // multiply with 16 filters at a time
                 // Now the threads split up into half-warps, and each half-warp decides if it's interested.
-                const float* hLoad = &hidActs[(moduleIdx + f * numModules) * numImages];
+                const float* hLoad = &derivs[(moduleIdx + f * numModules) * numImages];
                 #pragma unroll
                 for (int i = 0; i < imgsPerThread * 16; i += 32) {
                     if (!checkCaseBounds || blockCaseIdx + i + loadX < numImages) {
@@ -190,7 +190,7 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
  * threadIdx.x determines case.
  * threadIdx.y determines pixel.
  *
- * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
+ * derivs:     (numFilters, numModulesY, numModulesX, numImages)
  * filters:     (numFilterColors, filterPixels, numFilters)                             if conv
  *              (numModulesY, numModulesX, numFilterColors, filterPixels, numFilters)   otherwise
  * targets:     (numImageColors, imgSizeY, imgSizeX, numImages)
@@ -208,7 +208,7 @@ __global__ void img_acts_color(const float* hidActs, const float* filters, float
  * To be used when there are 4-16 color channels.
  */
 template <int imgsPerThread, int colorsPerThread,  bool scale, bool checkCaseBounds, bool conv>
-__global__ void img_acts_mediumcolor(const float* hidActs, const float* filters, float* targets,
+__global__ void img_acts_mediumcolor(const float* derivs, const float* filters, float* targets,
                                        const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                        const int filterSize, const int imgSizeY, const int imgSizeX, const int paddingStart,
                                        const int moduleStride, const int numImgColors, const int numGroups,
@@ -243,7 +243,7 @@ __global__ void img_acts_mediumcolor(const float* hidActs, const float* filters,
     const int tidx = threadIdx.y * 16 + threadIdx.x;
     const int loadY = tidx / 32, loadX = tidx % 32;
 
-    hidActs += blockCaseIdx + (blockFilterIdx + loadY) * numImages * numModules + loadX;
+    derivs += blockCaseIdx + (blockFilterIdx + loadY) * numImages * numModules + loadX;
     filters += blockFilterIdx + filterColorIdx * filterPixels * numFilters + threadIdx.x;
     targets += imgColorIdx * imgPixels * numImages + pxIdx * numImages + blockCaseIdx + threadIdx.x;
 
@@ -279,7 +279,7 @@ __global__ void img_acts_mediumcolor(const float* hidActs, const float* filters,
 
             for (int f = 0; f < numFiltersPerGroup; f += 16) { // multipply with 16 filters at a time
                 // Now the threads split up into half-warps, and each half-warp decides if it's interested.
-                const float* hLoad = &hidActs[(moduleIdx + f * numModules) * numImages];
+                const float* hLoad = &derivs[(moduleIdx + f * numModules) * numImages];
                 #pragma unroll
                 for (int i = 0; i < imgsPerThread * 16; i += 32) {
                     if (!checkCaseBounds || blockCaseIdx + loadX + i < numImages) {
@@ -362,7 +362,7 @@ __global__ void img_acts_mediumcolor(const float* hidActs, const float* filters,
  * threadIdx.x determines case.
  * threadIdx.y determines color.
  *
- * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
+ * derivs:     (numFilters, numModulesY, numModulesX, numImages)
  * filters:     (numFilterColors, filterPixels, numFilters)                             if conv
  *              (numModulesY, numModulesX, numFilterColors, filterPixels, numFilters)   otherwise
  * targets:     (numImageColors, imgSizeY, imgSizeX, numImages)
@@ -384,7 +384,7 @@ __global__ void img_acts_mediumcolor(const float* hidActs, const float* filters,
  * To be used when there are >= 16 color channels.
  */
 template <int B_Y, int B_X, int imgsPerThread, int colorsPerThread, int filterCache, bool scale, bool checkCaseBounds, bool conv>
-__global__ void conv_img_acts_manycolor(const float* hidActs, const float* filters, float* targets,
+__global__ void conv_img_acts_manycolor(const float* derivs, const float* filters, float* targets,
                                           const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                           const int filterSize, const int imgSizeY, const int imgSizeX, const int paddingStart, const int moduleStride,
                                           const int numImgColors, const int numGroups,
@@ -413,7 +413,7 @@ __global__ void conv_img_acts_manycolor(const float* hidActs, const float* filte
     const int filtersLoadY = tidx / filterCache, filtersLoadX = tidx % filterCache;
     const int numModules = numModulesY * numModulesX;
 
-    hidActs += blockCaseIdx + (blockFilterIdx + hidActLoadY) * numImages * numModules + hidActLoadX;
+    derivs += blockCaseIdx + (blockFilterIdx + hidActLoadY) * numImages * numModules + hidActLoadX;
     filters += blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
     targets += (imgColorIdx + threadIdx.y) * imgPixels * numImages + blockPixelIdx * numImages + blockCaseIdx + threadIdx.x;
 
@@ -448,7 +448,7 @@ __global__ void conv_img_acts_manycolor(const float* hidActs, const float* filte
             const int pxIdxInFilter = pxInFilterY * filterSize + pxInFilterX;
 
             for (int f = 0; f < numFiltersPerGroup; f += filterCache) { // multiply with filterCache filters at a time
-                const float* hLoad = &hidActs[(moduleIdx + f * numModules) * numImages];
+                const float* hLoad = &derivs[(moduleIdx + f * numModules) * numImages];
                 #pragma unroll
                 for (int i = 0; i < imgsPerThread * B_X; i += 32) {
                     if (!checkCaseBounds || blockCaseIdx + hidActLoadX + i < numImages) {
@@ -522,7 +522,7 @@ __global__ void conv_img_acts_manycolor(const float* hidActs, const float* filte
  * threadIdx.x determines case.
  * threadIdx.y determines color.
  *
- * hidActs:     (numFilters, numModulesY, numModulesX, numImages)
+ * derivs:     (numFilters, numModulesY, numModulesX, numImages)
  * filters:     (numFilterColors, filterPixels, numFilters)                             if conv
  *              (numModulesY, numModulesX, numFilterColors, filterPixels, numFilters)   otherwise
  * targets:     (numImageColors, imgSizeY, imgSizeX, numImages)
@@ -542,7 +542,7 @@ __global__ void conv_img_acts_manycolor(const float* hidActs, const float* filte
  * To be used when there are >= 16 color channels.
  */
 template <int B_Y, int B_X, int imgsPerThread, int colorsPerThread, int filterCacheF, int filterCacheH, bool scale, bool checkCaseBounds, bool conv>
-__global__ void conv_img_acts_manycolor_kepler(const float* hidActs, const float* filters, float* targets,
+__global__ void conv_img_acts_manycolor_kepler(const float* derivs, const float* filters, float* targets,
                                           const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                           const int filterSize, const int imgSizeY, const int imgSizeX, const int paddingStart, const int moduleStride,
                                           const int numImgColors, const int numGroups,
@@ -575,7 +575,7 @@ __global__ void conv_img_acts_manycolor_kepler(const float* hidActs, const float
     //const int ty = threadIdx.y, tx = threadIdx.x;
     const int numModules = numModulesY * numModulesX;
 
-    hidActs += blockCaseIdx + (blockFilterIdx + hidActLoadY) * numImages * numModules + hidActLoadX;
+    derivs += blockCaseIdx + (blockFilterIdx + hidActLoadY) * numImages * numModules + hidActLoadX;
     filters += blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
     targets += (imgColorIdx + threadIdx.y) * imgPixels * numImages + blockPixelIdx * numImages + blockCaseIdx + threadIdx.x;
 
@@ -621,9 +621,9 @@ __global__ void conv_img_acts_manycolor_kepler(const float* hidActs, const float
                 //#pragma unroll
                 
                 for (int fh = f; fh < f + filterCacheF; fh += filterCacheH) {
-                    //conv_img_acts_manycolor_dummy_fhLoop<B_Y, B_X, imgsPerThread, colorsPerThread, filterCacheF, filterCacheH, checkCaseBounds>(hidActs, shHidActLoad, shHidActs, shFilters, moduleIdx, numImages, hidActLoadY, hidActLoadX, blockCaseIdx, numModules, f, fh, prod);
+                    //conv_img_acts_manycolor_dummy_fhLoop<B_Y, B_X, imgsPerThread, colorsPerThread, filterCacheF, filterCacheH, checkCaseBounds>(derivs, shHidActLoad, shHidActs, shFilters, moduleIdx, numImages, hidActLoadY, hidActLoadX, blockCaseIdx, numModules, f, fh, prod);
                     
-                    const float* hLoad = &hidActs[(moduleIdx + fh * numModules) * numImages];
+                    const float* hLoad = &derivs[(moduleIdx + fh * numModules) * numImages];
 
                     #pragma unroll
                     for (int j = 0; j < filterCacheH; j += B_Y) {
@@ -736,7 +736,7 @@ for (int w = 0; w < filterCacheH; w++) { \
     hPreload[y][x] =  hLoad[(y) * B_Y * numModules * numImages + (x) * B_X]; \
 }
 #define IA_PRELOAD_H_TX(y,x) if (!checkCaseBounds || myCaseIdx + (x) * B_X < numImages) { \
-    hPreload[y][x] =  tex1Dfetch<float>(hidActs, hidActsLoadOffset + (y) * B_Y * numModules * numImages + (x) * B_X); \
+    hPreload[y][x] =  tex1Dfetch<float>(derivs, derivsLoadOffset + (y) * B_Y * numModules * numImages + (x) * B_X); \
 }
 
 template <int B_Y, int B_X, int imgsPerThread, int colorsPerThread, int filterCacheF, int filterCacheH, bool scale, bool checkCaseBounds, bool conv>
@@ -744,7 +744,7 @@ __global__ void
 __launch_bounds__(256, 2)   // 256 threads per block, 2 blocks per multiprocessor
                             // These launch bounds ensure 25% occupancy (128 registers used)
                             // as oppposed to 13% (130 registers) achieved by defaults.
-conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObject_t hidActs, cudaTextureObject_t filters, float* targets,
+conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObject_t derivs, cudaTextureObject_t filters, float* targets,
                                           const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                           const int filterSize, const int imgSizeY, const int imgSizeX, const int paddingStart, const int moduleStride,
                                           const int numImgColors, const int numGroups,
@@ -777,9 +777,9 @@ conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObje
     //const int outputY = threadIdx.y, outputX = threadIdx.x;
     //const int ty = threadIdx.y, tx = threadIdx.x;
     const int numModules = numModulesY * numModulesX;
-    const int hidActsOffset = (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
+    const int derivsOffset = (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
     const int filtersOffset = blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
-//    hidActs += (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
+//    derivs += (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
 //    filters += blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
     targets += (imgColorIdx + threadIdx.y) * imgPixels * numImages + blockPixelIdx * numImages + myCaseIdx;
 
@@ -823,15 +823,15 @@ conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObje
         }
     }
 
-//    const float* hLoad = &hidActs[(moduleIdx + 0 * numModules) * numImages];
-    int hidActsLoadOffset = hidActsOffset + (moduleIdx + 0 * numModules) * numImages;
+//    const float* hLoad = &derivs[(moduleIdx + 0 * numModules) * numImages];
+    int derivsLoadOffset = derivsOffset + (moduleIdx + 0 * numModules) * numImages;
     #pragma unroll
     for (int j = 0; j < filterCacheH; j += B_Y) {
         if (filterCacheH % B_Y == 0 || threadIdx.y + j < filterCacheH) {
             #pragma unroll
             for (int i = 0; i < imgsPerThread; i++) {
                 if (!checkCaseBounds || myCaseIdx + i * B_X < numImages) {
-                    hPreload[j/B_Y][i] = tex1Dfetch<float>(hidActs, hidActsLoadOffset + j * numModules * numImages + i * B_X);
+                    hPreload[j/B_Y][i] = tex1Dfetch<float>(derivs, derivsLoadOffset + j * numModules * numImages + i * B_X);
                 }
             }
         }
@@ -885,7 +885,7 @@ conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObje
 
                 __syncthreads();
 
-                hidActsLoadOffset = hidActsOffset + (moduleIdx + (f + filterCacheH) * numModules) * numImages;
+                derivsLoadOffset = derivsOffset + (moduleIdx + (f + filterCacheH) * numModules) * numImages;
 
                 #pragma unroll
                 for (int z = 0; z < 4; ++z) {
@@ -920,9 +920,9 @@ conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObje
 
                 __syncthreads();
 
-                hidActsLoadOffset = hidActsOffset + (moduleIdx + (f + filterCacheF) * numModules) * numImages;
+                derivsLoadOffset = derivsOffset + (moduleIdx + (f + filterCacheF) * numModules) * numImages;
                 if (f == numFiltersPerGroup - filterCacheF) {
-                    hidActsLoadOffset = hidActsOffset + moduleIdxNext * numImages;
+                    derivsLoadOffset = derivsOffset + moduleIdxNext * numImages;
                 }
 
                 #pragma unroll
@@ -973,7 +973,7 @@ conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex(cudaTextureObje
 template <int B_Y, int B_X, int imgsPerThread, int colorsPerThread, int filterCacheF, int filterCacheH, bool scale, bool checkCaseBounds, bool conv>
 __global__ void
 //__launch_bounds__(128, 3)   // 128 threads per block, 3 blocks per multiprocessor
-conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_t hidActs, cudaTextureObject_t filters, float* targets,
+conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_t derivs, cudaTextureObject_t filters, float* targets,
                                           const int numModulesY, const int numModulesX, const int numImages, const int numFilters,
                                           const int filterSize, const int imgSizeY, const int imgSizeX, const int paddingStart, const int moduleStride,
                                           const int numImgColors, const int numGroups,
@@ -1007,10 +1007,10 @@ conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_
     //const int ty = threadIdx.y, tx = threadIdx.x;
     const int numModules = numModulesY * numModulesX;
 
-    const int hidActsOffset = (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
+    const int derivsOffset = (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
     const int filtersOffset = blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
 
-//    hidActs += (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
+//    derivs += (blockFilterIdx + threadIdx.y) * numImages * numModules + myCaseIdx;
 //    filters += blockFilterIdx + (filterColorIdx + filtersLoadY) * filterPixels * numFilters + filtersLoadX;
     targets += (imgColorIdx + threadIdx.y) * imgPixels * numImages + blockPixelIdx * numImages + myCaseIdx;
 
@@ -1054,15 +1054,15 @@ conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_
         }
     }
 
-//    const float* hLoad = &hidActs[moduleIdx * numImages];
-    int hidActsLoadOffset = hidActsOffset + moduleIdx * numImages;
+//    const float* hLoad = &derivs[moduleIdx * numImages];
+    int derivsLoadOffset = derivsOffset + moduleIdx * numImages;
     #pragma unroll
     for (int j = 0; j < filterCacheH; j += B_Y) {
         if (filterCacheH % B_Y == 0 || threadIdx.y + j < filterCacheH) {
             #pragma unroll
             for (int i = 0; i < imgsPerThread; i++) {
                 if (!checkCaseBounds || myCaseIdx + i * B_X < numImages) {
-                    hPreload[j/B_Y][i] = tex1Dfetch<float>(hidActs, hidActsLoadOffset + j * numModules * numImages + i * B_X);
+                    hPreload[j/B_Y][i] = tex1Dfetch<float>(derivs, derivsLoadOffset + j * numModules * numImages + i * B_X);
                 }
             }
         }
@@ -1113,9 +1113,9 @@ conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_
                         }
                     }
                 }
-                hidActsLoadOffset = hidActsOffset + (moduleIdx + (f + filterCacheF) * numModules) * numImages;
+                derivsLoadOffset = derivsOffset + (moduleIdx + (f + filterCacheF) * numModules) * numImages;
                 if (f == numFiltersPerGroup - filterCacheF) {
-                    hidActsLoadOffset = hidActsOffset + moduleIdxNext * numImages;
+                    derivsLoadOffset = derivsOffset + moduleIdxNext * numImages;
                 }
 
                 __syncthreads();
@@ -1192,7 +1192,7 @@ conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_
 }
 
 /*
- * hidActs:         (numFilters, numModules, numImages)
+ * derivs:         (numFilters, numModules, numImages)
  * filters:         (numFilterColors, filterPixels, numFilters)               if conv
  *                  (numModules, numFilterColors, filterPixels, numFilters)   otherwise
  * targets:         (overSample, numImgColors, imgPixels, numImages)
@@ -1202,18 +1202,28 @@ conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16(cudaTextureObject_
  * Other batch sizes will work, but but I made no attempt whatsoever
  * to make them work fast. 
  */
-void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
-              int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride, int numImgColors, int numGroups,
-              float scaleTargets, float scaleOutput, bool conv) {
+void _imgActs(cudamat* derivs, cudamat* filters, cudamat* targets,
+              Shape4D derivs_shape, Shape4D filters_shape,
+              Shape4D targets_shape, ConvDesc conv_desc, float scaleTargets,
+              float scaleOutput, bool conv) {
+    int numImgColors    = conv_desc.num_input_channels;
+    int numGroups       = conv_desc.num_groups;
     int numFilterColors = numImgColors / numGroups;
-    int numImages = hidActs->size[0];
-    int numFilters = filters->size[0];
-    int numModules = hidActs->size[1] / numFilters;
+     
+    int numImages   = derivs_shape.shape[0];
+    int numFilters  = conv_desc.num_output_channels;
+    int numModulesY = derivs_shape.shape[2];
+    int numModulesX = derivs_shape.shape[1];
+    int imgSizeY    = targets_shape.shape[2];
+    int imgSizeX    = targets_shape.shape[1];
+    int numModules  = numModulesY * numModulesX; 
+    int imgPixels   = imgSizeY * imgSizeX;
+    int moduleStride = conv_desc.stride_y;
+    int paddingStart = conv_desc.padding_y;
     int filterModuleMult = conv ? 1 : numModules;
-    int filterPixels = filters->size[1] / (filterModuleMult * numFilterColors);
-    int filterSize = sqrt(filterPixels);
-    int imgPixels = imgSizeY * imgSizeX;
-    int numModulesX = numModules / numModulesY;
+    
+    int filterPixels = conv_desc.kernel_size_y * conv_desc.kernel_size_x;
+    int filterSize   = conv_desc.kernel_size_y; // TODO: Rect.
     
     assert(numImgColors % numGroups == 0);
     assert(numFilters % (32*numGroups) == 0); // TODO: insisting on 32 filters due to bug in calling code below. fix that.
@@ -1221,14 +1231,14 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
     assert(numGroups == 1 || numFilterColors % 4 == 0);
 
     assert(filterPixels == filterSize * filterSize);
-    assert(hidActs->size[1] == numModules * numFilters);
+    assert(derivs->size[1] == numModules * numFilters);
     assert(filters->size[1] == filterModuleMult * numFilterColors * filterPixels);
     assert(numModules == numModulesY * numModulesX);
 
-    //assert(hidActs.isContiguous());
+    //assert(derivs.isContiguous());
     //assert(filters.isContiguous());
 
-    assert(!hidActs->is_trans);
+    assert(!derivs->is_trans);
     assert(!filters->is_trans);
     assert(!targets->is_trans);
     // These routines don't handle the case when only part of the image is visited in the convolution
@@ -1278,7 +1288,7 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
     cudaStream_t stream = 0;  //NVMatrix::getDefaultStream();
 //    cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, true >, cudaFuncCachePreferShared);
 //    conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(
-//            getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize,
+//            getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize,
 //            imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
 
     //return;
@@ -1297,91 +1307,91 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                         // TODO: this code assumes we hvae 32 filters because it uses filter cache of 32!
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1389,37 +1399,37 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 8, 4, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 8, 4, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 8, 4, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 4, 4, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 4, 4, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 4, 4, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1427,55 +1437,55 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 3, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 3, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 3, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 3, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 3, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 3, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 1, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 1, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 1, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 1, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 1, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 1, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1485,31 +1495,31 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1517,13 +1527,13 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, true, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1531,19 +1541,19 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1555,91 +1565,91 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1647,37 +1657,37 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 8, 4, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 8, 4, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 8, 4, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 4, 4, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 4, 4, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 4, 4, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1685,55 +1695,55 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 3, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 3, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 3, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 3, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 3, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 3, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 1, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 1, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 1, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 1, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 1, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 1, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, false, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, false, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, false, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1743,31 +1753,31 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, true >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1775,13 +1785,13 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, true, true >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1789,19 +1799,19 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, true, true >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, true, true ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, true, true ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1815,91 +1825,91 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1907,37 +1917,37 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 8, 4, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 8, 4, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 8, 4, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 4, 4, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 4, 4, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 4, 4, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -1945,55 +1955,55 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 3, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 3, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 3, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 3, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 3, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 3, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 1, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 1, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 1, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 1, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 1, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 1, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2003,31 +2013,31 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2035,13 +2045,13 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, false, true, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2049,19 +2059,19 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, false, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, false, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, false, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, false, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, false, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2073,91 +2083,91 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_8_tx_32_c_8_ff_32_fh_16_tex< 8, 32, 4, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 2, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(hidActs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_preloadfh_ty_4_tx_32_c_12_ff_16_fh_16< 4, 32, 4, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(getTextureObject(derivs), getTextureObject(filters), targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 4, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 2, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2165,37 +2175,37 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 8, 4, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 8, 4, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 8, 4, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 4, 4, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 4, 4, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 4, 4, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2203,55 +2213,55 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 3, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 3, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 3, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 3, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 3, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 3, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 128 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 8, 1, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 8, 1, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 8, 1, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 64 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 4, 1, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 4, 1, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 4, 1, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 32 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                         else if (numImages % 16 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, false, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, false, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, false, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2261,31 +2271,31 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors % 64 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 8, 32, 1, 8, 32, 16, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 48 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 12, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 32 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 8, 32, 16, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 16 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 4, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors % 8 == 0) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, false >, cudaFuncCachePreferShared);
-                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            conv_img_acts_manycolor_kepler < 4, 32, 1, 2, 16, 16, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2293,13 +2303,13 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 4) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_mediumcolor < 2, 4, true, true, false >, cudaFuncCachePreferShared);
-                            img_acts_mediumcolor < 2, 4, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
+                            img_acts_mediumcolor < 2, 4, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2307,19 +2317,19 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
                     if (numFilterColors == 3) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 3, true, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 3, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 3, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 2) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 2, true, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 2, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 2, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                     else if (numFilterColors == 1) {
                         if (numImages % 1 == 0) {
                             cudaFuncSetCacheConfig(img_acts_color < 2, 1, true, true, false >, cudaFuncCachePreferShared);
-                            img_acts_color < 2, 1, true, true, false ><<<blocks, threads, 0, stream>>>(hidActs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
+                            img_acts_color < 2, 1, true, true, false ><<<blocks, threads, 0, stream>>>(derivs->data_device, filters->data_device, targets->data_device, numModulesY, numModulesX, numImages, numFilters, filterSize, imgSizeY, imgSizeX, paddingStart, moduleStride, scaleTargets, scaleOutput);
                         }
                     }
                 }
@@ -2333,14 +2343,21 @@ void _imgActs(cudamat* hidActs, cudamat* filters, cudamat* targets,
 #ifdef __cplusplus
 extern "C" {
 #endif
-void convDown(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride, int numImgColors, int numGroups, float scaleTargets){
-  _imgActs(images, filters, targets, imgSizeY, imgSizeX, numModulesY, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1, true);
+
+void convDown(cudamat* derivs, cudamat* filters, cudamat* targets,
+              Shape4D* derivs_shape, Shape4D* filters_shape,
+              Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets) {
+  _imgActs(derivs, filters, targets, *derivs_shape, *filters_shape, *targets_shape,
+           conv_desc, scaleTargets, 1, true);
 }
 
-
-void localDown(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride, int numImgColors, int numGroups, float scaleTargets){
-  _imgActs(images, filters, targets, imgSizeY, imgSizeX, numModulesY, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1, false);
+void localDown(cudamat* derivs, cudamat* filters, cudamat* targets,
+               Shape4D* derivs_shape, Shape4D* filters_shape,
+               Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets) {
+  _imgActs(derivs, filters, targets, *derivs_shape, *filters_shape, *targets_shape,
+           conv_desc, scaleTargets, 1, false);
 }
+
 #ifdef __cplusplus
 }
 #endif

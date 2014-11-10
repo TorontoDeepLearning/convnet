@@ -6,148 +6,118 @@ _ConvNet = ct.cdll.LoadLibrary('libcudamat_conv.so')
 def DivUp(a, b):
   return (a + b - 1) / b
 
-def convUp(images, filters, targets, imgSizeY, numModulesY, numModulesX, paddingStart, moduleStride, numImgColors, scaleTargets=0, numGroups=1):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  filters - (n_filters, filter_w**2 * n_chans)
-  targets - (n_images, n_locs**2 * n_filters)
-  numModulesX - Number of filter locations along an axis. = n_locs
-  paddingStart - Set to k for a k-pixel border of zeros. Usually set to 0.
-  moduleStride - stride to move the filters by. 
-  numImgColors - n_chans
-  """
-  numImages = images.shape[0]
-  numFilters = filters.shape[0]
+def AddAtAllLocs(h, b):
+  batch_size, size_x, size_y, num_channels = h.shape4d
+  b_shape = b.shape
+  h.reshape((-1, num_channels))
+  b.reshape((1, -1))
+  assert b.shape[1] == num_channels
+  h.add_row_vec(b)
+  h.reshape((batch_size, -1))
+  b.reshape(b_shape)
 
-  assert targets.shape == (numImages, numFilters * numModulesX * numModulesY), '%s %d %d-%d-%d' % (targets.shape.__str__(), numImages, numFilters, numModulesX, numModulesY)
+def AddUpAllLocs(h, b, scaleTargets=0):
+  batch_size, size_x, size_y, num_channels = h.shape4d
+  b_shape = b.shape
+  h.reshape((-1, num_channels))
+  b.reshape((1, -1))
+  assert b.shape[1] == num_channels
+  if scaleTargets == 0:
+    h.sum(axis=0, target=b)
+  else:
+    b.mult(scaleTargets)
+    b.add_sums(h, axis=0)
+  h.reshape((batch_size, -1))
+  b.reshape(b_shape)
 
-  _ConvNet.convUp(images.p_mat, filters.p_mat, targets.p_mat, ct.c_int(imgSizeY), ct.c_int(numModulesY), ct.c_int(numModulesX),
-                  ct.c_int(-paddingStart), ct.c_int(moduleStride), ct.c_int(numImgColors), ct.c_int(numGroups), ct.c_float(scaleTargets))
+def convUp(images, filters, targets, conv_desc, scaleTargets=0):
+  _ConvNet.convUp(images.p_mat, filters.p_mat, targets.p_mat,
+                  images.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                  conv_desc, ct.c_float(scaleTargets))
 
-def convDown(hidSums, filters, targets, imgSizeY, imgSizeX, numModulesY, paddingStart, moduleStride, numImgColors, scaleTargets=0, numGroups=1):
-  """
-  hidSums - (n_images, n_locs**2 * n_filters)
-  filters - (n_filters, filter_w**2 * n_chans)
-  targets - (n_images, img_w**2 * n_chans)
-  """
-  numImages = hidSums.shape[0] 
+def localUp(images, filters, targets, conv_desc, scaleTargets=0):
+  _ConvNet.localUp(images.p_mat, filters.p_mat, targets.p_mat,
+                   images.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                   conv_desc, ct.c_float(scaleTargets))
 
-  assert paddingStart >= 0
-  assert targets.shape == (numImages, numImgColors * imgSizeX * imgSizeY)
+def convDown(hidSums, filters, targets, conv_desc, scaleTargets=0):
+  _ConvNet.convDown(hidSums.p_mat, filters.p_mat, targets.p_mat,
+                    hidSums.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                    conv_desc, ct.c_float(scaleTargets))
 
-  _ConvNet.convDown(hidSums.p_mat, filters.p_mat, targets.p_mat, ct.c_int(imgSizeY), ct.c_int(imgSizeX), ct.c_int(numModulesY),
-                    ct.c_int(-paddingStart), ct.c_int(moduleStride), ct.c_int(numImgColors), ct.c_int(numGroups), ct.c_float(scaleTargets))
+def localDown(hidSums, filters, targets, conv_desc, scaleTargets=0):
+  _ConvNet.localDown(hidSums.p_mat, filters.p_mat, targets.p_mat,
+                     hidSums.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                     conv_desc, ct.c_float(scaleTargets))
 
-def convOutp(images, hidSums, targets, imgSizeY, numModulesY, numModulesX, filterSize, paddingStart, moduleStride, numImgColors, scaleTargets=0, numGroups=1, partialSum=0):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  hidSums - (n_images, n_locs**2 * n_filters)
-  targets - (n_filters, filter_w**2 * n_chans)
-  """
-  if partialSum == 0:
-    partialSum = max(numModulesX, numModulesY)
-  sum_locs = DivUp(numModulesX, partialSum) * DivUp(numModulesY, partialSum)
-  numImages  = images.shape[0]
-  numFilters = hidSums.shape[1] / (numModulesX * numModulesY)
+def convOutp(images, hidSums, targets, conv_desc, scaleTargets=0, partialSumY=0, partialSumX=0, temp=None):
+  num_images, num_modules_x, num_modules_y, num_output_channels = hidSums.shape4d
+  num_output_channels2, kernel_size_x, kernel_size_y, num_input_channels = targets.shape4d
+  if partialSumY == 0:
+    partialSumY = num_modules_y
+  if partialSumX == 0:
+    partialSumX = num_modules_x
+  temp_alloc = False
+  num_locs = DivUp(num_modules_x, partialSumX) * DivUp(num_modules_y, partialSumY)
+  if num_locs == 1:
+    outp = targets
+    scale_targets = scaleTargets
+  else:
+    if temp is None:
+      temp_alloc = True
+      temp = cm.empty((num_output_channels, kernel_size_x * kernel_size_y * num_input_channels * num_locs))
+      temp.set_shape4d((num_output_channels, kernel_size_x, kernel_size_y, num_input_channels * num_locs))
+    outp = temp
+    scale_targets = 0
 
-  assert targets.shape == (numFilters, sum_locs * numImgColors * filterSize * filterSize), '%s %d %d-%d-%d-%d' % (targets.shape.__str__(), sum_locs, numFilters, numImgColors, filterSize, filterSize)
-  _ConvNet.convOutp(images.p_mat, hidSums.p_mat, targets.p_mat, ct.c_int(imgSizeY), ct.c_int(numModulesY), ct.c_int(numModulesX), ct.c_int(filterSize), ct.c_int(-paddingStart), ct.c_int(moduleStride), ct.c_int(numImgColors), ct.c_int(numGroups), ct.c_int(partialSum), ct.c_float(scaleTargets), ct.c_float(1))
+  if temp is not None:
+    num_output_channels3, kernel_size_x2, kernel_size_y2, num_input_channels_mult_partial_sum = temp.shape4d
+    assert kernel_size_y2 == kernel_size_y
+    assert kernel_size_x2 == kernel_size_x
+    assert num_output_channels3 == num_output_channels
+    assert num_input_channels_mult_partial_sum % num_input_channels == 0
+    assert num_locs == num_input_channels_mult_partial_sum / num_input_channels
+ 
+  _ConvNet.convOutp(
+    images.p_mat, hidSums.p_mat, outp.p_mat,
+    images.p_shape4d, hidSums.p_shape4d, outp.p_shape4d,
+    conv_desc, ct.c_int(partialSumY), ct.c_int(partialSumX),
+    ct.c_float(scale_targets), ct.c_float(1))
 
-def localUp(images, filters, targets, imgSizeY, numModulesY, numModulesX, paddingStart, moduleStride, numImgColors, numGroups=1, scaleTargets=0):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  filters - (n_filters, filter_w**2 * n_chans)
-  targets - (n_images, n_locs**2 * n_filters)
-  numModulesX - Number of filter locations along an axis. = n_locs
-  paddingStart - Set to k for a k-pixel border of zeros. Usually set to 0.
-  moduleStride - stride to move the filters by. 
-  numImgColors - n_chans
-  """
-  numImages = images.shape[0]
-  numFilters = filters.shape[0]
+  if num_locs > 1:
+    temp.reshape((-1, num_locs))
+    targets.reshape((-1, 1))
+    targets.mult(scaleTargets)
+    targets.add_sums(temp, axis=1)
+    temp.reshape((num_output_channels, -1))
+    targets.reshape((num_output_channels, -1))
+    if temp_alloc:
+      temp.free_device_memory()
+  elif temp is not None:
+    temp.assign(outp)
 
-  assert targets.shape == (numImages, numFilters * numModulesX * numModulesY), '%s %d %d-%d-%d' % (targets.shape.__str__(), numImages, numFilters, numModulesX, numModulesY)
+def localOutp(images, hidSums, targets, conv_desc, scaleTargets=0):
+  _ConvNet.localOutp(
+    images.p_mat, hidSums.p_mat, targets.p_mat,
+    images.p_shape4d, hidSums.p_shape4d, targets.p_shape4d,
+    conv_desc, ct.c_float(scale_targets), ct.c_float(1))
 
-  _ConvNet.localUp(images.p_mat, filters.p_mat, targets.p_mat, imgSizeY, numModulesY, numModulesX,
-                  -paddingStart, moduleStride, numImgColors, numGroups, scaleTargets)
+def MaxPool(images, targets, conv_desc):
+  _ConvNet.MaxPool(images.p_mat, targets.p_mat, images.p_shape4d,
+                   targets.p_shape4d, conv_desc)
 
+def AvgPool(images, targets, conv_desc):
+  _ConvNet.AvgPool(images.p_mat, targets.p_mat, images.p_shape4d,
+                   targets.p_shape4d, conv_desc)
 
-def localDown(hidSums, filters, targets, imgSizeY, imgSizeX, numModulesY, paddingStart, moduleStride, numImgColors, numGroups=1, scaleTargets=0):
-  """
-  hidSums - (n_images, n_locs**2 * n_filters)
-  filters - (n_filters, filter_w**2 * n_chans)
-  targets - (n_images, img_w**2 * n_chans)
-  """
-  numImages = hidSums.shape[0] 
+def MaxPoolUndo(images, grad, maxes, targets, conv_desc, scaleTargets=0):
+  _ConvNet.MaxPoolUndo(images.p_mat, grad.p_mat, maxes.p_mat, targets.p_mat,
+                       images.p_shape4d, grad.p_shape4d, conv_desc,
+                       ct.c_float(scaleTargets))
 
-  assert paddingStart >= 0
-  assert targets.shape == (numImages, numImgColors * imgSizeX * imgSizeY)
-
-  _ConvNet.localDown(hidSums.p_mat, filters.p_mat, targets.p_mat, imgSizeY, imgSizeX, numModulesY,
-                    -paddingStart, moduleStride, numImgColors, numGroups, scaleTargets)
-
-def localOutp(images, hidSums, targets, imgSizeY, numModulesY, numModulesX, filterSize, paddingStart, moduleStride, numImgColors, numGroups=1, scaleTargets=0):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  hidSums - (n_images, n_locs**2 * n_filters)
-  targets - (n_filters, filter_w**2 * n_chans)
-  """
-  numImages = images.shape[0]
-  numFilters = hidSums.shape[1] / (numModulesX * numModulesY)
-
-  assert targets.shape == (numFilters, numImgColors * filterSize * filterSize * numModulesX * numModulesY), '%s %d %d-%d-%d' % (targets.shape.__str__(), numFilters, numImgColors, filterSize, filterSize)
-  _ConvNet.convOutp(images.p_mat, hidSums.p_mat, targets.p_mat, imgSizeY, numModulesY, numModulesX, filterSize, -paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1)
-
-def MaxPool(images, targets, numChannels, kernel_size, padding, stride, num_modules_x):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  numChannels - number of filter/color channels
-  subsX - width of pooling area
-  startX - pixel where pooling starts
-  strideX - stride
-  outputsX - number of pooling sites
-  """
-  numImages = images.shape[0]
-
-  assert targets.shape == (numImages, numChannels * num_modules_x**2)
-  
-  _ConvNet.MaxPool(images.p_mat, targets.p_mat, numChannels, kernel_size, -padding, stride, num_modules_x)
-
-def ProbMaxPool(images, rnd, targets, numChannels, subsX, startX, strideX, outputsX):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  rnd - (n_images, img_w**2 * n_chans)
-  numChannels - number of filter/color channels
-  subsX - width of pooling area
-  startX - pixel where pooling starts
-  strideX - stride
-  outputsX - number of pooling sites
-  """
-  numImages = images.shape[0]
-
-  assert targets.shape == (numImages, numChannels * outputsX * outputsX)
-  assert rnd.shape == images.shape
-
-  raise Exception('Not implemented.')
-  """
-  _ConvNet.ProbMaxPool(images.p_mat, rnd.p_mat, targets.p_mat,
-           numChannels, subsX, startX, strideX, outputsX)
-  """
-
-
-def MaxPoolUndo(images, targets, grad, maxes, kernel_size, padding, stride, num_modules_x):
-  """
-  images - (n_images, img_w**2 * n_chans)
-  grad - (n_images, outputsX**2 * n_chans) cudamat of deltas/gradients of loss wrt layer outputs.
-  maxes - (n_images, outputsX**2 * n_chans) cudamat of layer outputs.
-  subsX - width of pooling area
-  startX - pixel where pooling starts
-  strideX - stride
-  outputsX - number of pooling sites
-  """
-  assert targets.shape == images.shape
-
-  _ConvNet.MaxPoolUndo(images.p_mat, grad.p_mat, maxes.p_mat, targets.p_mat, kernel_size, -padding, stride, num_modules_x)
+def AvgPoolUndo(avgGrads, targets, conv_desc, scaleTargets=0):
+  _ConvNet.AvgPoolUndo(avgGrads.p_mat, targets.p_mat, avgGrads.p_shape4d,
+                       targets.p_shape4d, conv_desc, ct.c_float(scaleTargets))
 
 def ResponseNorm(images, denoms, targets, numChannels, sizeX, addScale, powScale):
   assert targets.shape == images.shape

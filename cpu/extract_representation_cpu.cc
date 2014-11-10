@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
       filenames.push_back(imgfile);
 
       RawImageFileIterator<unsigned char> it = RawImageFileIterator<unsigned char>(
-        filenames, image_size, big_image_size, false, false, false);
+        filenames, image_size, image_size, big_image_size, big_image_size, false, false, false, 0, 1.0);
       it.GetNext(image_buf);
       unsigned char *R = image_buf;
       unsigned char *G = image_buf +   num_pixels;

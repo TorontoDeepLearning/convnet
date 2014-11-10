@@ -12,6 +12,7 @@ vector<int> Matrix::boards_;
 vector<size_t> Matrix::temp_size_, Matrix::ones_size_;
 int Matrix::current_gpu_id_ = 0, Matrix::num_boards_ = 0;
 map<string, long> Matrix::gpu_memory_;
+Matrix Matrix::rgb_to_yuv_mat_;
 
 Matrix::Matrix() {
   mat_.data_host = NULL;
@@ -24,6 +25,10 @@ Matrix::Matrix() {
   mat_.owns_data = 0;
   mat_.tex_obj = 0;
   SetupTranspose();
+  shape_.shape[0] = 0;
+  shape_.shape[1] = 0;
+  shape_.shape[2] = 0;
+  shape_.shape[3] = 0;
 }
 
 Matrix::~Matrix() {
@@ -45,6 +50,22 @@ Matrix::Matrix(const size_t rows, const size_t cols, const bool on_gpu) {
   } else {
     AllocateMainMemory(rows, cols);
   }
+}
+
+void Matrix::SetShape4D(int d1, int d2, int d3, int d4) {
+  shape_.shape[0] = d1;
+  shape_.shape[1] = d2;
+  shape_.shape[2] = d3;
+  shape_.shape[3] = d4;
+}
+
+void Matrix::SetShape4D_like(Matrix& mat) {
+ Shape4D s = mat.GetShape4D();
+ SetShape4D(s.shape[0], s.shape[1], s.shape[2], s.shape[3]);
+}
+
+Shape4D& Matrix::GetShape4D() {
+  return shape_;
 }
 
 void Matrix::GetSlice(Matrix& slice, size_t start, size_t end) {
@@ -360,6 +381,12 @@ bool Matrix::CheckNaN() {
 string Matrix::GetShapeString() {
   stringstream ss;
   ss << mat_.size[0] << " " << mat_.size[1];
+  return ss.str();
+}
+
+string Matrix::GetShape4DString() {
+  stringstream ss;
+  ss << shape_.shape[0] << " " << shape_.shape[1] << " " << shape_.shape[2] << " " << shape_.shape[3];
   return ss.str();
 }
 
@@ -744,113 +771,186 @@ void Matrix::ShuffleColumns(Matrix& rand_perm_indices) {
   shuffleColumns(&mat_, rand_perm_indices.GetMat());
 }
 
-void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
-                    int num_modules_y, int num_modules_x, int padding,
-                    int stride, int num_input_channels, float scale_targets) {
-  convUp(input.GetMat(), w.GetMat(), output.GetMat(), image_size,
-         num_modules_y, num_modules_x, -padding, stride, num_input_channels, 1,
-         scale_targets);
+void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output,
+                    ConvDesc conv_desc, float scale_targets) {
+#ifdef USE_GEMM
+  convUpGemm(
+#else
+  convUp(
+#endif
+      input.GetMat(), w.GetMat(), output.GetMat(), &input.GetShape4D(),
+         &w.GetShape4D(), &output.GetShape4D(), conv_desc, scale_targets);
 }
 
 void Matrix::ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                      int image_size_y, int image_size_x, int num_modules_y,
-                      int padding, int stride, int num_input_channels, float scale_targets) {
-  convDown(deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(), image_size_y, image_size_x,
-           num_modules_y, -padding, stride, num_input_channels, 1,
-           scale_targets);
+                      ConvDesc conv_desc, float scale_targets) {
+#ifdef USE_GEMM
+  convDownGemm(
+#else
+  convDown(
+#endif
+    deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(),
+           &deriv_output.GetShape4D(), &w.GetShape4D(), &deriv_input.GetShape4D(),
+           conv_desc, scale_targets);
 }
 
 void Matrix::ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
-                      int image_size_y, int num_modules_y, int num_modules_x,
-                      int kernel_size, int padding, int stride,
-                      int num_input_channels, int partial_sum,
+                      ConvDesc conv_desc, int partial_sum_y, int partial_sum_x,
                       float scale_targets, float scale_outputs) {
-  convOutp(input.GetMat(), deriv_output.GetMat(), dw.GetMat(), image_size_y,
-           num_modules_y, num_modules_x, kernel_size, -padding, stride,
-           num_input_channels, 1, partial_sum, scale_targets, scale_outputs);
+#ifdef USE_GEMM
+  convOutpGemm(input.GetMat(), deriv_output.GetMat(), dw.GetMat(),
+           &input.GetShape4D(), &deriv_output.GetShape4D(), &dw.GetShape4D(),
+           conv_desc, scale_targets, scale_outputs);
+#else
+  convOutp(input.GetMat(), deriv_output.GetMat(), dw.GetMat(),
+           &input.GetShape4D(), &deriv_output.GetShape4D(), &dw.GetShape4D(),
+           conv_desc, partial_sum_y, partial_sum_x, scale_targets,
+           scale_outputs);
+#endif
 }
 
-void Matrix::LocalUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
-                    int num_modules_y, int num_modules_x, int padding,
-                    int stride, int num_input_channels, float scale_targets) {
-  localUp(input.GetMat(), w.GetMat(), output.GetMat(), image_size,
-         num_modules_y, num_modules_x, -padding, stride, num_input_channels, 1,
-         scale_targets);
+void Matrix::LocalUp(Matrix& input, Matrix& w, Matrix& output,
+                    ConvDesc conv_desc, float scale_targets) {
+#ifdef USE_GEMM
+  localUpGemm(
+#else
+  localUp(
+#endif
+      input.GetMat(), w.GetMat(), output.GetMat(), &input.GetShape4D(),
+         &w.GetShape4D(), &output.GetShape4D(), conv_desc, scale_targets);
 }
 
 void Matrix::LocalDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                       int image_size_y, int image_size_x, int num_modules_y,
-                       int padding, int stride, int num_input_channels,
-                       float scale_targets) {
-  localDown(deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(),
-            image_size_y, image_size_x, num_modules_y, -padding, stride,
-            num_input_channels, 1, scale_targets);
+                     ConvDesc conv_desc, float scale_targets) {
+#ifdef USE_GEMM
+  localDownGemm(
+#else
+  localDown(
+#endif
+   deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(),
+   &deriv_output.GetShape4D(), &w.GetShape4D(), &deriv_input.GetShape4D(),
+   conv_desc, scale_targets);
 }
 
 void Matrix::LocalOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
-                       int image_size_y, int num_modules_y, int num_modules_x,
-                       int kernel_size, int padding, int stride,
-                       int num_input_channels,
-                       float scale_targets, float scale_outputs) {
-  localOutp(input.GetMat(), deriv_output.GetMat(), dw.GetMat(), image_size_y,
-           num_modules_y, num_modules_x, kernel_size, -padding, stride,
-           num_input_channels, 1, scale_targets, scale_outputs);
+                      ConvDesc conv_desc,
+                      float scale_targets, float scale_outputs) {
+#ifdef USE_GEMM
+  localOutpGemm(
+#else
+  localOutp(
+#endif
+    input.GetMat(), deriv_output.GetMat(), dw.GetMat(),
+    &input.GetShape4D(), &deriv_output.GetShape4D(), &dw.GetShape4D(),
+    conv_desc, scale_targets, scale_outputs);
 }
 
-void Matrix::ConvMaxPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules, float scale_targets) {
-  MaxPool(input.GetMat(), output.GetMat(), num_input_channels, kernel_size,
-          -padding, stride, num_modules, scale_targets);
+void Matrix::ConvMaxPool(Matrix& input, Matrix& output, ConvDesc conv_desc) {
+#ifdef USE_GEMM
+  MaxPoolGemm(input.GetMat(), output.GetMat(), &input.GetShape4D(),
+          &output.GetShape4D(), conv_desc, 0, 1);
+#else
+  MaxPool(input.GetMat(), output.GetMat(), &input.GetShape4D(),
+          &output.GetShape4D(), conv_desc);
+#endif
 }
 
-void Matrix::ConvAvgPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules, float scale_targets) {
-  AvgPool(input.GetMat(), output.GetMat(), num_input_channels, kernel_size,
-          -padding, stride, num_modules, scale_targets);
+void Matrix::ConvAvgPool(Matrix& input, Matrix& output, ConvDesc conv_desc) {
+#ifdef USE_GEMM
+  AvgPoolGemm(input.GetMat(), output.GetMat(), &input.GetShape4D(),
+              &output.GetShape4D(), conv_desc, 0, 1);
+#else
+  AvgPool(input.GetMat(), output.GetMat(), &input.GetShape4D(),
+          &output.GetShape4D(), conv_desc);
+#endif
 }
-
 
 void Matrix::ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
-                         Matrix& deriv_input, int kernel_size, int padding,
-                         int stride, int num_modules, float scale_targets) {
-  MaxPoolUndo(input.GetMat(), deriv_output.GetMat(), output.GetMat(),
-              deriv_input.GetMat(), kernel_size, -padding, stride, num_modules,
-              scale_targets);
+                             Matrix& deriv_input, ConvDesc conv_desc,
+                             float scale_targets) {
+#ifdef USE_GEMM
+  MaxPoolUndoGemm(
+#else
+  MaxPoolUndo(
+#endif
+      input.GetMat(), deriv_output.GetMat(), output.GetMat(),
+              deriv_input.GetMat(), &input.GetShape4D(),
+              &deriv_output.GetShape4D(), conv_desc, scale_targets);
 }
 
-void Matrix::ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, int kernel_size, int padding,
-                         int stride, int num_modules, int image_size, float scale_targets) {
-  AvgPoolUndo(input.GetMat(), deriv_output.GetMat(), kernel_size, -padding,
-              stride, num_modules, image_size, scale_targets);
+void Matrix::ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output,
+                             ConvDesc conv_desc, float scale_targets) {
+#ifdef USE_GEMM
+  AvgPoolUndoGemm(
+#else
+  AvgPoolUndo(
+#endif
+    input.GetMat(), deriv_output.GetMat(), &input.GetShape4D(),
+              &deriv_output.GetShape4D(), conv_desc, scale_targets);
 }
 
 void Matrix::ConvResponseNormCrossMap(
     Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
     float powScale, bool blocked) {
-  ResponseNormCrossMap(input.GetMat(), output.GetMat(), numFilters, sizeF,
-                       addScale, powScale, blocked);
+#ifdef USE_GEMM
+  ResponseNormCrossMapGemm(
+#else
+  ResponseNormCrossMap(
+#endif
+    input.GetMat(), output.GetMat(), numFilters, sizeF, addScale, powScale,
+    blocked);
 }
 
 void Matrix::ConvResponseNormCrossMapUndo(
     Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
     int sizeF, float addScale, float powScale, bool blocked) {
+
+#ifdef USE_GEMM
+  ResponseNormCrossMapUndoGemm(outGrads.GetMat(), inputs.GetMat(), targets.GetMat(),
+                           numFilters, sizeF, addScale, powScale, blocked);
+#else
   ResponseNormCrossMapUndo(outGrads.GetMat(), inputs.GetMat(), acts.GetMat(),
                            targets.GetMat(), numFilters, sizeF, addScale, powScale,
                            blocked);
+#endif
 }
 
 void Matrix::ConvUpSample(Matrix& input, Matrix& output, int factor,
-                          int input_image_size, float scaleTargets) {
-  UpSample(input.GetMat(), output.GetMat(), factor, input_image_size, scaleTargets);
+                          float scaleTargets) {
+#ifdef USE_GEMM
+  UpSampleGemm(
+#else
+  UpSample(
+#endif
+      input.GetMat(), output.GetMat(), &input.GetShape4D(),
+           &output.GetShape4D(), factor, scaleTargets);
 }
 
-void Matrix::ConvDownSample(Matrix& input, Matrix& output, int factor,
-                            int input_image_size) {
-  DownSample(input.GetMat(), output.GetMat(), factor, input_image_size);
+void Matrix::ConvDownSample(Matrix& input, Matrix& output, int factor) {
+#ifdef USE_GEMM
+  DownSampleGemm(
+#else
+  DownSample(
+#endif
+    input.GetMat(), output.GetMat(), &input.GetShape4D(),
+    &output.GetShape4D(), factor);
 }
 
 void Matrix::ConvRGBToYUV(Matrix& input, Matrix& output) {
-  RGBToYUV(input.GetMat(), output.GetMat());
+  if (Matrix::rgb_to_yuv_mat_.GetNumEls() == 0) {
+    Matrix::rgb_to_yuv_mat_.AllocateGPUMemory(3, 3);
+    float* data = Matrix::rgb_to_yuv_mat_.GetHostData();
+    data[0] = 0.2126f;    data[1] = 0.7152f;    data[2] = 0.0722f;
+    data[3] = -0.09991f;  data[4] = -0.33609f;  data[5] = 0.436f;
+    data[6] = 0.615f;     data[7] = -0.55861f;  data[8] = -0.05639f;
+    Matrix::rgb_to_yuv_mat_.CopyToDevice();
+  }
+  int batch_size = input.GetRows();
+  input.Reshape(-1, 3);
+  output.Reshape(-1, 3);
+  dot(input.GetMat(), Matrix::rgb_to_yuv_mat_.GetMat(), output.GetMat(), 1, 0);
+  output.Reshape(batch_size, -1);
+  input.Reshape(batch_size, -1);
 }
 
 void Matrix::ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
@@ -880,6 +980,22 @@ void Matrix::RectifyBBox(Matrix& width_offset, Matrix& height_offset,
 
   if (err_code != 0) {
     cerr << "Error rectifying boxes " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::AdagradUpdate(Matrix& adagrad_history, Matrix& gradient, float delta) {
+  int err_code = adagrad(adagrad_history.GetMat(), gradient.GetMat(), delta);
+  if (err_code != 0) {
+    cerr << "Error in adagrad update " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor) {
+  int err_code = rms_prop(rms_history.GetMat(), gradient.GetMat(), factor);
+  if (err_code != 0) {
+    cerr << "Error in rms update " << GetStringError(err_code) << endl;
     exit(1);
   }
 }

@@ -5,7 +5,7 @@
 EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
   Edge(edge_config),
   weight_optimizer_(Optimizer::ChooseOptimizer(edge_config.weight_optimizer())),
-  bias_optimizer_(Optimizer::ChooseOptimizer(edge_config.bias_optimizer())),
+  bias_optimizer_(edge_config.has_no_bias() ? NULL : Optimizer::ChooseOptimizer(edge_config.bias_optimizer())),
   initialization_(edge_config.initialization()),
   init_wt_(edge_config.init_wt()),
   init_bias_(edge_config.init_bias()),
@@ -20,7 +20,7 @@ EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
 
 EdgeWithWeight::~EdgeWithWeight() {
   delete weight_optimizer_;
-  delete bias_optimizer_;
+  if (!has_no_bias_) delete bias_optimizer_;
 }
 
 void EdgeWithWeight::SaveParameters(hid_t file) {
@@ -181,4 +181,9 @@ void EdgeWithWeight::IncrementNumGradsReceived() {
   } else {
     num_grads_received_++;
   }
+}
+
+void EdgeWithWeight::NotifyStart() {
+  weight_optimizer_->NotifyStart(weights_);
+  if (!has_no_bias_) bias_optimizer_->NotifyStart(bias_);
 }

@@ -7,31 +7,30 @@ extern "C" {
 
 void SetupTexture(cudamat* mat);
 
-void convUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY,
-            int numModulesX, int paddingStart, int moduleStride,
-            int numImgColors, int numGroups, float scaleTargets);
+void convUp(cudamat* images, cudamat* filters, cudamat* targets,
+            Shape4D* images_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+            ConvDesc conv_desc, float scaleTargets);
 
-void convDown(cudamat* images, cudamat* filters, cudamat* targets,
-              int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride,
-              int numImgColors, int numGroups, float scaleTargets);
+void localUp(cudamat* images, cudamat* filters, cudamat* targets,
+             Shape4D* images_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+             ConvDesc conv_desc, float scaleTargets);
 
-void convOutp(cudamat* images, cudamat* hidSums, cudamat* targets, int imgSizeY, int numModulesY,
-              int numModulesX, int filterSize, int paddingStart,
-              int moduleStride, int numImgColors, int numGroups,
-              int partialSum, float scaleTargets, float scaleOutput);
+void convDown(cudamat* derivs, cudamat* filters, cudamat* targets,
+              Shape4D* derivs_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+              ConvDesc conv_desc, float scaleTargets);
 
-void localUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY,
-             int numModulesX, int paddingStart, int moduleStride,
-             int numImgColors, int numGroups, float scaleTargets);
+void localDown(cudamat* derivs, cudamat* filters, cudamat* targets,
+               Shape4D* derivs_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+               ConvDesc conv_desc, float scaleTargets);
 
-void localDown(cudamat* images, cudamat* filters, cudamat* targets,
-               int imgSizeY, int imgSizeX, int numModulesY, int paddingStart, int moduleStride,
-               int numImgColors, int numGroups, float scaleTargets);
+void convOutp(cudamat* images, cudamat* derivs, cudamat* targets,
+              Shape4D* images_shape, Shape4D* derivs_shape, Shape4D* targets_shape,
+              ConvDesc conv_desc, int partialSumY, int partialSumX, float scaleTargets,
+              float scaleOutput);
 
-void localOutp(cudamat* images, cudamat* hidSums, cudamat* targets, int imgSizeY, int numModulesY,
-               int numModulesX, int filterSize, int paddingStart,
-               int moduleStride, int numImgColors, int numGroups,
-               float scaleTargets, float scaleOutput);
+void localOutp(cudamat* images, cudamat* derivs, cudamat* targets,
+               Shape4D* images_shape, Shape4D* derivs_shape, Shape4D* targets_shape,
+               ConvDesc conv_desc, float scaleTargets, float scaleOutput);
 
 void ResponseNormCrossMap(cudamat* images, cudamat* targets,
                           int numFilters, int sizeF, float addScale,
@@ -57,24 +56,24 @@ void ContrastNormUndo(cudamat* outGrads, cudamat* denoms, cudamat* meanDiffs,
                       cudamat* acts, cudamat* targets, int numFilters,
                       int sizeX, float addScale, float powScale);
 
-void MaxPool(cudamat* images, cudamat* targets, int numFilters, int subsX,
-             int startX,	int strideX, int outputsX, float scaleTargets);
+void MaxPool(cudamat* images, cudamat* targets, Shape4D* images_shape,
+             Shape4D* targets_shape, ConvDesc conv_desc);
 
-void AvgPool(cudamat* images, cudamat* targets, int numFilters, int subsX,
-             int startX,	int strideX, int outputsX, float scaleTargets);
+void AvgPool(cudamat* images, cudamat* targets, Shape4D* images_shape,
+             Shape4D* targets_shape, ConvDesc conv_desc);
 
 void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
-                 cudamat* targets, int subsX, int startX, int strideX,
-                 int outputsX, float scaleTargets);
+                 cudamat* targets, Shape4D* images_shape, Shape4D* maxGrads_shape,
+                 ConvDesc conv_desc, float scaleTargets);
 
-void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, int subsX, int startX,
-                 int strideX, int outputsX, int imgSize, float scaleTargets);
+void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, Shape4D* avgGrads_shape,
+                 Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets);
 
-void UpSample(cudamat* images, cudamat* targets, int factor,
-              int input_image_size, float scaleTargets);
+void UpSample(cudamat* images, cudamat* targets, Shape4D* images_shape,
+              Shape4D* targets_shape, int factor, float scaleTargets);
  
-void DownSample(cudamat* images, cudamat* targets, int factor,
-                int input_image_size);
+void DownSample(cudamat* images, cudamat* targets, Shape4D* images_shape,
+                Shape4D* targets_shape, int factor);
 
 void RGBToYUV(cudamat* images, cudamat* targets);
 #ifdef __cplusplus

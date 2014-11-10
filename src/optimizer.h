@@ -17,6 +17,7 @@ class Optimizer {
   // Do the optimizaion. This will update parameter.
   virtual void Optimize(Matrix& gradient, Matrix& parameter) = 0;
   virtual void ReduceLearningRate(float factor);
+  virtual void NotifyStart(Matrix& parameter);
 
   // Load and Save gradient history so that optimization can be restarted if it
   // gets interrupted for some reason.
@@ -47,6 +48,7 @@ class SGDOptimizer : public Optimizer {
   virtual void LoadParameters(hid_t file, const string& prefix);
   virtual void SaveParameters(hid_t file, const string& prefix);
   virtual bool IsAllocated() { return gradient_history_.GetNumEls() > 0; }
+  virtual void NotifyStart(Matrix& parameter);
 
  protected:
   float GetMomentum() const;
@@ -57,7 +59,35 @@ class SGDOptimizer : public Optimizer {
   // Hyperparams.
   const float initial_momentum_, final_momentum_;
   const int momentum_transition_timescale_;
-  const bool other_way_;
+  const bool nesterov_momentum_;
+};
+
+class AdagradSGDOptimizer : public SGDOptimizer {
+ public:
+  AdagradSGDOptimizer(const config::Optimizer& optimizer_config);
+  virtual void AllocateMemory(const int rows, const int cols);
+  virtual void Optimize(Matrix& gradient, Matrix& parameter);
+  virtual void LoadParameters(hid_t file, const string& prefix);
+  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual bool IsAllocated() { return adagrad_history_.GetNumEls() > 0; }
+
+ protected:
+  Matrix adagrad_history_;
+  const float adagrad_delta_;
+};
+
+class RMSPropSGDOptimizer : public SGDOptimizer {
+ public:
+  RMSPropSGDOptimizer(const config::Optimizer& optimizer_config);
+  virtual void AllocateMemory(const int rows, const int cols);
+  virtual void Optimize(Matrix& gradient, Matrix& parameter);
+  virtual void LoadParameters(hid_t file, const string& prefix);
+  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual bool IsAllocated() { return rms_history_.GetNumEls() > 0; }
+
+ protected:
+  Matrix rms_history_;
+  const float factor_;
 };
 
 /** Implmenets LBFGS optimization.

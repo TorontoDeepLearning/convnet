@@ -53,6 +53,58 @@ Edge* Edge::ChooseEdgeClass(const config::Edge& edge_config) {
   return e;
 }
 
+bool Edge::HasParameters(const config::Edge& edge_config) {
+  bool has_p = false;
+  switch (edge_config.edge_type()) {
+    case config::Edge::FC :
+    case config::Edge::CONVOLUTIONAL :
+    case config::Edge::LOCAL :
+    case config::Edge::CONV_ONETOONE :
+      has_p = true;
+      break;
+    case config::Edge::MAXPOOL :
+    case config::Edge::AVERAGE_POOL :
+    case config::Edge::RESPONSE_NORM :
+    case config::Edge::UPSAMPLE :
+    case config::Edge::DOWNSAMPLE :
+    case config::Edge::RGBTOYUV :
+      has_p = false;
+      break;
+    default:
+      cerr << "Error: Undefined edge type." << endl;
+      exit(1);
+  }
+  return has_p;
+}
+
+ConvDesc Edge::GetConvDesc(const config::Edge& edge_config) {
+  ConvDesc conv_desc;
+  conv_desc.kernel_size_y = edge_config.kernel_size();
+  conv_desc.kernel_size_x = edge_config.kernel_size();
+  conv_desc.stride_y = edge_config.stride();
+  conv_desc.stride_x = edge_config.stride();
+  conv_desc.padding_y = -edge_config.padding();
+  conv_desc.padding_x = -edge_config.padding();
+  conv_desc.num_groups = 1;
+  conv_desc.num_input_channels = 0;
+  conv_desc.num_output_channels = 0;
+  return conv_desc;
+}
+
+void Edge::GetNumModules(const ConvDesc conv_desc,
+                         int image_size_y, int image_size_x,
+                         int& num_modules_y, int& num_modules_x) {
+  num_modules_y = (image_size_y - 2 * conv_desc.padding_y - conv_desc.kernel_size_y) / conv_desc.stride_y + 1;
+  num_modules_x = (image_size_x - 2 * conv_desc.padding_x - conv_desc.kernel_size_x) / conv_desc.stride_x + 1;
+}
+
+string Edge::GetDescription(const ConvDesc conv_desc) {
+  stringstream ss;
+  ss << conv_desc.kernel_size_y << "-" << conv_desc.kernel_size_x << "-"
+     << conv_desc.num_input_channels << " : " << conv_desc.num_output_channels;
+  return ss.str();
+}
+
 Edge::Edge(const config::Edge& edge_config) :
   source_(NULL), dest_(NULL),
   source_node_(edge_config.source()),
@@ -256,4 +308,6 @@ void Edge::BackupCurrent() {
 void Edge::LoadCurrentOnGPU() {
 }
 void Edge::LoadPolyakOnGPU() {
+}
+void Edge::NotifyStart() {
 }

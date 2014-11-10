@@ -22,14 +22,11 @@ void UpSampleEdge::SetImageSize(int image_size_y, int image_size_x) {
 
 void UpSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   int scale_targets = overwrite ? 0 : 1;
-  // TODO: rect
-  Matrix::ConvUpSample(input, output, sample_factor_, image_size_x_, scale_targets);
+  Matrix::ConvUpSample(input, output, sample_factor_, scale_targets);
 }
 
 void UpSampleEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                                Matrix& output, Matrix& deriv_input,
                                bool overwrite) {
-  // TODO: rect
-  Matrix::ConvDownSample(deriv_output, deriv_input, sample_factor_,
-                         sample_factor_ * image_size_x_);
+  Matrix::ConvDownSample(deriv_output, deriv_input, sample_factor_);
 }

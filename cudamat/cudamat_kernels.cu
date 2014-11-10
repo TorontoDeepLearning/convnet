@@ -45,7 +45,24 @@ __device__ void reduceToMax(float* sdata, unsigned int tid){
   }
 }
 
-template __device__ void reduceToMax<32>(float* sdata, unsigned int tid);
+__device__ void reduceToMax32(float* sdata, unsigned int tid) {
+  //Synchronize threads to share shared memory data
+  __syncthreads();
+
+  float mySum = sdata[tid];
+  if (tid < 16) {
+    // now that we are using warp-synchronous programming (below)
+    // we need to declare our shared memory volatile so that the compiler
+    // doesn't reorder stores to it and induce incorrect behavior.
+    volatile float* smem = sdata;
+    smem[tid] = mySum = fmaxf(mySum, smem[tid + 16]);
+    smem[tid] = mySum = fmaxf(mySum, smem[tid +  8]);
+    smem[tid] = mySum = fmaxf(mySum, smem[tid +  4]);
+    smem[tid] = mySum = fmaxf(mySum, smem[tid +  2]);
+    smem[tid] = mySum = fmaxf(mySum, smem[tid +  1]);
+  }
+}
+
 template __device__ void reduceToMax<NUM_VECTOR_OP_THREADS_PER_BLOCK>(float* sdata, unsigned int tid);
 
 template<int NUM_THREADS>
@@ -93,7 +110,24 @@ __device__ void reduceToSumLocal(float* sdata, unsigned int tid)
     }
   }
 }
-template __device__ void reduceToSumLocal<32>(float* sdata, unsigned int tid);
+__device__ void reduceToSumLocal32(float* sdata, unsigned int tid) {
+  //Synchronize threads to share shared memory data
+  __syncthreads();
+
+  float mySum = sdata[tid];
+  if (tid < 16) {
+    // now that we are using warp-synchronous programming (below)
+    // we need to declare our shared memory volatile so that the compiler
+    // doesn't reorder stores to it and induce incorrect behavior.
+    volatile float* smem = sdata;
+    smem[tid] = mySum = mySum + smem[tid + 16];
+    smem[tid] = mySum = mySum + smem[tid +  8];
+    smem[tid] = mySum = mySum + smem[tid +  4];
+    smem[tid] = mySum = mySum + smem[tid +  2];
+    smem[tid] = mySum = mySum + smem[tid +  1];
+  }
+}
+
 template __device__ void reduceToSumLocal<NUM_VECTOR_OP_THREADS_PER_BLOCK>(float* sdata, unsigned int tid);
 
 /* ------------------------- Random number generation ------------------------- */
@@ -1115,7 +1149,7 @@ __global__ void kSoftMax(float* mat, float* target, unsigned int width, unsigned
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax<32>(max_vals, threadIdx.x);
+    reduceToMax32(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ; 
     __syncthreads();
@@ -1124,7 +1158,7 @@ __global__ void kSoftMax(float* mat, float* target, unsigned int width, unsigned
       val += __expf(cur_data[i]-cur_max);
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal<32>(max_vals, threadIdx.x);
+    reduceToSumLocal32(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     float *cur_target = &target[column * height] ; 
@@ -1149,7 +1183,7 @@ __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int h
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax<32>(max_vals, threadIdx.x);
+    reduceToMax32(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ;
     __syncthreads();
@@ -1159,7 +1193,7 @@ __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int h
       val += cur_data[i];
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal<32>(max_vals, threadIdx.x);
+    reduceToSumLocal32(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
@@ -1183,7 +1217,7 @@ __global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int he
       }
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax<32>(max_vals, threadIdx.x);
+    reduceToMax32(max_vals, threadIdx.x);
     __syncthreads();
     cur_max = max_vals[0] ;
     __syncthreads();
@@ -1193,7 +1227,7 @@ __global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int he
       val += cur_data[i * height];
     }
     max_vals[threadIdx.x] = val;
-    reduceToSumLocal<32>(max_vals, threadIdx.x);
+    reduceToSumLocal32(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
@@ -1280,7 +1314,7 @@ __global__ void kMaxColumnwise(float* mat, float* target, unsigned int width, un
       if (val > cur_max) cur_max = val;
     }
     max_vals[threadIdx.x] = cur_max;
-    reduceToMax<32>(max_vals, threadIdx.x);
+    reduceToMax32(max_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = max_vals[0];
   }
@@ -1328,7 +1362,7 @@ __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, 
       cur_sum += cur_data[i] * cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal<32>(sum_vals, threadIdx.x);
+    reduceToSumLocal32(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = p * target[column] + mult * sum_vals[0];
   }
@@ -1344,7 +1378,7 @@ __global__ void kSumColumnwise(float* mat, float* target, unsigned int width, un
       cur_sum += cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal<32>(sum_vals, threadIdx.x);
+    reduceToSumLocal32(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[column] = p * target[column] + mult * sum_vals[0];
   }
@@ -1377,7 +1411,7 @@ __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, uns
       cur_sum += cur_data[i * height] * cur_data[i * height];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal<32>(sum_vals, threadIdx.x);
+    reduceToSumLocal32(sum_vals, threadIdx.x);
     __syncthreads();
     if (threadIdx.x == 0) target[row] = p * target[row] + mult * sum_vals[0];
   }
@@ -1408,7 +1442,7 @@ __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsi
       cur_sum += cur_data[i] * cur_data[i];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal<32>(sum_vals, threadIdx.x);
+    reduceToSumLocal32(sum_vals, threadIdx.x);
     __syncthreads();
     cur_sum = sqrt(sum_vals[0]);
     cur_sum = (constraint == 1 || cur_sum > norm) ? (norm / cur_sum) : 1;
@@ -1430,7 +1464,7 @@ __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigne
       cur_sum += cur_data[i * height] * cur_data[i * height];
     }
     sum_vals[threadIdx.x] = cur_sum;
-    reduceToSumLocal<32>(sum_vals, threadIdx.x);
+    reduceToSumLocal32(sum_vals, threadIdx.x);
     __syncthreads();
     cur_sum = sqrt(sum_vals[0]);
     cur_sum = (constraint == 1 || cur_sum > norm) ? (norm / cur_sum) : 1;
@@ -1537,12 +1571,20 @@ __global__ void kRectifyBoundingBox(
   }
 }
 
-__global__ void kAdagrad(float *w, float *grad, float *sum_grad_sq, int len, float decay, float epsilon) {
+__global__ void kAdagrad(float *history, float *grad, float delta, int len) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
   for (unsigned int i = idx; i < len; i += numThreads) {
-    sum_grad_sq[i] = decay * sum_grad_sq[i] + grad[i] * grad[i];
-    w[i] += epsilon * grad[i] / (0.00001 + sqrtf(sum_grad_sq[i]));
+    float curr_norm = history[i] - delta;
+    history[i] = delta + sqrt(curr_norm * curr_norm + grad[i] * grad[i]);
+  }
+}
+
+__global__ void kRMSProp(float *history, float *grad, float factor, int len) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  for (unsigned int i = idx; i < len; i += numThreads) {
+    history[i] = sqrt(factor * history[i] * history[i] + (1-factor) * grad[i] * grad[i]);
   }
 }
 

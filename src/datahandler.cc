@@ -653,14 +653,14 @@ ImageDataIterator::ImageDataIterator(const config::DataStreamConfig& config):
         filenames,
         image_size_y_, image_size_x_, raw_image_size_y_, raw_image_size_x_,
         avg10_full_image, avg10_full_image,
-        config.random_rotate_raw_image(), config.random_rotate_max_angle(),
+        config.jitter_raw_image(), config.random_rotate_max_angle(),
         config.min_scale());
   } else {
     it_ = new BBoxImageFileIterator<unsigned char>(
         filenames, config.bbox_file(),
         image_size_y_, image_size_x_, raw_image_size_y_, raw_image_size_x_,
         avg10_full_image, avg10_full_image,
-        config.random_rotate_raw_image(), config.random_rotate_max_angle(),
+        config.jitter_raw_image(), config.random_rotate_max_angle(),
         config.min_scale(), config.context_factor(), config.center_on_bbox());
   }
 

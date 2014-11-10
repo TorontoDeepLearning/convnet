@@ -1170,45 +1170,74 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
  * Other batch sizes will work, but but I made no attempt whatsoever
  * to make them work fast. 
  */
- void _filterActs(cudamat* images, cudamat* filters, cudamat* targets,
-                   int imgSizeY, int numModulesY, int numModulesX, int paddingStart, int moduleStride,
-                   int numImgColors, int numGroups,
+  void _filterActs(cudamat* images, cudamat* filters, cudamat* targets,
+                   Shape4D images_shape, Shape4D filters_shape,
+                   Shape4D targets_shape, ConvDesc conv_desc,
                    float scaleTargets, float scaleOutput, bool conv) {
-    int numFilterColors = numImgColors / numGroups;
-    int numFilters = filters->size[0];
-    int numModules = numModulesY * numModulesX;
-    int numImages = images->size[0];
-    int imgPixels = images->size[1] / numImgColors;
-    int imgSizeX = imgPixels / imgSizeY;
+    int numImgColors    = conv_desc.num_input_channels;
+    int numGroups       = conv_desc.num_groups;
+    int numFilters  = conv_desc.num_output_channels;
+    int numFilters2 = targets_shape.shape[3];
+    int numModulesY = targets_shape.shape[2];
+    int numModulesX = targets_shape.shape[1];
+    int numImages   = targets_shape.shape[0];
+    int numImgColors2 = images_shape.shape[3];
+    int imgSizeY    =  images_shape.shape[2];
+    int imgSizeX    =  images_shape.shape[1];
+    int numImages2  =  images_shape.shape[0];
+    int numImgColors3Mult = filters_shape.shape[3];
+    int kernel_size_y = filters_shape.shape[2];
+    int kernel_size_x = filters_shape.shape[1];
+    int numFilters3 = filters_shape.shape[0];
+    int numModules  = numModulesY * numModulesX;
+    int imgPixels   = imgSizeY * imgSizeX;
+    int moduleStride = conv_desc.stride_y;
+    int moduleStrideY = conv_desc.stride_y;
+    int moduleStrideX = conv_desc.stride_x;
+    int paddingStart = conv_desc.padding_y;
+    int paddingStartY = conv_desc.padding_y;
+    int paddingStartX = conv_desc.padding_x;
     int filterModuleMult = conv ? 1 : numModules;
-    
-    assert(numGroups > 1 || (numImgColors > 0 && (numImgColors <= 3 || numImgColors % 4 == 0)));
-    assert(numGroups == 1 || numFilterColors % 4 == 0);
-    assert(numFilters % (16 * numGroups) == 0);
-    assert(numImgColors % numGroups == 0);
-    assert(images->size[1] == imgPixels * numImgColors);
-    assert(imgSizeY * imgSizeX == imgPixels);
+    int numFilterColors = numImgColors / numGroups;
     int numFiltersPerGroup = numFilters / numGroups;
-
+    int filterSize   = kernel_size_y;
     int imgStride = images->size[0]; //images.getStride(); // images does not need to be a contiguous matrix
+  
+    // Consistency checks. 
+    assert (numImages == numImages2);
+    assert (numFilters == numFilters2);
+    assert (numFilters == numFilters3);
+    assert (numImgColors == numImgColors2);
+    assert (numImgColors == numImgColors3Mult / filterModuleMult);
+    assert (numImages == images->size[0]);
+    assert (numImages == targets->size[0]);
+    assert (imgPixels * numImgColors == images->size[1]);
+    assert (numModules * numFilters == targets->size[1]);
+    assert (numFilters == filters->size[0]);
+    assert (kernel_size_y * kernel_size_x * numImgColors * filterModuleMult == filters->size[1]);
+    assert (kernel_size_y == conv_desc.kernel_size_y);
+    assert (kernel_size_x == conv_desc.kernel_size_x);
+    assert (numImgColors % numGroups == 0);
 
-    int filterPixels = filters->size[1] / (filterModuleMult * numFilterColors);
-    int filterSize = int(sqrt(filterPixels));
-    assert(filterSize * filterSize == filterPixels);
-    assert(filters->size[1] == filterModuleMult * numFilterColors * filterPixels);
+    // Constraints. These need to be eventually removed.
+    assert (conv_desc.stride_y == conv_desc.stride_x);
+    assert (conv_desc.padding_y == conv_desc.padding_x);
+    assert (conv_desc.kernel_size_y == conv_desc.kernel_size_x);
+    assert (numGroups > 1 || (numImgColors > 0 && (numImgColors <= 3 || numImgColors % 4 == 0)));
+    assert (numGroups == 1 || numFilterColors % 4 == 0);
+    assert (numFilters % (16 * numGroups) == 0);
 
     // These routines don't handle the case when only part of the image is visited in the convolution
-    assert(paddingStart <= 0);
-    assert(paddingStart + (numModulesX-1)*moduleStride + filterSize >= imgSizeX);
-    assert(paddingStart + (numModulesY-1)*moduleStride + filterSize >= imgSizeY);
-    assert(moduleStride <= filterSize);
+    assert(paddingStartY <= 0);
+    assert(paddingStartX <= 0);
+    assert(paddingStartY + (numModulesY-1)*moduleStrideY + kernel_size_y >= imgSizeY);
+    assert(paddingStartX + (numModulesX-1)*moduleStrideX + kernel_size_x >= imgSizeX);
+    assert(moduleStrideY <= kernel_size_y);
+    assert(moduleStrideX <= kernel_size_x);
     
     assert(!images->is_trans);
     assert(!filters->is_trans);
     assert(!targets->is_trans);
-
-//    //assert(filters.isContiguous());
-    //assert(targets.isContiguous());
 
     int imgsPerThread = numImages % 128 == 0 ? 4 : numImages % 64 == 0 ? 2 : 1;
     int filtersPerThread, threadsY = 4;
@@ -1227,8 +1256,6 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
     
     bool checkImgBounds = numImages % (threads.x*imgsPerThread) != 0;
     bool scale = scaleTargets != 0;
-    assert(targets->size[1] == numFilters * numModules);
-    assert(targets->size[0] == numImages);
     cudaStream_t stream = 0; //NVMatrix::getDefaultStream();
 
     // Auto-generated calling code...
@@ -2054,13 +2081,27 @@ __global__ void filterActs_YxX_sparse2(float* images, float* filters, float* tar
 #ifdef __cplusplus
 extern "C" {
 #endif
-void convUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY, int numModulesX, int paddingStart, int moduleStride, int numImgColors, int numGroups, float scaleTargets){
-  _filterActs(images, filters, targets, imgSizeY, numModulesY, numModulesX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1, true);
+
+void convUp(cudamat* images, cudamat* filters, cudamat* targets,
+            Shape4D* images_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+            ConvDesc conv_desc, float scaleTargets) {
+  /*
+  printf("image shape %d %d %d %d\n", images_shape->shape[0], images_shape->shape[1], images_shape->shape[2], images_shape->shape[3]);
+  printf("filters shape %d %d %d %d\n", filters_shape->shape[0], filters_shape->shape[1], filters_shape->shape[2], filters_shape->shape[3]);
+  printf("targets shape %d %d %d %d\n", targets_shape->shape[0], targets_shape->shape[1], targets_shape->shape[2], targets_shape->shape[3]);
+  printf("Convolution : kernel_size_y %d kernel_size_x %d stride_y %d stride_x %d padding_y %d padding_x %d num_input_channels %d num_output_channels %d num_groups %d\n",
+          conv_desc.kernel_size_y, conv_desc.kernel_size_x, conv_desc.stride_x, conv_desc.stride_y, conv_desc.padding_y, conv_desc.padding_x, conv_desc.num_input_channels,
+          conv_desc.num_output_channels, conv_desc.num_groups);
+  */
+  _filterActs(images, filters, targets, *images_shape, *filters_shape,
+              *targets_shape, conv_desc, scaleTargets, 1, true);
 }
 
-
-void localUp(cudamat* images, cudamat* filters, cudamat* targets, int imgSizeY, int numModulesY, int numModulesX, int paddingStart, int moduleStride, int numImgColors, int numGroups, float scaleTargets){
-  _filterActs(images, filters, targets, imgSizeY, numModulesY, numModulesX, paddingStart, moduleStride, numImgColors, numGroups, scaleTargets, 1, false);
+void localUp(cudamat* images, cudamat* filters, cudamat* targets,
+            Shape4D* images_shape, Shape4D* filters_shape, Shape4D* targets_shape,
+            ConvDesc conv_desc, float scaleTargets) {
+  _filterActs(images, filters, targets, *images_shape, *filters_shape,
+              *targets_shape, conv_desc, scaleTargets, 1, false);
 }
 
 void SetupTexture(cudamat* mat) {

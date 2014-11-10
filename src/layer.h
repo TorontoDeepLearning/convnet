@@ -35,17 +35,17 @@ class Layer {
   /** Compute derivative of loss function.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual void ComputeDeriv();
+  void ComputeDeriv();
 
   /** Compute the performance metric that is displayed during training.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual float GetPerformanceMetric();
+  float GetPerformanceMetric();
 
   /** Compute the value of the actual loss function.
    * This is applicable only if this layer is an output layer.
    */ 
-  virtual float GetLoss();
+  float GetLoss();
 
   /** Apply dropout to this layer.
    * @param train If train is true, drop units stochastically,
@@ -119,6 +119,8 @@ class Layer {
   bool AddOrOverwriteState(const string& slice);
   bool AddOrOverwriteDeriv(const string& slice);
   void ResetAddOrOverwrite();
+  bool HasTiedData() const;
+  const string& GetTiedDataLayerName() const;
 
  protected:
   void ApplyDropoutAtTrainTime();
@@ -154,6 +156,9 @@ class Layer {
   bool store_dropout_noise_;
   LossFunction *loss_, *performance_;
   config::Layer::LossFunction loss_function_, performance_metric_;
+  const float loss_function_weight_;
+  const bool has_tied_data_;
+  const string tied_data_layer_name_;
 };
 
 /** Implements a layer with a linear activation function.*/

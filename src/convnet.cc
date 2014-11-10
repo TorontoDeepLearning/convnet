@@ -37,8 +37,26 @@ ConvNet::ConvNet(const string& model_file):
     AddSubnet(model_, subnet);
   }
   model_.clear_subnet();
+
+  // Use default optimizer for weights/biases whose optimizer is not specified.
+  const config::Optimizer& default_w_opt = model_.default_weight_optimizer();
+  const config::Optimizer& default_b_opt = model_.default_bias_optimizer();
+  for (config::Edge& e : *(model_.mutable_edge())) {
+    if (Edge::HasParameters(e)) {
+      config::Optimizer w_opt(default_w_opt);
+      w_opt.MergeFrom(e.weight_optimizer());
+      e.mutable_weight_optimizer()->CopyFrom(w_opt);
+      if (!e.has_no_bias()) {
+        config::Optimizer b_opt(default_b_opt);
+        b_opt.MergeFrom(e.bias_optimizer());
+        e.mutable_bias_optimizer()->CopyFrom(b_opt);
+      }
+    }
+  }
+  
   Matrix::InitRandom(model_.seed() + process_id_);
   srand(model_.seed() + process_id_);
+
   localizer_ = model_.localizer();
   model_name_ = model_.name();
   checkpoint_dir_ = model_.checkpoint_dir();
@@ -162,10 +180,25 @@ void ConvNet::BuildNet() {
   // layers_ now contains the layers in an fprop-safe order.
 
   for (Layer* l : layers_) {
-    if (l->incoming_edge_.size() == 0) input_layers_.push_back(l);
-    if (l->outgoing_edge_.size() == 0) output_layers_.push_back(l);
-    if (l->incoming_edge_.size() == 0 || l->outgoing_edge_.size() == 0) {
-      data_layers_.push_back(l);
+    bool is_input = l->incoming_edge_.size() == 0;
+    bool is_output = l->outgoing_edge_.size() == 0;
+    bool has_tied_data = l->HasTiedData();
+    Layer* t = has_tied_data? GetLayerByName(l->GetTiedDataLayerName()) : NULL;
+    if (is_input) {
+      input_layers_.push_back(l);
+      if (has_tied_data) {
+        input_tied_data_layers_[l] = t; 
+      } else {
+        data_layers_.push_back(l);
+      }
+    }
+    if (is_output) {
+      output_layers_.push_back(l);
+      if (has_tied_data) {
+        output_tied_data_layers_[l] = t; 
+      } else {
+        data_layers_.push_back(l);
+      }
     }
   }
 
@@ -401,9 +434,22 @@ void ConvNet::GetLoss(vector<float>& error) {
   }
 }
 
+void ConvNet::GetBatch(DataHandler& dataset) {
+  dataset.GetBatch(data_layers_);
+  for (auto& kv : input_tied_data_layers_) {
+    Layer* src = kv.second, *dst = kv.first;
+    dst->GetState().Set(src->GetState());
+  }
+  for (auto& kv : output_tied_data_layers_) {
+    Layer* src = kv.second, *dst = kv.first;
+    dst->GetData().Set(src->GetData());
+  }
+}
+
 void ConvNet::TrainOneBatch(vector<float>& error) {
   for (Layer* l : layers_) l->ResetAddOrOverwrite();
-  train_dataset_->GetBatch(data_layers_);
+  for (Edge* e : edges_) e->NotifyStart();
+  GetBatch(*train_dataset_);
   Fprop(true);
   ComputeDeriv();
   GetLoss(error);
@@ -504,7 +550,7 @@ void ConvNet::Validate(DataHandler* dataset, vector<float>& total_error) {
       num_batches = dataset_size / batch_size;
   for (int k = 0; k < num_batches; k++) {
     for (Layer* l : layers_) l->ResetAddOrOverwrite();
-    dataset->GetBatch(data_layers_);
+    GetBatch(*dataset);
     Fprop(false);
     GetLoss(error);
     if (total_error.size() != error.size()) total_error.resize(error.size());
@@ -569,7 +615,7 @@ void ConvNet::ExtractFeatures(const config::FeatureExtractorConfig& config) {
     numcases = (left_overs > 0 && k == num_batches - 1) ? left_overs : batch_size;
     for (int m = 0; m < multiplicity; m++) {
       for (Layer* l : layers_) l->ResetAddOrOverwrite();
-      dataset.GetBatch(data_layers_);
+      GetBatch(dataset);
       if (display && k % display_after == 0) {
         DisplayLayers();
         if (localizer_) DisplayLocalization();
@@ -689,16 +735,16 @@ void ConvNet::DisplayEdges() {
   }
 }
 
-void ConvNet::WriteLog(int current_iter, float time, float training_error) {
+void ConvNet::WriteLog(int current_iter, float time, float error) {
   vector<float> temp(1);
-  temp[0] = training_error;
+  temp[0] = error;
   WriteLog(current_iter, time, temp);
 }
 
-void ConvNet::WriteLog(int current_iter, float time, const vector<float>& training_error) {
+void ConvNet::WriteLog(int current_iter, float time, const vector<float>& error) {
   ofstream f(log_file_, ofstream::out | ofstream::app);
   f << current_iter << " " << time;
-  for (const float& val: training_error) f << " " << val;
+  for (const float& val: error) f << " " << val;
   f << endl;
   f.close();
 }
@@ -818,6 +864,23 @@ void ConvNet::Train() {
             start_polyak_queue_val = validate_after - polyak_after * model_.polyak_queue_size(),
             start_polyak_queue_save = save_after - polyak_after * model_.polyak_queue_size();
 
+  int lr_reduce_layer_id = 0;
+  const string& reduce_lr_layer_name = model_.reduce_lr_layer_name();
+  if (!reduce_lr_layer_name.empty()) {
+    int layer_id = 0;
+    lr_reduce_layer_id = -1;
+    for (Layer *l : output_layers_) {
+      if (l->GetName().compare(reduce_lr_layer_name) == 0) {
+        lr_reduce_layer_id = layer_id;
+      }
+      layer_id++;
+    }
+    if (lr_reduce_layer_id < 0) {
+      cerr << "No such output layer " << reduce_lr_layer_name << endl;
+      exit(1);
+    }
+  }
+
   const bool display = model_.display(), print_weights = model_.print_weights();
 
   if (display && localizer_) {
@@ -894,7 +957,7 @@ void ConvNet::Train() {
       Validate(this_val_error);
       //if (polyak_after > 0) LoadCurrentWeights();  // Restore original weights.
 
-      val_error.push_back(this_val_error[0]);
+      val_error.push_back(this_val_error[lr_reduce_layer_id]);
       if (is_root_) {
         cout << " Val Acc :";
         for (const float& val: this_val_error) cout << " " << val;

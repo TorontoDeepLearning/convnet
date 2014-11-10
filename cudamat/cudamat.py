@@ -134,6 +134,71 @@ class cudamat(ct.Structure):
                 ('owns_data', ct.c_int),
                 ('tex_obj', ct.c_ulonglong)]
 
+class ConvDesc(ct.Structure):
+    _fields_ = [('num_input_channels', ct.c_int),
+                ('num_output_channels', ct.c_int),
+                ('kernel_size_y', ct.c_int),
+                ('kernel_size_x', ct.c_int),
+                ('stride_y', ct.c_int),
+                ('stride_x', ct.c_int),
+                ('padding_y', ct.c_int),
+                ('padding_x', ct.c_int),
+                ('num_groups', ct.c_int)]
+
+class Conv3DDesc(ct.Structure):
+    _fields_ = [('num_input_channels', ct.c_int),
+                ('num_output_channels', ct.c_int),
+                ('kernel_size_y', ct.c_int),
+                ('kernel_size_x', ct.c_int),
+                ('kernel_size_t', ct.c_int),
+                ('stride_y', ct.c_int),
+                ('stride_x', ct.c_int),
+                ('stride_t', ct.c_int),
+                ('padding_y', ct.c_int),
+                ('padding_x', ct.c_int),
+                ('padding_t', ct.c_int),
+                ('num_groups', ct.c_int)]
+
+class Shape4D(ct.Structure):
+    _fields_ = [('shape', ct.c_int * 4)]
+
+
+def GetConvDesc(num_input_channels, num_output_channels, kernel_size_y,
+                kernel_size_x, stride_y, stride_x, padding_y, padding_x,
+                num_groups=1):
+  return ConvDesc(num_input_channels, num_output_channels, kernel_size_y, kernel_size_x, stride_y, stride_x, -padding_y, -padding_x, num_groups)
+
+def GetConvDescTuple(cd):
+  return (
+    cd.num_input_channels,
+    cd.num_output_channels,
+    cd.kernel_size_y,
+    cd.kernel_size_x,
+    cd.stride_y,
+    cd.stride_x,
+    -cd.padding_y,
+    -cd.padding_x,
+    cd.num_groups
+         )
+
+def GetConvDescTuple2(cd):
+  return (
+    cd.num_output_channels,
+    cd.kernel_size_y,
+    cd.kernel_size_x,
+    cd.stride_y,
+    cd.stride_x,
+    -cd.padding_y,
+    -cd.padding_x,
+         )
+
+def GetOutputShape4D(input_shape, conv_desc):
+  batch_size, image_size_x, image_size_y, num_input_channels = input_shape
+  num_output_channels, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple2(conv_desc)
+  num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
+  num_modules_x = (image_size_x + 2 * padding_x - kernel_size_x) / stride_x + 1
+  return batch_size, num_modules_x, num_modules_y, num_output_channels
+
 class rnd_struct(ct.Structure):
     _fields_ = [('dev_rnd_mults', ct.POINTER(ct.c_uint)), 
                 ('dev_rnd_words', ct.POINTER(ct.c_longlong))]
@@ -245,7 +310,6 @@ class CUDAMatrix(object):
             self.size = self.mat.size
             self.p_mat = ct.pointer(self.mat)
             self.numpy_array = array
-
             _cudamat.init_from_array(self.p_mat, array.ctypes.data_as(ct.POINTER(ct.c_float)), ct.c_int(rows), ct.c_int(cols))
             if copy_to_device:
                 err_code = _cudamat.copy_to_device(self.p_mat)
@@ -259,6 +323,9 @@ class CUDAMatrix(object):
             self.p_mat = ct.pointer(self.mat)
 
         self.T = TransposedCUDAMatrix(self.mat)
+        self.shape4d_ = Shape4D()
+        self.p_shape4d = ct.pointer(self.shape4d_)
+        self.set_shape4d((self.shape[0], 1, 1, self.shape[1]))
 
         # Keep a reference to free device memory in case of a crash.
         self.__free_device_memory = _cudamat.free_device_memory
@@ -283,13 +350,30 @@ class CUDAMatrix(object):
     def shape(self):
         return (self.mat.size[0], self.mat.size[1])
 
+    @property
+    def shape4d(self):
+        return (self.shape4d_.shape[0], self.shape4d_.shape[1],
+                self.shape4d_.shape[2], self.shape4d_.shape[3]) 
+
+    def set_shape4d(self, shape):
+        assert shape[0] * shape[1] * shape[2] * shape[3] == self.shape[0] * self.shape[1], "%s %s" % (shape, self.shape)
+        s1 = ct.c_uint(shape[0])
+        s2 = ct.c_uint(shape[1])
+        s3 = ct.c_uint(shape[2])
+        s4 = ct.c_uint(shape[3])
+
+        err_code = _cudamat.set_shape4d(self.p_shape4d, s1, s2, s3, s4)
+        if err_code:
+            raise generate_exception(err_code)
+
+        return self
+
     def set_shape(self, shape):
         """
         Sets the shape of the array to the given array.
         Highly unsafe method. Does no checking.
         Do not use this unless you know what you are doing.
         """
-
         m = ct.c_uint(shape[0])
         n = ct.c_uint(shape[1])
 
@@ -797,12 +881,14 @@ class CUDAMatrix(object):
         created for storing the result.
         """
         if axis is None:
+          """
           err_code = ct.c_int(0)
           res = _cudamat.sum_all(self.p_mat, ct.byref(err_code))
           if err_code:
               raise generate_exception(err_code)
           return res
-          #return vdot(self, CUDAMatrix.ones.slice(0, self.shape[0]*self.shape[1])) * mult
+          """
+          return vdot(self, CUDAMatrix.ones.slice(0, self.shape[0]*self.shape[1])) * mult
         else:
           return sum(self, axis, target, mult)
 
@@ -1673,14 +1759,30 @@ def empty(shape):
     """
     Creates and returns a new CUDAMatrix with the given shape.
     """
-
     mat = cudamat()
-    err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1]))
+    if len(shape) == 2:
+      err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1]))
+    elif len(shape) == 4:
+      err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1] * shape[2] * shape[3]))
 
     if err_code:
         raise generate_exception(err_code)
 
-    return CUDAMatrix(mat)
+    m = CUDAMatrix(mat)
+
+    if len(shape) == 4:
+      m.set_shape4d(shape)
+
+    m.assign(0)
+    return m
+
+def empty_like(m):
+    """
+    Creates and returns a new CUDAMatrix with the shape same as that of m.
+    """
+    cmat = empty(m.shape)
+    cmat.set_shape4d(m.shape4d)
+    return cmat
 
 def sum(mat, axis, target = None, mult=1.0):
     """

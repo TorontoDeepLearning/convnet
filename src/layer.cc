@@ -52,7 +52,10 @@ Layer::Layer(const config::Layer& config) :
   loss_(NULL),
   performance_(NULL),
   loss_function_(config.loss_function()),
-  performance_metric_(config.performance_metric()) {
+  performance_metric_(config.performance_metric()),
+  loss_function_weight_(config.loss_function_weight()),
+  has_tied_data_(!config.tied_data().empty()),
+  tied_data_layer_name_(config.tied_data()) {
 
   add_or_overwrite_state_[""] = true;
   add_or_overwrite_deriv_[""] = true;
@@ -92,6 +95,14 @@ void Layer::AddOutgoing(Edge* e) {
   } else {
     has_outgoing_to_same_gpu_ = true;
   }
+}
+
+bool Layer::HasTiedData() const {
+  return has_tied_data_;
+}
+
+const string& Layer::GetTiedDataLayerName() const {
+  return tied_data_layer_name_;
 }
 
 void Layer::AllocateMemoryOnOtherGPUs() {
@@ -218,10 +229,13 @@ void Layer::SetSize(int image_size_y, int image_size_x) {
 void Layer::SetupSlices() {
   int start = 0, end;
   const int num_pixels = image_size_y_ * image_size_x_;
+  const int batch_size = state_.GetRows();
   for (auto& kv : slice_channels_) {
     end = start + num_pixels * kv.second;
     state_.GetSlice(state_slices_[kv.first], start, end);
     deriv_.GetSlice(deriv_slices_[kv.first], start, end);
+    state_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second);
+    deriv_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second);
     start = end;
   }
 }
@@ -231,6 +245,8 @@ void Layer::AllocateMemory(int batch_size) {
   Matrix::SetDevice(gpu_id_);
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
+  state_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_);
+  deriv_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_);
 
   if (is_input_) store_dropout_noise_ = false;
   if (store_dropout_noise_) {
@@ -386,10 +402,13 @@ float Layer::GetPerformanceMetric() {
 
 void Layer::ComputeDeriv() {
   loss_->GetLossDerivative(state_, data_, deriv_);
+  if (loss_function_weight_ != 1.0) {
+    deriv_.Mult(loss_function_weight_);
+  }
 }
 
 float Layer::GetLoss() {
-  return loss_->GetLoss(state_, data_);
+  return loss_function_weight_ * loss_->GetLoss(state_, data_);
 }
 
 void Layer::Display() {

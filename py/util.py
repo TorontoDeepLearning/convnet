@@ -1,6 +1,8 @@
 import numpy as np
 import cudamat as cm
 from cudamat import cudamat_conv as cc
+from cudamat import cudamat_conv_gemm as cc_gemm
+import conv_cpu
 import sys
 import h5py
 from time import sleep

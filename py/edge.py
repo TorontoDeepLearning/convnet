@@ -98,6 +98,9 @@ class ConvEdge(EdgeWithWeight):
       self.bias_.free_device_memory()
     self.weights_ = cm.empty((self.num_output_channels_, input_size))
     self.bias_ = cm.empty((1, self.num_output_channels_ * bias_locs))
+    self.conv_spec_ = (self.num_output_channels_, self.kernel_size_,
+                       self.kernel_size_, self.stride_, self.stride_,
+                       self.padding_, self.padding_)
 
   def ComputeUp(self, input_layer, output_layer, overwrite):
     scale_targets = 0 if overwrite else 1
@@ -114,6 +117,15 @@ class ConvEdge(EdgeWithWeight):
     output_state.add_row_vec(b)
     if self.shared_bias_:
       output_state.reshape((batch_size, -1))
+
+  def ComputeUpCPU(self, input_layer):
+    output = conv_cpu.ConvUp(input_layer, self.weights_.asarray(), self.conv_spec_)
+    if shared_bias:
+      b = np.tile(self.bias_.asarray().reshape(-1, 1), self.num_modules_ * self.num_modules_).reshape(1, -1)
+    else:
+      b = self.bias_.asarray().reshape(1, -1)
+    output += b
+    return output
 
 class MaxPoolEdge(Edge):
   def __init__(self, edge_proto):

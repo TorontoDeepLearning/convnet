@@ -1,7 +1,11 @@
 #ifndef MATRIX_H_
 #define MATRIX_H_
 #include <string>
+#ifdef USE_GEMM
+#include "../cudamat/cudamat_conv_gemm.cuh"
+#else
 #include "../cudamat/cudamat_conv.cuh"
+#endif
 #include "../cudamat/cudamat.cuh"
 #include "hdf5.h"
 #include <vector>
@@ -17,6 +21,9 @@ class Matrix {
   
   void Tie(Matrix &m);
   void SetupTranspose();
+  void SetShape4D(int d1, int d2, int d3, int d4);
+  void SetShape4D_like(Matrix& mat);
+  Shape4D& GetShape4D();
   void AllocateGPUMemory(const size_t rows, const size_t cols, const string& name);
   void AllocateGPUMemory(const size_t rows, const size_t cols);
   void AllocateMainMemory(const size_t rows, const size_t cols);
@@ -46,6 +53,7 @@ class Matrix {
   void ReadHDF5(hid_t file, const string& name);
   void AllocateAndReadHDF5(hid_t file, const string& name);
   string GetShapeString();
+  string GetShape4DString();
   cudamat* GetMat() { return &mat_; }
   cudamat* GetMatTranspose() { return &mat_t_; }
   float* GetHostData() { return mat_.data_host; }
@@ -102,53 +110,42 @@ class Matrix {
   static void SoftmaxDistCE(Matrix& state, Matrix& gt, Matrix& output);
   static void HingeLossDeriv(Matrix& state, Matrix& gt, Matrix& deriv,
                              bool quadratic, float margin);
-
+  static void AdagradUpdate(Matrix& adagrad_history, Matrix& gradient, float delta);
+  static void RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor);
   static void Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta);
   static void Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta,
                   bool transpose_a, bool transpose_b);
 
-  static void ConvUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
-                     int num_modules_y, int num_modules_x, int padding,
-                     int stride, int num_input_channels, float scale_targets);
+  static void ConvUp(Matrix& input, Matrix& w, Matrix& output,
+                     ConvDesc conv_desc, float scale_targets);
 
   static void ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                       int image_size_y, int image_size_x, int num_modules_y,
-                       int padding, int stride, int num_input_channels,
-                       float scale_targets);
+                       ConvDesc conv_desc, float scale_targets);
 
   static void ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
-                       int image_size_y, int num_modules_y, int num_modules_x,
-                       int kernel_size, int padding, int stride,
-                       int num_input_channels, int partial_sum,
+                       ConvDesc conv_desc, int partial_sum_y, int partial_sum_x,
                        float scale_targets, float scale_outputs);
 
-  static void LocalUp(Matrix& input, Matrix& w, Matrix& output, int image_size,
-                      int num_modules_y, int num_modules_x, int padding,
-                      int stride, int num_input_channels, float scale_targets);
+  static void LocalUp(Matrix& input, Matrix& w, Matrix& output,
+                      ConvDesc conv_desc, float scale_targets);
 
   static void LocalDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                        int image_size_y, int image_size_x, int num_modules_y,
-                        int padding, int stride, int num_input_channels,
-                        float scale_targets);
+                       ConvDesc conv_desc, float scale_targets);
 
   static void LocalOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
-                        int image_size_y, int num_modules_y, int num_modules_x,
-                        int kernel_size, int padding, int stride,
-                        int num_input_channels,
+                        ConvDesc conv_desc,
                         float scale_targets, float scale_outputs);
 
-  static void ConvMaxPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules, float scale_targets);
+  static void ConvMaxPool(Matrix& input, Matrix& output, ConvDesc conv_desc);
 
   static void ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
-                          Matrix& deriv_input, int kernel_size, int padding,
-                          int stride, int num_modules, float scale_targets);
+                              Matrix& deriv_input, ConvDesc conv_desc,
+                              float scale_targets);
 
-  static void ConvAvgPool(Matrix& input, Matrix& output, int num_input_channels,
-                     int kernel_size, int padding, int stride, int num_modules, float scale_targets);
+  static void ConvAvgPool(Matrix& input, Matrix& output, ConvDesc conv_desc);
 
-  static void ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, int kernel_size, int padding,
-                          int stride, int num_modules, int image_size, float scale_targets);
+  static void ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output,
+                              ConvDesc conv_desc, float scale_targets);
 
   static void ConvResponseNormCrossMap(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
@@ -159,10 +156,9 @@ class Matrix {
     int sizeF, float addScale, float powScale, bool blocked);
 
   static void ConvUpSample(Matrix& input, Matrix& output, int factor,
-                           int input_image_size, float scaleTargets);
+                           float scaleTargets);
   
-  static void ConvDownSample(Matrix& input, Matrix& output, int factor,
-                             int input_image_size);
+  static void ConvDownSample(Matrix& input, Matrix& output, int factor);
 
   static void ConvRGBToYUV(Matrix& input, Matrix& output);
 
@@ -188,10 +184,12 @@ class Matrix {
   static vector<Matrix> ones_, temp_;
   static vector<rnd_struct> rnd_;
   static map<string, long> gpu_memory_;
+  static Matrix rgb_to_yuv_mat_;
 
  private:
   cudamat mat_, mat_t_;
   cudaEvent_t ready_;
+  Shape4D shape_;
   int gpu_id_;
   string name_;
   static int num_boards_;

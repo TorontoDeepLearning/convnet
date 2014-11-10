@@ -2134,13 +2134,20 @@ __global__ void kRNormUndo2(float* outGrads, float* denoms, float* inputs, float
  * target:      (numFilters, imgPixels, numImages)
  */
 void convLocalMaxUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs, cudamat* target,
-                      int subsX, int startX, int strideX, int outputsX, float scaleTargets, float scaleOutput) {
-    int outputs = outputsX * outputsX;
-    int numImages = images->size[0];
-    int numFilters = maxGrads->size[1] / outputs;
-    int imgPixels = images->size[1] / numFilters;
-    assert(images->size[1] == numFilters * imgPixels);
-    int imgSize = int(sqrt(imgPixels));
+                      Shape4D images_shape, Shape4D maxGrads_shape, ConvDesc conv_desc,
+                      float scaleTargets, float scaleOutput) {
+    int outputsX   = maxGrads_shape.shape[1];
+    int outputsY   = maxGrads_shape.shape[2];
+    int outputs    = outputsX * outputsY;
+    int numImages  = images_shape.shape[0];
+    int numFilters = maxGrads_shape.shape[3];
+    int imgSizeX   = images_shape.shape[1];
+    int imgSizeY   = images_shape.shape[2];
+    int imgPixels  = imgSizeY * imgSizeX;
+    int imgSize    = imgSizeX;
+    int startX     = conv_desc.padding_x;
+    int subsX      = conv_desc.kernel_size_x;
+    int strideX    = conv_desc.stride_x;  // TODO : Rect
     
     assert(imgSize * imgSize == imgPixels);
     assert(maxGrads->size[1] == numFilters * outputs);
@@ -2229,14 +2236,18 @@ void convLocalMaxUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs, cuda
  * target:      (numFilters, imgPixels, numImages)
  */
 void convLocalAvgUndo(cudamat* avgGrads, cudamat* target,
-                      int subsX, int startX, int strideX, int outputsX, int imgSize,
-                      float scaleTargets, float scaleOutput) {
-    int numImages = avgGrads->size[0];
-
-    int outputs = outputsX * outputsX;
-    //int imgPixels = imgSize * imgSize;
-    int numFilters = avgGrads->size[1] / outputs;
-    assert(avgGrads->size[1] == numFilters * outputs);
+                      Shape4D avgGrads_shape, Shape4D target_shape,
+                      ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
+    int numImages  = avgGrads_shape.shape[0];
+    int outputsX   = avgGrads_shape.shape[1]; 
+    //int outputsY   = avgGrads_shape.shape[2]; 
+    int numFilters = avgGrads_shape.shape[3];
+    int imgSizeX   = target_shape.shape[1];
+    //int imgSizeY   = target_shape.shape[2];
+    int imgSize    = imgSizeX;
+    int startX     = conv_desc.padding_x;
+    int subsX      = conv_desc.kernel_size_x;
+    int strideX    = conv_desc.stride_x;  // TODO : Rect
 
     assert(!target->is_trans);
     assert(!avgGrads->is_trans);
@@ -3100,9 +3111,10 @@ public:
  */
 
 template<class Agg, int B_Y, int B_X, int imgsPerThread, int filtersPerThread, bool checkCaseBounds>
-__global__ void kLocalPool(float* imgs, float* target, const int imgSize, const int numFilters,
+__global__ void kLocalPool(float* imgs, float* target, const int imgSizeY,
+                           const int imgSizeX, const int numFilters,
                            const int numImages, const int subsX, const int startX, const int strideX,
-                           const int outputsX, Agg agg) {
+                           const int outputsY, const int outputsX, Agg agg) {
     const int numImgBlocks = DIVUP(numImages,B_X*imgsPerThread);
     const int numFilterBlocks = DIVUP(numFilters, B_Y*filtersPerThread);
     const int outputIdxX = blockIdx.x / numImgBlocks;
@@ -3115,8 +3127,8 @@ __global__ void kLocalPool(float* imgs, float* target, const int imgSize, const 
     }
     
     const int outputIdx = outputIdxY * outputsX + outputIdxX;
-    const int numOutputs = outputsX * outputsX;
-    const int imgPixels = imgSize * imgSize;
+    const int numOutputs = outputsY * outputsX;
+    const int imgPixels = imgSizeY * imgSizeX;
     
     const int startImgPxX = startX + outputIdxX * strideX;
     const int startImgPxY = startX + outputIdxY * strideX;
@@ -3136,12 +3148,12 @@ __global__ void kLocalPool(float* imgs, float* target, const int imgSize, const 
     
     const int loopStartY = MAX(0, startImgPxY);
     const int loopStartX = MAX(0, startImgPxX);
-    const int loopEndY = MIN(imgSize, startImgPxY + subsX);
-    const int loopEndX = MIN(imgSize, startImgPxX + subsX);
+    const int loopEndY = MIN(imgSizeY, startImgPxY + subsX);
+    const int loopEndX = MIN(imgSizeX, startImgPxX + subsX);
     const int regionSize = (loopEndY - loopStartY) * (loopEndX - loopStartX);
     for (int y = loopStartY; y < loopEndY; y++) {
         for (int x = loopStartX; x < loopEndX; x++) {
-            const int imgPx = y * imgSize + x;
+            const int imgPx = y * imgSizeX + x;
             #pragma unroll
             for (int i = 0; i < imgsPerThread; i++) {
                 if (!checkCaseBounds || imgIdx + i * B_X < numImages) {
@@ -3314,9 +3326,10 @@ void convPoolCrossMap(cudamat* images, cudamat* target, const int startF, const 
  * To be used when the stride is 1 and the pooling region is fairly large.
  */
 template<class Agg, int B_X, int imgsPerThread, int filtersPerThread, bool checkCaseBounds>
-__global__ void kLocalPool2(float* imgs, float* target, const int imgSize, const int numFilters,
-                           const int numImages, const int subsX, const int startX,
-                           const int outputsX, Agg agg) {
+__global__ void kLocalPool2(float* imgs, float* target, const int imgSizeY,
+                            const int imgSizeX, const int numFilters,
+                            const int numImages, const int subsX, const int startX, const int strideX,
+                            const int outputsY, const int outputsX, Agg agg) {
     __shared__ float shImgs[filtersPerThread][B_X*imgsPerThread];
     const int numImgBlocks = DIVUP(numImages,B_X*imgsPerThread);
     const int numFilterBlocks = numFilters/(filtersPerThread);
@@ -3326,8 +3339,8 @@ __global__ void kLocalPool2(float* imgs, float* target, const int imgSize, const
     const int blockFilterIdx = (blockIdx.y % numFilterBlocks) * filtersPerThread;
     
 //    const int blockOutputIdx = blockOutputY * outputsX + blockOutputX;
-    const int numOutputs = outputsX * outputsX;
-    const int imgPixels = imgSize * imgSize;
+    const int numOutputs = outputsY * outputsX;
+    const int imgPixels = imgSizeY * imgSizeX;
     
     const int tidx = threadIdx.y * B_X + threadIdx.x;
     const int loadY = tidx / 32, loadX = tidx % 32;
@@ -3351,8 +3364,8 @@ __global__ void kLocalPool2(float* imgs, float* target, const int imgSize, const
 
     const int loopStartY = MAX(startImgPxY, 0);
     const int loopStartX = MAX(startImgPxX, 0);
-    const int loopEndY = MIN(imgSize, endImgPxY + 3);
-    const int loopEndX = MIN(imgSize, endImgPxX + 3);
+    const int loopEndY = MIN(imgSizeY, endImgPxY + 3);
+    const int loopEndX = MIN(imgSizeX, endImgPxX + 3);
     
     const int imgIdx = blockImgIdx + threadIdx.x;
     
@@ -3372,7 +3385,7 @@ __global__ void kLocalPool2(float* imgs, float* target, const int imgSize, const
         const bool isInY = y >= myStartImgPxY && y < myEndImgPxY ;
         for (int x = loopStartX; x < loopEndX; x++) {
             // Load a pixel
-            const int px = y * imgSize + x;
+            const int px = y * imgSizeX + x;
             #pragma unroll
             for (int ly = 0; ly < filtersPerThread; ly += B_X/2) {
                 if (filtersPerThread % (B_X/2) == 0 || ly + loadY < filtersPerThread) {
@@ -3421,22 +3434,21 @@ __global__ void kLocalPool2(float* imgs, float* target, const int imgSize, const
  * target:      (numFilters, outputs, numImages)
  */
 template<class Pooler>
-void convLocalPool(cudamat* images, cudamat* target, int numFilters,
-                   int subsX, int startX, int strideX, int outputsX, Pooler pooler) {
-    int numImages = images->size[0];
-    int imgPixels = images->size[1] / numFilters;
-    assert(images->size[1] == numFilters * imgPixels);
-    int imgSize = int(sqrt(imgPixels));
-    assert(imgSize * imgSize == imgPixels);
+void convLocalPool(cudamat* images, cudamat* target, Shape4D images_shape,
+                   Shape4D targets_shape, ConvDesc conv_desc, Pooler pooler) {
+    int numFilters = conv_desc.num_input_channels;
+    int imgSizeY   = images_shape.shape[2];
+    int imgSizeX   = images_shape.shape[1];
+    int numImages  = images_shape.shape[0];
+    int outputsY   = targets_shape.shape[2];
+    int outputsX   = targets_shape.shape[1];
+    int startX     = conv_desc.padding_x;
+    int subsX      = conv_desc.kernel_size_x;
+    int strideX    = conv_desc.stride_x;  // TODO : Rect
     
     assert(!images->is_trans);
     assert(!target->is_trans);
-    //assert(images.isContiguous());
-//    assert(numFilters % 4 == 0);
-//    assert(numImages % 128 == 0);
     cudaStream_t stream = 0;  // NVMatrix::getDefaultStream();
-    //int outputs = outputsX * outputsX;
-    //target.resize(numFilters*outputs, numImages);
 
     if (strideX == 1 && subsX >= 6) {
         // NOTE: this part has not been optimized for Kepler
@@ -3447,91 +3459,106 @@ void convLocalPool(cudamat* images, cudamat* target, int numFilters,
         assert((imgsPerThread * bx) % 32 == 0);
         assert(numFilters % filtersPerThread == 0);
         dim3 threads(bx, 16);
-        dim3 blocks(DIVUP(outputsX, 4) * DIVUP(numImages, bx*imgsPerThread), DIVUP(outputsX, 4) * numFilters / filtersPerThread);
-//        printf("threads: %dx%d, blocks: %dx%d, imgSize: %d, numFilters: %d, numImages: %d, subsX: %d, startX: %d, outputsX: %d\n",
-//                threads.y, threads.x, blocks.y, blocks.x, imgSize, numFilters, numImages, subsX, startX, outputsX);
+        dim3 blocks(DIVUP(outputsX, 4) * DIVUP(numImages, bx*imgsPerThread),
+                    DIVUP(outputsY, 4) * numFilters / filtersPerThread);
         if (imgsPerThread == 8) {
             if (filtersPerThread == 1) {
                  if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 1, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 1, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 1, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 1, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 1, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 1, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 2) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 2, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 2, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 2, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 2, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 2, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 2, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 3) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 3, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 3, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 3, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 3, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 3, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 3, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 4) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 4, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 4, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 4, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 8, 4, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 8, 4, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 8, 4, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             }
         } else if (imgsPerThread == 4) {
             if (filtersPerThread == 1) {
                  if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 1, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 1, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 1, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 1, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 1, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 1, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 2) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 2, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 2, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 2, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 2, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 2, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 2, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 3) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 3, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 3, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 3, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 3, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 3, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 3, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else if (filtersPerThread == 4) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 4, true>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 4, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 4, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool2<Pooler, 8, 4, 4, false>, cudaFuncCachePreferShared);
-                    kLocalPool2<Pooler, 8, 4, 4, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, outputsX, pooler);
+                    kLocalPool2<Pooler, 8, 4, 4, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             }
         }
@@ -3540,71 +3567,83 @@ void convLocalPool(cudamat* images, cudamat* target, int numFilters,
         int imgsPerThread = numImages % 128 == 0 ? 4 : numImages % 64 == 0 ? 2 : 1;
         bool checkCaseBounds = numImages % (32*imgsPerThread) != 0;
         dim3 threads(32, 4);
-        dim3 blocks(DIVUP(numImages,32*imgsPerThread) * outputsX, DIVUP(numFilters, 4 * filtersPerThread) * outputsX);
+        dim3 blocks(DIVUP(numImages,32*imgsPerThread) * outputsX, DIVUP(numFilters, 4 * filtersPerThread) * outputsY);
         if (imgsPerThread == 4) {
             if (filtersPerThread == 1) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 4, 1, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 4, 1, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 4, 1, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 4, 1, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 4, 1, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 4, 1, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 4, 4, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 4, 4, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 4, 4, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 4, 4, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 4, 4, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 4, 4, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             }
         } else if (imgsPerThread == 2) {
             if (filtersPerThread == 1) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 2, 1, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 2, 1, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 2, 1, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 2, 1, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 2, 1, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 2, 1, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 2, 4, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 2, 4, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 2, 4, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 2, 4, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 2, 4, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 2, 4, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             }
         } else {
             if (filtersPerThread == 1) {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 1, 1, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 1, 1, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 1, 1, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 1, 1, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 1, 1, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 1, 1, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             } else {
                 if (checkCaseBounds) {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 1, 4, true>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 1, 4, true><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 1, 4, true><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 } else {
                     cudaFuncSetCacheConfig(kLocalPool<Pooler, 4, 32, 1, 4, false>, cudaFuncCachePreferL1);
-                    kLocalPool<Pooler, 4, 32, 1, 4, false><<<blocks, threads, 0, stream>>>(images->data_device, target->data_device,
-                                                                      imgSize, numFilters, numImages, subsX, startX, strideX, outputsX, pooler);
+                    kLocalPool<Pooler, 4, 32, 1, 4, false><<<blocks, threads, 0, stream>>>(
+                        images->data_device, target->data_device,
+                        imgSizeY, imgSizeX, numFilters, numImages, subsX, startX, strideX, outputsY, outputsX, pooler);
                 }
             }
         }
@@ -3644,41 +3683,63 @@ void ContrastNormUndo(cudamat* outGrads, cudamat* denoms, cudamat* meanDiffs, cu
 }
 
 // Pooling.
-void MaxPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX, float scaleTargets){
-  MaxPooler mpooler;
-  convLocalPool<MaxPooler>(images, targets, numFilters, subsX, startX, strideX, outputsX, mpooler);
+void MaxPool(cudamat* images, cudamat* targets, Shape4D* images_shape,
+             Shape4D* targets_shape, ConvDesc conv_desc){
+  MaxPooler pooler;
+  convLocalPool<MaxPooler>(images, targets, *images_shape, *targets_shape,
+                           conv_desc, pooler);
 }
 
-void AvgPool(cudamat* images, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX, float scaleTargets){
+void AvgPool(cudamat* images, cudamat* targets, Shape4D* images_shape,
+             Shape4D* targets_shape, ConvDesc conv_desc) {
+  AvgPooler pooler;
+  convLocalPool<AvgPooler>(images, targets, *images_shape, *targets_shape,
+                           conv_desc, pooler);
+}
+
+void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
+                 cudamat* targets, Shape4D* images_shape, Shape4D* maxGrads_shape,
+                 ConvDesc conv_desc, float scaleTargets) {
+  convLocalMaxUndo(images, maxGrads, maxActs, targets, *images_shape,
+                   *maxGrads_shape, conv_desc, scaleTargets, 1);
+}
+
+void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, Shape4D* avgGrads_shape,
+                 Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets) {
+  convLocalAvgUndo(avgGrads, targets, *avgGrads_shape, *targets_shape, conv_desc,
+                   scaleTargets, 1);
+}
+
+void UpSample(cudamat* images, cudamat* targets, Shape4D* images_shape,
+              Shape4D* targets_shape, int factor, float scaleTargets) { 
+  ConvDesc conv_desc;
+  conv_desc.kernel_size_y = factor;
+  conv_desc.kernel_size_x = factor;
+  conv_desc.stride_y = factor;
+  conv_desc.stride_x = factor;
+  conv_desc.padding_y = 0;
+  conv_desc.padding_x = 0;
+  conv_desc.num_input_channels = images_shape->shape[3];
+  conv_desc.num_output_channels = targets_shape->shape[3];
+  conv_desc.num_groups = 1;
+  convLocalAvgUndo(images, targets, *images_shape, *targets_shape, conv_desc,
+                   scaleTargets, factor * factor);
+}
+
+void DownSample(cudamat* images, cudamat* targets, Shape4D* images_shape, Shape4D* targets_shape, int factor) {
   AvgPooler pooler = AvgPooler();
-  convLocalPool<AvgPooler>(images, targets, numFilters, subsX, startX, strideX, outputsX, pooler);
-}
-/*
-void ProbMaxPool(cudamat* images, cudamat* rnd, cudamat* targets, int numFilters, int subsX,	int startX,	int strideX, int outputsX){
-  ProbMaxPooler mpooler;
-  convLocalProbPool<ProbMaxPooler>(images, rnd, targets, numFilters, subsX, startX, strideX, outputsX, mpooler);
-}
-*/
-
-
-void MaxPoolUndo(cudamat* images, cudamat* maxGrads, cudamat* maxActs, cudamat* targets, int subsX, int startX, int strideX, int outputsX, float scaleTargets){
-  convLocalMaxUndo(images, maxGrads, maxActs, targets, subsX, startX, strideX, outputsX, scaleTargets, 1);
-}
-
-void AvgPoolUndo(cudamat* avgGrads, cudamat* targets, int subsX, int startX, int strideX, int outputsX, int imgSize, float scaleTargets) {
-  convLocalAvgUndo(avgGrads, targets, subsX, startX, strideX, outputsX, imgSize, scaleTargets, 1);
-}
-
-void UpSample(cudamat* images, cudamat* targets, int factor, int input_image_size, float scaleTargets) { 
-  convLocalAvgUndo(images, targets, factor, 0, factor, input_image_size,
-                   factor * input_image_size, scaleTargets, factor * factor);
-}
-
-void DownSample(cudamat* images, cudamat* targets, int factor, int input_image_size) {
-  AvgPooler pooler = AvgPooler();
-  int num_filters = images->size[1] / (input_image_size * input_image_size);
-  convLocalPool<AvgPooler>(images, targets, num_filters, factor, 0, factor,
-                           input_image_size / factor, pooler);
+  ConvDesc conv_desc;
+  conv_desc.kernel_size_y = factor;
+  conv_desc.kernel_size_x = factor;
+  conv_desc.stride_y = factor;
+  conv_desc.stride_x = factor;
+  conv_desc.padding_y = 0;
+  conv_desc.padding_x = 0;
+  conv_desc.num_input_channels = images_shape->shape[3];
+  conv_desc.num_output_channels = targets_shape->shape[3];
+  conv_desc.num_groups = 1;
+  convLocalPool<AvgPooler>(images, targets, *images_shape, *targets_shape,
+                           conv_desc, pooler);
 }
 
 void RGBToYUV(cudamat* images, cudamat* targets) {

@@ -73,6 +73,38 @@ struct cudamat_sparse {
     int nnz;
 };
 
+typedef struct Shape4D {
+  int shape[4];
+} Shape4D;
+
+typedef struct ConvDesc {
+  int num_input_channels;
+  int num_output_channels;
+  int kernel_size_y;
+  int kernel_size_x;
+  int stride_y;
+  int stride_x;
+  int padding_y;
+  int padding_x;
+  int num_groups;
+} ConvDesc;
+
+typedef struct Conv3DDesc {
+  int num_output_channels;
+  int num_input_channels;
+  int kernel_size_y;
+  int kernel_size_x;
+  int kernel_size_t;
+  int stride_y;
+  int stride_x;
+  int stride_t;
+  int padding_y;
+  int padding_x;
+  int padding_t;
+  int num_groups;
+} Conv3DDesc;
+
+
 const char* get_last_cuda_error();
 int cuda_record_event(cudaEvent_t* t);
 int cuda_synchronize_event(cudaEvent_t* t);
@@ -110,6 +142,7 @@ int copy_transpose_big_matrix(cudamat* source, cudamat* target);
 int free_device_memory(cudamat* mat);
 int free_device_memory_bbox(cudamat_bbox* mat);
 int set_shape(cudamat* mat, unsigned int m, unsigned int n);
+int set_shape4d(Shape4D* shape, unsigned int s1, unsigned int s2, unsigned s3, unsigned s4);
 int reshape(cudamat* mat, int m, int n);
 int get_slice(cudamat* source, cudamat* target, unsigned int first_col, unsigned int last_col);
 int get_vector_slice(cudamat* source, cudamat* target, unsigned int first_ind, unsigned int last_ind);
@@ -229,7 +262,8 @@ int extract_patches(cudamat* images, cudamat* patches, cudamat* width_offset,
 int rectify_bounding_boxes(cudamat* boxes, cudamat* width_offset,
                            cudamat* height_offset, cudamat* flip,
                            int patch_width, int patch_height);
-int adagrad(cudamat* w, cudamat* grad, cudamat* sum_grad_sq, float decay, float epsilon);
+int adagrad(cudamat* history, cudamat* grad, float delta);
+int rms_prop(cudamat* history, cudamat* grad, float factor);
 int apply_grad_bbox(
     cudamat* mat, cudamat_bbox* bbox, cudamat* indices, cudamat* width_offset,
     cudamat* height_offset, cudamat* target, int width, int height, int depth,

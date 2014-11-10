@@ -21,12 +21,9 @@ class LocalEdge : public EdgeWithWeight {
   virtual void SetImageSize(int image_size_y, int image_size_x);
   virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
 
-  int GetKernelSize() const { return kernel_size_; }
-  int GetStride() const { return stride_; }
-  int GetPadding() const { return padding_; }
+  ConvDesc GetConvDesc() const { return conv_desc_; }
  
  private:
-
-  int kernel_size_, stride_, padding_;
+  ConvDesc conv_desc_;
 };
 #endif

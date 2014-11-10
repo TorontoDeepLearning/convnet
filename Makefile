@@ -9,6 +9,7 @@ LOCAL_BIN=$(HOME)/local/bin
 CUDA_ROOT=/pkgs_local/cuda-5.5
 
 USE_MPI=no
+USE_GEMM_KERNELS=yes
 #####################################
 
 CUDA_INC=$(CUDA_ROOT)/include
@@ -17,12 +18,18 @@ CUDA_LIB=$(CUDA_ROOT)/lib64
 CXX = g++
 LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L./cudamat
 CPPFLAGS = -I$(INC) -I$(CUDA_INC) -I$(SRC) -Ideps
-LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudamat_conv -lcudart -Wl,-rpath='$$ORIGIN/../cudamat'
+LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudart -Wl,-rpath='$$ORIGIN/../cudamat'
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare -fopenmp
 
 ifeq ($(USE_MPI), yes)
 	CPPFLAGS += -DUSE_MPI
 	CXX = mpic++.mpich2
+endif
+ifeq ($(USE_GEMM_KERNELS), yes)
+	CPPFLAGS += -DUSE_GEMM
+	LINKFLAGS += -lcudamat_conv_gemm
+else
+	LINKFLAGS += -lcudamat_conv
 endif
 
 SRC=src

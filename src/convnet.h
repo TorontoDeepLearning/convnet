@@ -103,6 +103,9 @@ class ConvNet {
   /** Topologically sort layers.*/
   void Sort();
 
+  /** Get a mini-batch from dataset.*/
+  void GetBatch(DataHandler& dataset);
+
   /** Forward propagate one layer.
    * Passes up input through the edge and updates the state of the output.
    * @param input the input layer.
@@ -188,6 +191,9 @@ class ConvNet {
   Matrix parameters_backup_;
   int polyak_queue_size_, polyak_index_;
   bool polyak_queue_full_;
+
+  // Data tying.
+  map<Layer*, Layer*> input_tied_data_layers_, output_tied_data_layers_;
 };
 
 #endif

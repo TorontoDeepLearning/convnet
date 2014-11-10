@@ -13,6 +13,12 @@ Optimizer* Optimizer::ChooseOptimizer(const config::Optimizer& config) {
     case config::Optimizer::LBFGS :
       opt = new LBFGSOptimizer(config);
       break;
+    case config::Optimizer::ADAGRAD_SGD:
+      opt = new AdagradSGDOptimizer(config);
+      break;
+    case config::Optimizer::RMSPROP_SGD:
+      opt = new RMSPropSGDOptimizer(config);
+      break;
     default:
       cerr << "Undefined optimizer." << endl;
       exit(1);
@@ -69,6 +75,9 @@ float Optimizer::GetDecayedEpsilon() const {
   return decayed_epsilon;
 }
 
+void Optimizer::NotifyStart(Matrix& parameter) {
+}
+
 SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
   Optimizer(optimizer_config),
   gradient_clip_(optimizer_config.gradient_clip()),
@@ -76,7 +85,7 @@ SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
   final_momentum_(optimizer_config.final_momentum()),
   momentum_transition_timescale_(
       optimizer_config.momentum_transition_timescale()),
-  other_way_(true) {}
+  nesterov_momentum_(optimizer_config.nesterov_momentum()) {}
 
 void SGDOptimizer::AllocateMemory(const int rows, const int cols) {
   gradient_history_.AllocateGPUMemory(rows, cols, "optimizer");
@@ -109,27 +118,114 @@ float SGDOptimizer::GetMomentum() const {
   }
 }
 
+void SGDOptimizer::NotifyStart(Matrix& parameter) {
+  if (nesterov_momentum_) {
+    gradient_history_.Mult(GetMomentum());
+    parameter.Add(gradient_history_, -1);
+  }
+}
+
 void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
   if (step_ >= start_optimization_after_) {
-    float epsilon = GetDecayedEpsilon(), momentum = GetMomentum();
+    float epsilon = GetDecayedEpsilon();
 
-    gradient_history_.Mult(momentum);
-   
     // L2 decay.
-    if (l2_decay_ > 0) gradient_history_.Add(parameter, l2_decay_ * (other_way_ ? epsilon : 1));
+    if (l2_decay_ > 0) gradient.Add(parameter, l2_decay_);
    
     // Clip gradients to prevent explosions.
     if (gradient_clip_ > 0) {
       gradient.UpperBoundMod(gradient_clip_);
     }
 
-    if (other_way_) {
-      gradient_history_.Add(gradient, epsilon);
-      parameter.Add(gradient_history_, -1);
+    gradient.Mult(epsilon);
+
+    if (!nesterov_momentum_) gradient_history_.Mult(GetMomentum());
+
+    gradient_history_.Add(gradient);
+    if (nesterov_momentum_) {
+      parameter.Add(gradient, -1);
     } else {
-      gradient_history_.Add(gradient, 1.0);
-      parameter.Add(gradient_history_, -epsilon);
+      parameter.Add(gradient_history_, -1);
     }
+    ApplyConstraints(parameter);
+  }
+  step_++;
+}
+
+AdagradSGDOptimizer::AdagradSGDOptimizer(const config::Optimizer& optimizer_config) :
+  SGDOptimizer(optimizer_config),
+  adagrad_delta_(optimizer_config.adagrad_delta()) {}
+
+void AdagradSGDOptimizer::AllocateMemory(const int rows, const int cols) {
+  SGDOptimizer::AllocateMemory(rows, cols);
+  adagrad_history_.AllocateGPUMemory(rows, cols, "optimizer");
+  adagrad_history_.Set(adagrad_delta_);
+}
+
+void AdagradSGDOptimizer::LoadParameters(hid_t file, const string& prefix) {
+  SGDOptimizer::LoadParameters(file, prefix);
+  stringstream ss;
+  ss << prefix << "_" << "adagrad_history";
+  adagrad_history_.ReadHDF5(file, ss.str());
+}
+
+void AdagradSGDOptimizer::SaveParameters(hid_t file, const string& prefix) {
+  SGDOptimizer::SaveParameters(file, prefix);
+  stringstream ss;
+  ss << prefix << "_" << "adagrad_history";
+  gradient_history_.WriteHDF5(file, ss.str());
+}
+
+void AdagradSGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
+  Matrix::AdagradUpdate(adagrad_history_, gradient, adagrad_delta_);
+  gradient.Divide(adagrad_history_);
+  gradient.Mult(sqrt(step_ + 1));
+  SGDOptimizer::Optimize(gradient, parameter);
+}
+
+RMSPropSGDOptimizer::RMSPropSGDOptimizer(const config::Optimizer& optimizer_config) :
+  SGDOptimizer(optimizer_config),
+  factor_(optimizer_config.rms_prop_factor()) {}
+
+void RMSPropSGDOptimizer::AllocateMemory(const int rows, const int cols) {
+  SGDOptimizer::AllocateMemory(rows, cols);
+  rms_history_.AllocateGPUMemory(rows, cols, "optimizer");
+  rms_history_.Set(1);
+}
+
+void RMSPropSGDOptimizer::LoadParameters(hid_t file, const string& prefix) {
+  SGDOptimizer::LoadParameters(file, prefix);
+  stringstream ss;
+  ss << prefix << "_" << "rms_history";
+  rms_history_.ReadHDF5(file, ss.str());
+}
+
+void RMSPropSGDOptimizer::SaveParameters(hid_t file, const string& prefix) {
+  SGDOptimizer::SaveParameters(file, prefix);
+  stringstream ss;
+  ss << prefix << "_" << "rms_history";
+  gradient_history_.WriteHDF5(file, ss.str());
+}
+
+void RMSPropSGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
+  if (step_ >= start_optimization_after_) {
+    float epsilon = GetDecayedEpsilon(), momentum = GetMomentum();
+    gradient_history_.Mult(momentum);
+    
+    // L2 decay.
+    if (l2_decay_ > 0) gradient.Add(parameter, l2_decay_);
+    
+    // Clip gradients to prevent explosions.
+    if (gradient_clip_ > 0) {
+      gradient.UpperBoundMod(gradient_clip_);
+    }
+
+    // Divide by running avg weight norm.
+    Matrix::RMSPropUpdate(rms_history_, gradient, factor_);
+    gradient.Divide(rms_history_);
+    
+    gradient_history_.Add(gradient, epsilon);
+    parameter.Add(gradient_history_, -1);
     ApplyConstraints(parameter);
   }
   step_++;
