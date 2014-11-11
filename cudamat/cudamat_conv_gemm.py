@@ -41,3 +41,15 @@ def AvgPoolUndo(avgGrads, targets, conv_desc, scaleTargets=0):
   _ConvNet.AvgPoolUndoGemm(avgGrads.p_mat, targets.p_mat, avgGrads.p_shape4d,
                        targets.p_shape4d, conv_desc, ct.c_float(scaleTargets))
 
+def ResponseNormCrossMap(images, targets, sizeF, addScale, powScale, blocked):
+  _, _, _, num_filters = images.shape4d
+  _ConvNet.ResponseNormCrossMapGemm(
+    images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
+    ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
+
+def ResponseNormCrossMapUndo(derivs, images, targets, sizeF, addScale, powScale, blocked):
+  _, _, _, num_filters = images.shape4d
+  _ConvNet.ResponseNormCrossMapUndoGemm(
+    derivs.p_mat, images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
+    ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
+

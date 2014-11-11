@@ -35,7 +35,7 @@ def main():
   means_file = sys.argv[3]
   model = cn.ConvNet(pbtxt_file)
   model.Load(params_file)
-  model.SetNormalizer(means_file, 224)
+  model.SetNormalizer(means_file, 224, 224)
   print model.GetLayerNames()
   
   # Random inputs.

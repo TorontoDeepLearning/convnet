@@ -34,14 +34,14 @@ class ConvNet(object):
 
     for l in self.layer_:
       if l.IsInput():
-        image_size = l.GetSize()
+        image_size_y, image_size_x = l.GetSize()
       else:
         # Incoming edge num_modules should be set because self.layer_ is sorted.
-        image_size = l.incoming_edge_[0].GetNumModules()
-      l.SetSize(image_size)
+        image_size_y, image_size_x = l.incoming_edge_[0].GetNumModules()
+      l.SetSize(image_size_y, image_size_x)
 
       for e in l.outgoing_edge_:
-        e.SetImageSize(image_size)
+        e.SetImageSize(image_size_y, image_size_x)
 
     for l in self.layer_:
       self.layer_name_dict_[l.GetName()] = l
@@ -63,7 +63,7 @@ class ConvNet(object):
       mark[GetName(e)] = False
 
     for l in model.layer:
-      if l.is_input:
+      if len(incoming_edge[l.name]) == 0:
         S.append(l)
     while len(S) > 0:
       n = S.pop()
@@ -111,12 +111,13 @@ class ConvNet(object):
   def GetState(self, layer_name):
     return self.layer_name_dict_[layer_name].GetState().asarray()
 
-  def SetNormalizer(self, means_file, image_size=1):
+  def SetNormalizer(self, means_file, image_size_y, image_size_x):
     f = h5py.File(means_file)
+    num_pixels = image_size_x * image_size_y
     mean = f['pixel_mean'].value.reshape(1, -1)
     std  = f['pixel_std'].value.reshape(1, -1)
-    self.mean_ = cm.CUDAMatrix(np.tile(mean, (image_size**2, 1)))
-    self.std_  = cm.CUDAMatrix(np.tile(std,  (image_size**2, 1)))
+    self.mean_ = cm.CUDAMatrix(np.tile(mean, (num_pixels, 1)))
+    self.std_  = cm.CUDAMatrix(np.tile(std,  (num_pixels, 1)))
     self.mean_.reshape((1, -1))
     self.std_.reshape((1, -1))
     self.normalizer_set_ = True

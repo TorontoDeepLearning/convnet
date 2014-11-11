@@ -67,7 +67,6 @@ void AvgPoolUndoGemm(cudamat* avgGrads, cudamat* targets,
                      Shape4D* avgGrads_shape, Shape4D* targets_shape,
                      ConvDesc conv_desc, float scaleTargets);
 
-
 void UpSampleGemm(cudamat* images, cudamat* targets, Shape4D* images_shape,
               Shape4D* targets_shape, int factor, float scaleTargets);
  
@@ -81,7 +80,6 @@ void ResponseNormCrossMapGemm(
 void ResponseNormCrossMapUndoGemm(
   cudamat* outGrads, cudamat* inputs, cudamat* targets,
   int numFilters, int sizeF, float addScale, float powScale, bool blocked);
-
 
 #ifdef __cplusplus
 }

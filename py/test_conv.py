@@ -8,34 +8,6 @@ test_gemm = True
 def DivUp(a, b):
   return (a + b - 1) / b
 
-class TestConvNet(ConvNet):
-  def __init__(self, model_pbtxt):
-    super(TestConvNet, self).__init__(model_pbtxt)
-
-  def TestFprop(self, input_data, cpu_check=False):
-    batch_size = input_data.shape[0]
-    if self.batch_size_ != batch_size:
-      self.SetBatchSize(batch_size)
-
-    for l in self.layer_:
-      overwrite = True
-      if cpu_check:
-        cpu_out = 0
-      for e in l.incoming_edge_:
-        e.ComputeUp(e.GetSource(), l, overwrite)
-        if cpu_check:
-          cpu_out += e.ComputeUpCPU(e.GetSource().asarray())
-        overwrite = False
-      if cpu_check:
-        Check(Diff(l.GetState().asarray(), cpu_out))
-      if l.IsInput():
-        state = l.GetState()
-        state.overwrite(input_data)
-        self.Normalize(state)
-        l.ApplyDropout()
-      else:
-        l.ApplyActivation()
-
 def TestConvUp(images_shape, conv_desc):
   filters_shape = (conv_desc.num_output_channels, conv_desc.kernel_size_x, conv_desc.kernel_size_y, conv_desc.num_input_channels)
   output_shape = cm.GetOutputShape4D(images_shape, conv_desc)

@@ -191,6 +191,11 @@ def GetConvDescTuple2(cd):
     -cd.padding_y,
     -cd.padding_x,
          )
+def GetOutputShape(image_size_y, image_size_x, conv_desc):
+  _, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple2(conv_desc)
+  num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
+  num_modules_x = (image_size_x + 2 * padding_x - kernel_size_x) / stride_x + 1
+  return num_modules_y, num_modules_x
 
 def GetOutputShape4D(input_shape, conv_desc):
   batch_size, image_size_x, image_size_y, num_input_channels = input_shape
