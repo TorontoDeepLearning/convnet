@@ -34,7 +34,7 @@ class ConvNet(object):
 
     for l in self.layer_:
       if l.IsInput():
-        image_size = self.model_.patch_size
+        image_size = l.GetSize()
       else:
         # Incoming edge num_modules should be set because self.layer_ is sorted.
         image_size = l.incoming_edge_[0].GetNumModules()

@@ -1,0 +1,18 @@
+output_file: "output.h5"
+
+feature {
+  layer: "output"
+}
+feature {
+  layer: "hidden2"
+}
+
+input {
+  data_config {
+    layer_name: "input"
+    file_pattern: "../data/mnist.h5"
+    dataset_name: "test"
+    data_type: HDF5
+  }
+  batch_size : 100
+}
