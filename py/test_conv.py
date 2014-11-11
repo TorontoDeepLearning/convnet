@@ -188,6 +188,45 @@ def TestAvgPoolUndo(images_shape, conv_desc):
   targets_gpu.free_device_memory()
   return diff
 
+def TestResponseNormCrossMap(images_shape, numF, add_scale, pow_scale, blocked):
+  images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  images_gpu = cm.CUDAMatrix(images)
+  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+  images_gpu.set_shape4d(images_shape)
+  targets_gpu.set_shape4d(images_shape)
+  if test_gemm:
+    cc_gemm.ResponseNormCrossMap(images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
+  else:
+    cc.ResponseNormCrossMap(images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
+  output_cpu = conv_cpu.ResponseNormCrossMap(images, images_shape, numF, add_scale, pow_scale, blocked)
+  diff = Diff(output_cpu, targets_gpu.asarray())
+  images_gpu.free_device_memory()
+  targets_gpu.free_device_memory()
+  return diff
+
+def TestResponseNormCrossMapUndo(images_shape, numF, add_scale, pow_scale, blocked):
+  images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  derivs = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  images_gpu = cm.CUDAMatrix(images)
+  derivs_gpu = cm.CUDAMatrix(derivs)
+  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+  images_gpu.set_shape4d(images_shape)
+  derivs_gpu.set_shape4d(images_shape)
+  targets_gpu.set_shape4d(images_shape)
+  if test_gemm:
+    cc_gemm.ResponseNormCrossMapUndo(derivs_gpu, images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
+  else:
+    acts_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+    acts_gpu.set_shape4d(images_shape)
+    cc.ResponseNormCrossMap(images_gpu, acts_gpu, numF, add_scale, pow_scale, blocked)
+    cc.ResponseNormCrossMapUndo(derivs_gpu, images_gpu, acts_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
+    acts_gpu.free_device_memory()
+  output_cpu = conv_cpu.ResponseNormCrossMapUndo(derivs, images, images_shape, numF, add_scale, pow_scale, blocked)
+  diff = Diff(output_cpu, targets_gpu.asarray())
+  images_gpu.free_device_memory()
+  targets_gpu.free_device_memory()
+  return diff
+
 def Diff(a, b):
   scale = np.abs(a + b).mean()
   diff = np.abs(a - b).max() / scale
@@ -202,9 +241,13 @@ def Check(diff, tol=1e-4):
 
 def Test():
   batch_size = 128
-  image_size_x = 14
-  image_size_y = 28
+  image_size_x = 12
+  image_size_y = 12
   num_input_channels = 32
+  sizeF = 8
+  add_scale = 0.005
+  pow_scale = 0.75
+  blocked = False
   num_output_channels = 64
   kernel_size_y = 3
   kernel_size_x = 3
@@ -232,14 +275,14 @@ def Test():
   Check(TestMaxPool(images_shape, pool_desc))
   print 'AvgPool'
   Check(TestAvgPool(images_shape, pool_desc))
-
   print 'MaxPoolUndo'
   Check(TestMaxPoolUndo(images_shape, pool_desc))
   print 'AvgPoolUndo'
   Check(TestAvgPoolUndo(images_shape, pool_desc))
-
-def TestModel(model_pbtxt):
-  model = cn.ConvNet(model_pbtxt)
+  print 'ResponseNormCrossMap'
+  Check(TestResponseNormCrossMap(images_shape, sizeF, add_scale, pow_scale, blocked))
+  print 'ResponseNormCrossMapUndo'
+  Check(TestResponseNormCrossMapUndo(images_shape, sizeF, add_scale, pow_scale, blocked))
 
 def main():
   Test()

@@ -126,9 +126,10 @@ def ResponseNorm(images, denoms, targets, numChannels, sizeX, addScale, powScale
              numChannels, sizeX, ct.c_float(addScale),
              ct.c_float(powScale))
 
-def ResponseNormCrossMap(images, targets, numChannels, sizeF, addScale, powScale, blocked):
+def ResponseNormCrossMap(images, targets, sizeF, addScale, powScale, blocked):
+  _, _, _, num_filters = images.shape4d
   assert targets.shape == images.shape
-  _ConvNet.ResponseNormCrossMap(images.p_mat, targets.p_mat, numChannels, sizeF, ct.c_float(addScale),
+  _ConvNet.ResponseNormCrossMap(images.p_mat, targets.p_mat, num_filters, sizeF, ct.c_float(addScale),
                                 ct.c_float(powScale), blocked)
 
 def ResponseNormUndo(outGrad, denoms, inGrad, acts, targets, numChannels, sizeX,
@@ -141,11 +142,12 @@ def ResponseNormUndo(outGrad, denoms, inGrad, acts, targets, numChannels, sizeX,
                acts.p_mat, targets.p_mat, numChannels, sizeX,
                ct.c_float(addScale), ct.c_float(powScale))
 
-def ResponseNormCrossMapUndo(outGrad, inGrad, acts, targets, numChannels, sizeF,
+def ResponseNormCrossMapUndo(outGrad, images, acts, targets, sizeF,
                              addScale, powScale, blocked):
   assert targets.shape == outGrad.shape
-  assert targets.shape == inGrad.shape
+  assert targets.shape == images.shape
   assert targets.shape == acts.shape
-  _ConvNet.ResponseNormUndo(outGrad.p_mat, inGrad.p_mat,
-                            acts.p_mat, targets.p_mat, numChannels, sizeF,
+  _, _, _, num_filters = images.shape4d
+  _ConvNet.ResponseNormCrossMapUndo(outGrad.p_mat, images.p_mat,
+                            acts.p_mat, targets.p_mat, num_filters, sizeF,
                             ct.c_float(addScale), ct.c_float(powScale), blocked)

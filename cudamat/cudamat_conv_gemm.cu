@@ -342,8 +342,9 @@ __global__ void kCrossMapDenoms(float* data, float* denoms,
   if (batch_offset + loc_id < num_locs) {
     for (int j = 0; j < num_filters; j++) {
       float sum = 0;
-      int start = blocked ? (j / k) * k : MAX(0, -k/2 + j);
+      int start = blocked ? (j / k) * k : -k/2 + j;
       int end = MIN(num_filters, start + k);
+      start = MAX(0, start);
       for (int i = start; i < end; i++) {
         sum += data[i * num_locs] * data[i * num_locs];
       }
@@ -361,8 +362,9 @@ __global__ void kCrossMapRNorm(float* data, float* target,
   if (loc_id < num_locs) {
     for (int j = 0; j < num_filters; j++) {
       float sum = 0;
-      int start = blocked ? (j / k) * k : MAX(0, -k/2 + j);
+      int start = blocked ? (j / k) * k : -k/2 + j;
       int end = MIN(num_filters, start + k);
+      start = MAX(0, start);
       for (int i = start; i < end; i++) {
         sum += data[i * num_locs] * data[i * num_locs];
       }
@@ -382,8 +384,9 @@ __global__ void kCrossMapRNormUndo(float* data, float* deriv, float* denoms, flo
   if (batch_offset + loc_id < num_locs) {
     for (int j = 0; j < num_filters; j++) {
       float sum = 0;
-      int start = blocked ? (j / k) * k : MAX(0, -k/2 + j);
+      int start = blocked ? (j / k) * k : -k/2 + j;
       int end = MIN(num_filters, start + k);
+      start = MAX(0, start);
       for (int i = start; i < end; i++) {
         sum += deriv[i * num_locs] * data[i * num_locs] * __powf(denoms[i * batch_locs], -powScale - 1);
       }

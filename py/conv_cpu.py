@@ -260,3 +260,62 @@ def AvgPoolUndo(derivs, image_shape, conv_spec):
             images_index = (c * image_size_y + y) * image_size_x + x
             output[:, images_index] += d_input[:, c]
   return output
+
+
+def GetBounds(i, numF, num_channels, blocked):
+  if blocked:
+    startPos = (i / numF) * numF
+  else:
+    startPos = i - numF/2
+  endPos = min(startPos + numF, num_channels)
+  startPos = max(0, startPos)
+  return startPos, endPos
+
+
+def ComputeDenoms(data, numF, blocked, addScale):
+  denoms = np.zeros(data.shape, dtype=data.dtype)
+  num_images, num_channels = data.shape
+  for i in xrange(num_channels):
+    startPos, endPos = GetBounds(i, numF, num_channels, blocked)
+    for j in xrange(startPos, endPos):
+      denoms[:, i] += data[:, j]**2
+  denoms = 1 + addScale * denoms
+  return denoms
+
+def ResponseNormCrossMap(images, image_shape, numF, add_scale, pow_scale, blocked):
+  num_images, image_size_x, image_size_y, num_input_channels = image_shape
+  output = np.zeros((num_images, image_size_x * image_size_y * num_input_channels), dtype=np.float32)
+  for y_pos in xrange(image_size_y):
+    for x_pos in xrange(image_size_x):
+      this_loc_all_channels = np.zeros((num_images, num_input_channels), dtype=np.float32)
+      for c in xrange(num_input_channels):
+        loc_id = x_pos + image_size_x * (y_pos + image_size_y * c)
+        this_loc_all_channels[:, c] = images[:, loc_id]
+      denoms = ComputeDenoms(this_loc_all_channels, numF, blocked, add_scale)
+      this_loc_all_channels *= np.power(denoms, -pow_scale)
+      for c in xrange(num_input_channels):
+        loc_id = x_pos + image_size_x * (y_pos + image_size_y * c)
+        output[:, loc_id] = this_loc_all_channels[:, c]
+  return output
+
+def ResponseNormCrossMapUndo(derivs, images, image_shape, numF, add_scale, pow_scale, blocked):
+  num_images, image_size_x, image_size_y, num_input_channels = image_shape
+  output = np.zeros((num_images, image_size_x * image_size_y * num_input_channels), dtype=np.float32)
+  for y_pos in xrange(image_size_y):
+    for x_pos in xrange(image_size_x):
+      this_loc_all_channels_data = np.zeros((num_images, num_input_channels), dtype=np.float32)
+      this_loc_all_channels_deriv = np.zeros((num_images, num_input_channels), dtype=np.float32)
+      for c in xrange(num_input_channels):
+        loc_id = x_pos + image_size_x * (y_pos + image_size_y * c)
+        this_loc_all_channels_data[:, c] = images[:, loc_id]
+        this_loc_all_channels_deriv[:, c] = derivs[:, loc_id]
+      denoms = ComputeDenoms(this_loc_all_channels_data, numF, blocked, add_scale)
+      for c in xrange(num_input_channels):
+        loc_id = x_pos + image_size_x * (y_pos + image_size_y * c)
+        startPos, endPos = GetBounds(c, numF, num_input_channels, blocked)
+        output[:, loc_id] = this_loc_all_channels_deriv[:, c] * np.power(denoms[:, c], -pow_scale) \
+        - 2 * add_scale * pow_scale * this_loc_all_channels_data[:, c] * \
+           (this_loc_all_channels_deriv[:, startPos:endPos] \
+            * this_loc_all_channels_data[:, startPos:endPos] \
+            * np.power(denoms[:, startPos:endPos], -pow_scale-1)).sum(axis=1)
+  return output
