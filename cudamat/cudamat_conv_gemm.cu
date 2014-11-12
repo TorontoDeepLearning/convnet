@@ -10,40 +10,6 @@
 
 #include "cudamat_conv_gemm.cuh"
 #define getLastCudaError(msg)   __getLastCudaError (msg, __FILE__, __LINE__)
-#define MAX_MEMORY_BYTES (200 * (1 << 20))
-
-inline void GetTempMemory(int num_images, int input_size, int num_output_channels,
-                   int num_modules, float *input, float *output,
-                   int* batch_size) {
-  int input_memory_size  = num_images * input_size * sizeof(float);
-  int output_memory_size = num_images * num_output_channels * sizeof(float);
-  int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
-  max_batch_size = MIN(max_batch_size, num_modules);
-  max_batch_size = MIN(max_batch_size, 4096);
-  max_batch_size = MAX(max_batch_size, 1);
-
-  cudaError_t err1, err2;
-  err1 = cudaMalloc((void**)&input,  max_batch_size * input_memory_size);
-  err2 = cudaMalloc((void**)&output, max_batch_size * output_memory_size);
-  if (cudaSuccess != err1 || cudaSuccess != err2) {
-    if (cudaSuccess == err1) cudaFree(input);
-    if (cudaSuccess == err2) cudaFree(output);
-    err1 = cudaMalloc((void**)&input,  input_memory_size);
-    err2 = cudaMalloc((void**)&output, output_memory_size);
-    if (cudaSuccess != err1 || cudaSuccess != err2) {
-      printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
-      printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
-    } 
-    *batch_size = 1;
-  } else {
-    *batch_size = max_batch_size;
-  }
-}
-
-void FreeTempMemory(float* input, float* output) {
-  cudaFree(input);
-  cudaFree(output);
-}
 
 inline bool check_cublas_error() {
   cublasStatus status = cublasGetError();
@@ -248,13 +214,13 @@ __global__ void kMaxPoolUndo(float * images, float *derivs, float* maxes, float*
 }
 
 __global__ void kContract(float *expanded_data, float* targets,
-                        int num_images, int num_input_channels,
-                        int image_size_y, int image_size_x,
-                        int num_modules_y, int num_modules_x,
-                        int kernel_size_y, int kernel_size_x,
-                        int padding_y, int padding_x,
-                        int stride_y, int stride_x,
-                        int num_modules_batch, int module_id_offset) {
+                          int num_images, int num_input_channels,
+                          int image_size_y, int image_size_x,
+                          int num_modules_y, int num_modules_x,
+                          int kernel_size_y, int kernel_size_x,
+                          int padding_y, int padding_x,
+                          int stride_y, int stride_x,
+                          int num_modules_batch, int module_id_offset) {
   int color = blockIdx.y;
   int dst_module_id = module_id_offset + blockIdx.x;
   int src_module_id = blockIdx.x;
@@ -384,7 +350,7 @@ __global__ void kCrossMapRNormUndo(float* data, float* deriv, float* denoms, flo
   if (batch_offset + loc_id < num_locs) {
     for (int j = 0; j < num_filters; j++) {
       float sum = 0;
-      int start = blocked ? (j / k) * k : -k/2 + j;
+      int start = blocked ? (j / k) * k : -k + k/2 + j + 1;
       int end = MIN(num_filters, start + k);
       start = MAX(0, start);
       for (int i = start; i < end; i++) {
@@ -517,7 +483,8 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
       }
       module_id_start += this_num_modules_batch;
     }
-    FreeTempMemory(expanded_images, expanded_target);
+    cudaFree(expanded_images);
+    cudaFree(expanded_target);
     getLastCudaError("convUpGemm: kernel execution failed");
 }
 
@@ -644,7 +611,8 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
                                    this_num_modules_batch, module_id_start);
       module_id_start += this_num_modules_batch;
     }
-    FreeTempMemory(expanded_target, expanded_derivs);
+    cudaFree(expanded_derivs);
+    cudaFree(expanded_target);
     getLastCudaError("convDownGemm: kernel execution failed");
 }
 
@@ -772,7 +740,8 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
       }
       module_id_start += this_num_modules_batch;
     }
-    FreeTempMemory(expanded_images, expanded_derivs);
+    cudaFree(expanded_derivs);
+    cudaFree(expanded_images);
     getLastCudaError("convOutpGemm: kernel execution failed");
 }
 

@@ -1,11 +1,20 @@
-/** Kernels for convUp, convDown, convOutp, maxpool, avgpool, maxpoolundo,
- *  avgpoolundo.
+/** Kernels for common conv net operations.
  *  These kernels are 10-20% slower than cuda-convnet2, but have no constraints
  *  on number of channels and support rectangular images and rectangular kernels.
  *  They use cublasSgemm for convUp, convDown, convOutp.
  *  Data layout : Column-major
  *  data : (num_images, image_size_x, image_size_y, num_input_channels)
  *  filters : (num_output_channels, kernel_size_x, kernel_size_y, num_input_channels)
+ *  For example, in data, the the fastest changing dimension is num_images and
+ *  slowest num_input_channels. The cudamat arrays are expected to be of shape
+ *  (num_images, image_size_x * image_size_y * num_input_channels).
+ *  Some of these kernels try to allocate MAX_MEMORY_BYTES at each call for use
+ *  as temporary space. If MAX_MEMORY_BYTES are not avaliable, the kernels will
+ *  switch to using the least amount of temporary space needed. This will cause
+ *  them to run very slowly. The least amount of space needed depends
+ *  on the kernel and the configuration of the convolution/data and can be
+ *  expected to be < 1MB. If this least amount is also not available, the
+ *  kernels will print an error message and not work.
  */
 #ifndef CUDAMAT_CONV_GEMM_CUH_
 #define CUDAMAT_CONV_GEMM_CUH_
@@ -15,6 +24,9 @@
 #include <cublas.h>
 #include <math.h>
 #include <assert.h>
+
+// 200 MB seems sufficient to create a big enough GEMM job.
+#define MAX_MEMORY_BYTES (200 * (1 << 20))
 
 #ifdef __cplusplus
 extern "C" {

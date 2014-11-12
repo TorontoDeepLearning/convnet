@@ -271,6 +271,15 @@ def GetBounds(i, numF, num_channels, blocked):
   startPos = max(0, startPos)
   return startPos, endPos
 
+def GetBoundsInv(i, numF, num_channels, blocked):
+  """Return the set of filters such that i appears in their normalization group."""
+  if blocked:
+    startPos = (i / numF) * numF
+  else:
+    startPos = i - numF + numF/2 + 1
+  endPos = min(startPos + numF, num_channels)
+  startPos = max(0, startPos)
+  return startPos, endPos
 
 def ComputeDenoms(data, numF, blocked, addScale):
   denoms = np.zeros(data.shape, dtype=data.dtype)
@@ -312,7 +321,7 @@ def ResponseNormCrossMapUndo(derivs, images, image_shape, numF, add_scale, pow_s
       denoms = ComputeDenoms(this_loc_all_channels_data, numF, blocked, add_scale)
       for c in xrange(num_input_channels):
         loc_id = x_pos + image_size_x * (y_pos + image_size_y * c)
-        startPos, endPos = GetBounds(c, numF, num_input_channels, blocked)
+        startPos, endPos = GetBoundsInv(c, numF, num_input_channels, blocked)
         output[:, loc_id] = this_loc_all_channels_deriv[:, c] * np.power(denoms[:, c], -pow_scale) \
         - 2 * add_scale * pow_scale * this_loc_all_channels_data[:, c] * \
            (this_loc_all_channels_deriv[:, startPos:endPos] \
