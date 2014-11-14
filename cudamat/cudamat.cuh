@@ -82,18 +82,6 @@ typedef struct ConvDesc {
   int num_output_channels;
   int kernel_size_y;
   int kernel_size_x;
-  int stride_y;
-  int stride_x;
-  int padding_y;
-  int padding_x;
-  int num_groups;
-} ConvDesc;
-
-typedef struct Conv3DDesc {
-  int num_output_channels;
-  int num_input_channels;
-  int kernel_size_y;
-  int kernel_size_x;
   int kernel_size_t;
   int stride_y;
   int stride_x;
@@ -102,8 +90,7 @@ typedef struct Conv3DDesc {
   int padding_x;
   int padding_t;
   int num_groups;
-} Conv3DDesc;
-
+} ConvDesc;
 
 const char* get_last_cuda_error();
 int cuda_record_event(cudaEvent_t* t);

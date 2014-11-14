@@ -46,6 +46,7 @@ Layer::Layer(const config::Layer& config) :
   scale_targets_(0),
   image_size_y_(config.image_size_y()),
   image_size_x_(config.image_size_x()),
+  image_size_t_(config.image_size_t()),
   img_display_(NULL),
   gpu_id_(config.gpu_id()),
   store_dropout_noise_(dropprob_ > 0),
@@ -213,9 +214,10 @@ void Layer::CopyDerivToGPU(int dest_gpu) {
   }
 }
 
-void Layer::SetSize(int image_size_y, int image_size_x) {
+void Layer::SetSize(int image_size_y, int image_size_x, int image_size_t) {
   image_size_y_ = image_size_y;
   image_size_x_ = image_size_x;
+  image_size_t_ = image_size_t;
   cout << "Layer " << name_ << ": " << image_size_y << "x" << image_size_x << endl;
   if (display_) {
     if (num_channels_ == 3) {
@@ -228,25 +230,25 @@ void Layer::SetSize(int image_size_y, int image_size_x) {
 
 void Layer::SetupSlices() {
   int start = 0, end;
-  const int num_pixels = image_size_y_ * image_size_x_;
+  const int num_pixels = image_size_y_ * image_size_x_ * image_size_t_;
   const int batch_size = state_.GetRows();
   for (auto& kv : slice_channels_) {
     end = start + num_pixels * kv.second;
     state_.GetSlice(state_slices_[kv.first], start, end);
     deriv_.GetSlice(deriv_slices_[kv.first], start, end);
-    state_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second);
-    deriv_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second);
+    state_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second * image_size_t_);
+    deriv_slices_[kv.first].SetShape4D(batch_size, image_size_x_, image_size_y_, kv.second * image_size_t_);
     start = end;
   }
 }
 
 void Layer::AllocateMemory(int batch_size) {
-  const int num_pixels = image_size_y_ * image_size_x_;
+  const int num_pixels = image_size_y_ * image_size_x_ * image_size_t_;
   Matrix::SetDevice(gpu_id_);
   state_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " state");
   deriv_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " deriv");
-  state_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_);
-  deriv_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_);
+  state_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_ * image_size_t_);
+  deriv_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_ * image_size_t_);
 
   if (is_input_) store_dropout_noise_ = false;
   if (store_dropout_noise_) {
@@ -445,7 +447,7 @@ void LinearLayer::ApplyDerivativeOfActivation() {
 
 void LinearLayer::AllocateMemory(int batch_size) {
   Layer::AllocateMemory(batch_size);
-  const int num_pixels = image_size_y_ * image_size_x_;
+  const int num_pixels = image_size_y_ * image_size_x_ * image_size_t_;
   if (is_output_) data_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " data");
 }
 

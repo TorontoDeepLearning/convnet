@@ -202,20 +202,23 @@ void ConvNet::BuildNet() {
     }
   }
 
-  int image_size_y, image_size_x;
+  int image_size_y, image_size_x, image_size_t;
   for (Layer* l : layers_) {
     if (l->IsInput()) {
       image_size_y = l->GetSizeY();
       image_size_x = l->GetSizeX();
+      image_size_t = l->GetSizeT();
       if (image_size_y <= 0) image_size_y = model_.patch_size();
       if (image_size_x <= 0) image_size_x = model_.patch_size();
+      if (image_size_t <= 0) image_size_t = 1;
     } else {
       image_size_y = l->incoming_edge_[0]->GetNumModulesY();
       image_size_x = l->incoming_edge_[0]->GetNumModulesX();
+      image_size_t = l->incoming_edge_[0]->GetNumModulesT();
     }
-    l->SetSize(image_size_y, image_size_x);
+    l->SetSize(image_size_y, image_size_x, image_size_t);
     for (Edge* e: l->outgoing_edge_) {
-      e->SetImageSize(image_size_y, image_size_x);
+      e->SetImageSize(image_size_y, image_size_x, image_size_t);
     }
   }
 

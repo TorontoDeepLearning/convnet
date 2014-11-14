@@ -16,6 +16,6 @@ class ConvOneToOneEdge : public EdgeWithWeight {
                            Matrix& output, Matrix& deriv_input, bool overwrite);
   virtual void ComputeOuter(Matrix& input, Matrix& deriv_output);
 
-  virtual void SetImageSize(int image_size_y, int image_size_x);
+  virtual void SetImageSize(int image_size_y, int image_size_x, int image_size_t);
 };
 #endif

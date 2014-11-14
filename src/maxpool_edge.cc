@@ -10,13 +10,14 @@ void MaxPoolEdge::SetTiedTo(Edge* e) {
   conv_desc_ = ee->GetConvDesc();
 }
 
-void MaxPoolEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void MaxPoolEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   conv_desc_.num_input_channels = num_input_channels_;
   conv_desc_.num_output_channels = num_output_channels_;
   if (conv_desc_.kernel_size_y <= 0) conv_desc_.kernel_size_y = image_size_y;
   if (conv_desc_.kernel_size_x <= 0) conv_desc_.kernel_size_x = image_size_x;
-  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, num_modules_y_, num_modules_x_);
+  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, image_size_t,
+                      num_modules_y_, num_modules_x_, num_modules_t_);
 }
 
 string MaxPoolEdge::GetDescription() {

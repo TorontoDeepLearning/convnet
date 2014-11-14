@@ -14,7 +14,9 @@ void LocalEdge::SetTiedTo(Edge* e) {
 void LocalEdge::DisplayWeights() {
   if (img_display_ != NULL) {
     weights_.CopyToHost();
-    img_display_->DisplayWeights(weights_.GetHostData(), conv_desc_.kernel_size_y, conv_desc_.num_output_channels, 250, false);
+    img_display_->DisplayWeights(
+        weights_.GetHostData(), conv_desc_.kernel_size_y,
+        conv_desc_.num_output_channels, 250, false);
   }
 }
 
@@ -27,11 +29,12 @@ string LocalEdge::GetDescription() {
   return ss.str();
 }
 
-void LocalEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void LocalEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   conv_desc_.num_input_channels = num_input_channels_;
   conv_desc_.num_output_channels = num_output_channels_;
-  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, num_modules_y_, num_modules_x_);
+  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, image_size_t,
+                      num_modules_y_, num_modules_x_, num_modules_t_);
 }
 
 void LocalEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
@@ -49,10 +52,10 @@ void LocalEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
 size_t LocalEdge::GetParameterMemoryRequirement() {
   if (is_tied_) return 0;
  
-  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y
+  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y * conv_desc_.kernel_size_t
                    * conv_desc_.num_input_channels * num_modules_y_
-                   * num_modules_x_;
-  int bias_locs = num_modules_y_ * num_modules_x_;
+                   * num_modules_x_ * num_modules_t_;
+  int bias_locs = num_modules_y_ * num_modules_x_ * num_modules_t_;
   return conv_desc_.num_output_channels * (input_size + (has_no_bias_ ? 0 : bias_locs));
 }
 
@@ -60,10 +63,10 @@ void LocalEdge::SetMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetMemory(p);
  
-  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y
+  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y * conv_desc_.kernel_size_t
                    * conv_desc_.num_input_channels * num_modules_y_
-                   * num_modules_x_;
-  int bias_locs = num_modules_y_ * num_modules_x_;
+                   * num_modules_x_ * num_modules_t_;
+  int bias_locs = num_modules_y_ * num_modules_x_ * num_modules_t_;
   p.Reshape(conv_desc_.num_output_channels, -1);
   p.GetSlice(weights_, 0, input_size);
   weights_.SetShape4D(conv_desc_.num_output_channels, conv_desc_.kernel_size_x,
@@ -86,10 +89,10 @@ void LocalEdge::SetMemory(Matrix& p) {
 void LocalEdge::SetGradMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetGradMemory(p);
-  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y
+  int input_size = conv_desc_.kernel_size_x * conv_desc_.kernel_size_y * conv_desc_.kernel_size_t
                    * conv_desc_.num_input_channels * num_modules_y_
-                   * num_modules_x_;
-  int bias_locs = num_modules_y_ * num_modules_x_;
+                   * num_modules_x_ * num_modules_t_;
+  int bias_locs = num_modules_y_ * num_modules_x_ * num_modules_t_;
   // Matrix for storing the current gradient.
 
   p.Reshape(conv_desc_.num_output_channels, -1);

@@ -26,10 +26,11 @@ string ResponseNormEdge::GetDescription() {
   return ss.str();
 }
 
-void ResponseNormEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void ResponseNormEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   num_modules_y_ = image_size_y;
   num_modules_x_ = image_size_x;
+  num_modules_t_ = image_size_t;
   num_filters_response_norm_ = (int)(frac_of_filters_response_norm_
                                      * num_input_channels_);
 }

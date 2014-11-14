@@ -12,7 +12,7 @@ class MaxPoolEdge : public Edge {
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
 
-  virtual void SetImageSize(int image_size_y, int image_size_x);
+  virtual void SetImageSize(int image_size_y, int image_size_x, int image_size_t);
   virtual void FOV(int* size, int* sep, int* pad1, int* pad2) const;
 
   ConvDesc GetConvDesc() const { return conv_desc_; }

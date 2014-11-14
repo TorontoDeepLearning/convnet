@@ -50,6 +50,8 @@ message Layer {
   // The data (input or target) at this layer should be tied to the data
   // at 'tied_data'.
   optional string tied_data = 19;
+  
+  optional int32 image_size_t = 20 [default=1];
 }
 
 message Optimizer {
@@ -193,9 +195,16 @@ message Edge {
   optional int32 grad_check_num_params = 31 [default=0];
   repeated float grad_check_epsilon = 32;
 
-  // Conv 3D.
-  optional int32 temporal_kernel_size = 33 [default=0];
-  optional int32 temporal_kernel_stride = 34 [default=0];
+  // More general Conv params.
+  optional int32 kernel_size_y = 33 [default=0];
+  optional int32 kernel_size_x = 34 [default=0];
+  optional int32 kernel_size_t = 35 [default=0];
+  optional int32 stride_y = 36 [default=1];
+  optional int32 stride_x = 37 [default=1];
+  optional int32 stride_t = 38 [default=1];
+  optional int32 padding_y = 39 [default=0];
+  optional int32 padding_x = 40 [default=0];
+  optional int32 padding_t = 41 [default=0];
 }
 
 message Subnet {

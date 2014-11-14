@@ -26,7 +26,7 @@
 #include <assert.h>
 
 // 200 MB seems sufficient to create a big enough GEMM job.
-#define MAX_MEMORY_BYTES (200 * (1 << 20))
+// #define MAX_MEMORY_BYTES (200 * (1 << 20))
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,6 +92,24 @@ void ResponseNormCrossMapGemm(
 void ResponseNormCrossMapUndoGemm(
   cudamat* outGrads, cudamat* inputs, cudamat* targets,
   int numFilters, int sizeF, float addScale, float powScale, bool blocked);
+
+void Scale(cudamat* mat, float scale);
+
+// 3D convolutions.
+void convUp3DGemm(cudamat* images, cudamat* filters, cudamat* targets,
+                Shape4D* images_shape, Shape4D* filters_shape,
+                Shape4D* targets_shape, ConvDesc conv_desc,
+                float scaleTargets);
+
+void convDown3DGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
+                  Shape4D* derivs_shape, Shape4D* filters_shape,
+                  Shape4D* targets_shape, ConvDesc conv_desc,
+                  float scaleTargets);
+
+void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+                  Shape4D* images_shape, Shape4D* derivs_shape,
+                  Shape4D* targets_shape, ConvDesc conv_desc,
+                  float scaleTargets, float scaleOutput);
 
 #ifdef __cplusplus
 }

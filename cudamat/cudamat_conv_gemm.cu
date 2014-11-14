@@ -10,6 +10,19 @@
 
 #include "cudamat_conv_gemm.cuh"
 #define getLastCudaError(msg)   __getLastCudaError (msg, __FILE__, __LINE__)
+size_t free_space_ = 0;
+void EstimateFreeSpace() {
+  /*
+  size_t total;
+  cudaMemGetInfo(&free_space_, &total);
+  //free_space_ >>= 1;
+  if (free_space_ > 1>>20) {
+    free_space_ -= 1 << 20; // Just remove 1 MB. This seems to work!
+  }
+  */
+  // How to get free contiguous space ?
+  free_space_ = 200 * (1 << 20);
+}
 
 inline bool check_cublas_error() {
   cublasStatus status = cublasGetError();
@@ -23,6 +36,14 @@ inline void __getLastCudaError(const char *errorMessage, const char *file, const
       file, line, errorMessage, (int)err, cudaGetErrorString(err));
   exit(EXIT_FAILURE);
  }
+}
+
+void _Scale(cudamat* mat, float scale) {
+  if (scale == 0) {
+    cudaMemset(mat->data_device, 0, sizeof(float) * mat->size[0] * mat->size[1]);
+  } else if (scale != 1) {
+    cublasSscal(sizeof(float) * mat->size[0] * mat->size[1], scale, mat->data_device, 1);
+  }
 }
 
 class AvgPooler {
@@ -421,15 +442,20 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
-    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    if (free_space_ == 0) EstimateFreeSpace();
+    int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
     max_batch_size = MIN(max_batch_size, 4096);
-    max_batch_size = MAX(max_batch_size, 1);
+    //max_batch_size = MAX(max_batch_size, 1);
+    //printf("Free space %ld max batch size %d\n", free_space, max_batch_size);
 
     cudaError_t err1, err2;
     err1 = cudaMalloc((void**)&expanded_images,  max_batch_size * input_memory_size);
     err2 = cudaMalloc((void**)&expanded_target, max_batch_size * output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
+      printf("Could not allocate memory.\n");
+      /*
       if (cudaSuccess == err1) cudaFree(expanded_images);
       if (cudaSuccess == err2) cudaFree(expanded_target);
       err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
@@ -437,7 +463,8 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
       if (cudaSuccess != err1 || cudaSuccess != err2) {
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
-      } 
+      }
+      */
       num_modules_batch = 1;
     } else {
       num_modules_batch = max_batch_size;
@@ -548,7 +575,9 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
 
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
-    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    if (free_space_ == 0) EstimateFreeSpace();
+    int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
+    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
     max_batch_size = MIN(max_batch_size, 4096);
     max_batch_size = MAX(max_batch_size, 1);
@@ -557,6 +586,8 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     err1 = cudaMalloc((void**)&expanded_target,  max_batch_size * input_memory_size);
     err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
+      printf("Out of memory\n");
+      /*
       if (cudaSuccess == err1) cudaFree(expanded_target);
       if (cudaSuccess == err2) cudaFree(expanded_derivs);
       err1 = cudaMalloc((void**)&expanded_target,  input_memory_size);
@@ -564,19 +595,16 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
       if (cudaSuccess != err1 || cudaSuccess != err2) {
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
-      } 
+      }
+      */
       num_modules_batch = 1;
     } else {
       num_modules_batch = max_batch_size;
     }
 
     int num_iter = DIVUP(num_modules, num_modules_batch);
-    
-    if (scaleTargets == 0) {
-      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
-    } else if (scaleTargets != 1) {
-      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
-    }
+   
+    _Scale(targets, scaleTargets); 
 
     int module_id_start = 0;
     float* w = filters->data_device;
@@ -677,7 +705,9 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
 
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
-    int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
+    if (free_space_ == 0) EstimateFreeSpace();
+    int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
+    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
     max_batch_size = MIN(max_batch_size, 4096);
     max_batch_size = MAX(max_batch_size, 1);
@@ -686,6 +716,8 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     err1 = cudaMalloc((void**)&expanded_images,  max_batch_size * input_memory_size);
     err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
+      printf("Out of memory.\n");
+      /*
       if (cudaSuccess == err1) cudaFree(expanded_images);
       if (cudaSuccess == err2) cudaFree(expanded_derivs);
       err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
@@ -694,6 +726,7 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
         printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
       } 
+      */
       num_modules_batch = 1;
     } else {
       num_modules_batch = max_batch_size;
@@ -701,11 +734,7 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
 
     int num_iter = DIVUP(num_modules, num_modules_batch);
 
-    if (scaleTargets == 0) {
-      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
-    } else if (scaleTargets != 1) {
-      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
-    }
+    _Scale(targets, scaleTargets);
 
     int module_id_start = 0;
     dim3 threads(num_threads_x);
@@ -780,11 +809,7 @@ void _convPoolGemm(cudamat* images, cudamat* targets,
     assert (image_size_y * image_size_x * num_input_channels == images->size[1]);
     assert (num_modules_y * num_modules_x * num_output_channels == targets->size[1]);
 
-    if (scaleTargets == 0) {
-      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
-    } else if (scaleTargets != 1) {
-      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
-    }
+    _Scale(targets, scaleTargets);
 
     dim3 threads(128);
     int num_blocks_x = MIN(4096, num_modules);
@@ -833,11 +858,7 @@ void _avgPoolUndoGemm(cudamat* derivs, cudamat* targets,
     assert (image_size_y * image_size_x * num_input_channels == targets->size[1]);
     assert (num_modules_y * num_modules_x * num_output_channels == derivs->size[1]);
 
-    if (scaleTargets == 0) {
-      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
-    } else if (scaleTargets != 1) {
-      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
-    }
+    _Scale(targets, scaleTargets);
 
     dim3 threads(128);
     int num_blocks_x = MIN(4096, num_modules);
@@ -886,11 +907,7 @@ void _maxPoolUndoGemm(cudamat* images, cudamat* derivs, cudamat* maxes, cudamat*
     assert (image_size_y * image_size_x * num_input_channels == targets->size[1]);
     assert (num_modules_y * num_modules_x * num_output_channels == derivs->size[1]);
 
-    if (scaleTargets == 0) {
-      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
-    } else if (scaleTargets != 1) {
-      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
-    }
+    _Scale(targets, scaleTargets);
 
     dim3 threads(128);
     int num_blocks_x = MIN(4096, num_modules);
@@ -925,7 +942,8 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
   int batch_offset = 0;
 
   float *denoms;
-  int max_batch_size = ((long) MAX_MEMORY_BYTES) / (sizeof(float) * num_filters);
+  if (free_space_ == 0) EstimateFreeSpace();
+  int max_batch_size = free_space_ / (sizeof(float) * num_filters);
   max_batch_size = MIN(num_locs, max_batch_size);
   cudaError_t err;
   err = cudaMalloc((void**)&denoms, max_batch_size * num_filters * sizeof(float));
@@ -957,6 +975,14 @@ void convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
                 Shape4D* images_shape, Shape4D* filters_shape,
                 Shape4D* targets_shape, ConvDesc conv_desc,
                 float scaleTargets) {
+  /*
+  printf("image shape %d %d %d %d\n", images_shape->shape[0], images_shape->shape[1], images_shape->shape[2], images_shape->shape[3]);
+  printf("filters shape %d %d %d %d\n", filters_shape->shape[0], filters_shape->shape[1], filters_shape->shape[2], filters_shape->shape[3]);
+  printf("targets shape %d %d %d %d\n", targets_shape->shape[0], targets_shape->shape[1], targets_shape->shape[2], targets_shape->shape[3]);
+  printf("Convolution : kernel_size_y %d kernel_size_x %d stride_y %d stride_x %d padding_y %d padding_x %d num_input_channels %d num_output_channels %d num_groups %d\n",
+          conv_desc.kernel_size_y, conv_desc.kernel_size_x, conv_desc.stride_x, conv_desc.stride_y, conv_desc.padding_y, conv_desc.padding_x, conv_desc.num_input_channels,
+          conv_desc.num_output_channels, conv_desc.num_groups);
+          */
   _convUpGemm(images, filters, targets, *images_shape, *filters_shape,
               *targets_shape, conv_desc, scaleTargets, 1.0, true);
 }
@@ -1065,6 +1091,9 @@ void ResponseNormCrossMapUndoGemm(
   int sizeF, float addScale, float powScale, bool blocked) {
   _CrossMapRNormUndo(outGrads, inputs, targets, num_filters, sizeF, addScale,
                      powScale, blocked);
+}
+void Scale(cudamat* mat, float scale) {
+  _Scale(mat, scale);
 }
 #ifdef __cplusplus
 }

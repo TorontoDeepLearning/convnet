@@ -24,8 +24,8 @@ libcudamat.so: cudamat.cu cudamat_kernels.cu cudamat.cuh cudamat_kernels.cuh
 libcudamat_conv.so: $(CUDA_CONV_SRC) cudamat_conv.cuh cudamat.cuh
 	$(NVCC) $(FLAGS) -o $@ $(CUDA_CONV_SRC) -lcublas -L$(CUDA_LIB)
 
-libcudamat_conv_gemm.so: cudamat_conv_gemm.cu cudamat_conv_gemm.cuh cudamat.cuh
-	$(NVCC) $(FLAGS) -o $@ cudamat_conv_gemm.cu -lcublas -L$(CUDA_LIB)
+libcudamat_conv_gemm.so: cudamat_conv_gemm.cu cudamat_conv3d_gemm.cu cudamat_conv_gemm.cuh cudamat.cuh
+	$(NVCC) $(FLAGS) -o $@ cudamat_conv_gemm.cu cudamat_conv3d_gemm.cu -lcublas -L$(CUDA_LIB)
 
 clean:
 	rm -rf libcudamat.so libcudamat_conv.so libcudamat_conv_gemm.so

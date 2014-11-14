@@ -17,11 +17,12 @@ void ConvEdge::SetTiedTo(Edge* e) {
   shared_bias_ = ee->GetSharedBias();
 }
 
-void ConvEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void ConvEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   conv_desc_.num_input_channels = num_input_channels_;
   conv_desc_.num_output_channels = num_output_channels_;
-  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, num_modules_y_, num_modules_x_);
+  Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, image_size_t,
+                      num_modules_y_, num_modules_x_, num_modules_t_);
   if (partial_sum_y_ == 0) partial_sum_y_ = num_modules_y_;
   if (partial_sum_x_ == 0) partial_sum_x_ = num_modules_x_;
 }
@@ -49,14 +50,17 @@ void ConvEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
 void ConvEdge::DisplayWeights() {
   if (img_display_ != NULL && display_) {
     weights_.CopyToHost();
-    img_display_->DisplayWeights(weights_.GetHostData(), conv_desc_.kernel_size_y, conv_desc_.num_output_channels, 250, false);
+    img_display_->DisplayWeights(
+        weights_.GetHostData(), conv_desc_.kernel_size_y,
+        conv_desc_.num_output_channels, 250, false);
   }
 }
 
 size_t ConvEdge::GetParameterMemoryRequirement() {
   if (is_tied_) return 0;
-  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x * conv_desc_.num_input_channels;
-  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_);
+  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x *
+                   conv_desc_.kernel_size_t * conv_desc_.num_input_channels;
+  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_ * num_modules_t_);
   return conv_desc_.num_output_channels *  (input_size + (has_no_bias_ ? 0 : bias_locs));
 }
 
@@ -64,14 +68,15 @@ void ConvEdge::SetMemory(Matrix& p) {
   if (is_tied_) return;
   Edge::SetMemory(p);
 
-  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x * conv_desc_.num_input_channels;
-  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_);
+  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x *
+                   conv_desc_.kernel_size_t * conv_desc_.num_input_channels;
+  int bias_locs = shared_bias_ ? 1: (num_modules_y_ * num_modules_x_ * num_modules_t_);
   
   // Weights for this convolution.
   p.Reshape(conv_desc_.num_output_channels, -1);
   p.GetSlice(weights_, 0, input_size);
   weights_.SetShape4D(conv_desc_.num_output_channels, conv_desc_.kernel_size_x,
-                      conv_desc_.kernel_size_y, conv_desc_.num_input_channels);
+                      conv_desc_.kernel_size_y, conv_desc_.num_input_channels * conv_desc_.kernel_size_t);
   if (!has_no_bias_) {
     p.GetSlice(bias_, input_size, input_size + bias_locs);
     bias_.Reshape(1, -1);
@@ -88,8 +93,9 @@ void ConvEdge::SetMemory(Matrix& p) {
 }
 
 void ConvEdge::SetGradMemory(Matrix& p) {
-  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x * conv_desc_.num_input_channels;
-  int num_locs = num_modules_y_ * num_modules_x_;
+  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x *
+                   conv_desc_.kernel_size_t * conv_desc_.num_input_channels;
+  int num_locs = num_modules_y_ * num_modules_x_ * num_modules_t_;
   int bias_locs = shared_bias_ ? 1 : num_locs;
 
   if (!is_tied_) {
@@ -119,15 +125,33 @@ void ConvEdge::SetGradMemory(Matrix& p) {
 void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   float scale_targets = overwrite ? 0 : 1;
-  Matrix::ConvUp(input, w, output, conv_desc_, scale_targets);
-  if (!has_no_bias_) {
-    Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
-    if (shared_bias_) {
-      output.Reshape(-1, conv_desc_.num_output_channels);
-      output.AddRowVec(b);
-      output.Reshape(-1, conv_desc_.num_output_channels * num_modules_y_ * num_modules_x_);
-    } else {
-      output.AddRowVec(b);
+  if (image_size_t_ == 1) {
+    Matrix::ConvUp(input, w, output, conv_desc_, scale_targets);
+    if (!has_no_bias_) {
+      Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
+      if (shared_bias_) {
+        output.Reshape(-1, conv_desc_.num_output_channels);
+        output.AddRowVec(b);
+        output.Reshape(-1, conv_desc_.num_output_channels * num_modules_y_ * num_modules_x_ * num_modules_t_);
+      } else {
+        output.AddRowVec(b);
+      }
+    }
+  } else {  // 3D convolution.
+    Matrix::Conv3DUp(input, w, output, conv_desc_, scale_targets);
+    if (!has_no_bias_) {
+      Matrix& b = is_tied_? tied_edge_->GetBias() : bias_;
+      if (shared_bias_) {
+        output.Reshape(-1, conv_desc_.num_output_channels * num_modules_t_);
+        for (int m = 0; m < num_modules_t_; m++) {
+          Matrix output_slice;
+          output.GetSlice(output_slice, m * conv_desc_.num_output_channels, (m+1)*conv_desc_.num_output_channels);
+          output_slice.AddRowVec(b);
+        }
+        output.Reshape(-1, conv_desc_.num_output_channels * num_modules_y_ * num_modules_x_ * num_modules_t_);
+      } else {
+        output.AddRowVec(b);
+      }
     }
   }
 }
@@ -136,7 +160,11 @@ void ConvEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   float scale_targets = overwrite ? 0 : 1;
-  Matrix::ConvDown(deriv_output, w, deriv_input, conv_desc_, scale_targets);
+  if (image_size_t_ == 1) {
+    Matrix::ConvDown(deriv_output, w, deriv_input, conv_desc_, scale_targets);
+  } else {
+    Matrix::Conv3DDown(deriv_output, w, deriv_input, conv_desc_, scale_targets);
+  }
 }
 
 void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
@@ -144,37 +172,60 @@ void ConvEdge::ComputeOuter(Matrix& input, Matrix& deriv_output) {
   const int batch_size = input.GetRows();
   int scale_targets = GetNumGradsReceived() > 0 ? 1 : 0;
 
-  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x * conv_desc_.num_input_channels;
-  int partial_sum_locs = DIVUP(num_modules_y_, partial_sum_y_) * DIVUP(num_modules_x_, partial_sum_x_);
-  if (partial_sum_locs > 1) {
-    Matrix dw_temp;
-    Matrix::GetTemp(conv_desc_.num_output_channels, input_size * partial_sum_locs, dw_temp);
-    dw_temp.SetShape4D(conv_desc_.num_output_channels, conv_desc_.kernel_size_x,
-                      conv_desc_.kernel_size_y, conv_desc_.num_input_channels * partial_sum_locs);
-    Matrix::ConvOutp(input, deriv_output, dw_temp, conv_desc_, partial_sum_y_,
-                     partial_sum_x_, 0, 1);
+  int input_size = conv_desc_.kernel_size_y * conv_desc_.kernel_size_x *
+                   conv_desc_.kernel_size_t * conv_desc_.num_input_channels;
+  if (image_size_t_ == 1) {
+    int partial_sum_locs = DIVUP(num_modules_y_, partial_sum_y_) * DIVUP(num_modules_x_, partial_sum_x_);
+    if (partial_sum_locs > 1) {
+      Matrix dw_temp;
+      Matrix::GetTemp(conv_desc_.num_output_channels, input_size * partial_sum_locs, dw_temp);
+      dw_temp.SetShape4D(conv_desc_.num_output_channels, conv_desc_.kernel_size_x,
+                        conv_desc_.kernel_size_y, conv_desc_.num_input_channels
+                        * conv_desc_.kernel_size_t * partial_sum_locs);
+      Matrix::ConvOutp(input, deriv_output, dw_temp, conv_desc_, partial_sum_y_,
+                       partial_sum_x_, 0, 1);
 
-    dw_temp.Reshape(conv_desc_.num_output_channels * input_size, partial_sum_locs);
-    dw.Reshape(-1, 1);
-    dw_temp.SumCols(dw, scale_targets, scale_gradients_ / batch_size);
-    dw.Reshape(conv_desc_.num_output_channels, input_size);
-  } else {
-    Matrix::ConvOutp(input, deriv_output, dw, conv_desc_, partial_sum_y_,
-                     partial_sum_x_, scale_targets,
-                     scale_gradients_ / batch_size);
-  }
-
-  if (!has_no_bias_) {
-    Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
-    if (shared_bias_) {
-      // 2 step addition is SIGNFICANTLY faster (Why ?)
-      Matrix db_temp;
-      Matrix::GetTemp(1, deriv_output.GetCols(), db_temp);
-      deriv_output.SumRows(db_temp, 0, 1);
-      db_temp.Reshape(-1, conv_desc_.num_output_channels);
-      db_temp.SumRows(db, scale_targets, scale_gradients_ / batch_size);
+      dw_temp.Reshape(conv_desc_.num_output_channels * input_size, partial_sum_locs);
+      dw.Reshape(-1, 1);
+      dw_temp.SumCols(dw, scale_targets, scale_gradients_ / batch_size);
+      dw.Reshape(conv_desc_.num_output_channels, input_size);
     } else {
-      deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
+      Matrix::ConvOutp(input, deriv_output, dw, conv_desc_, partial_sum_y_,
+                       partial_sum_x_, scale_targets,
+                       scale_gradients_ / batch_size);
+    }
+    if (!has_no_bias_) {
+      Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
+      if (shared_bias_) {
+        // 2 step addition is SIGNFICANTLY faster (Why ?)
+        Matrix db_temp;
+        Matrix::GetTemp(1, deriv_output.GetCols(), db_temp);
+        deriv_output.SumRows(db_temp, 0, 1);
+        db_temp.Reshape(-1, conv_desc_.num_output_channels);
+        db_temp.SumRows(db, scale_targets, scale_gradients_ / batch_size);
+      } else {
+        deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
+      }
+    }
+  } else {  // 3D convolutions.
+    Matrix::Conv3DOutp(input, deriv_output, dw, conv_desc_, scale_targets,
+                       scale_gradients_ / batch_size);
+    if (!has_no_bias_) {
+      Matrix& db = is_tied_ ? tied_edge_->GetGradBias() : grad_bias_;
+      if (shared_bias_) {
+        Matrix db_temp;
+        Matrix::GetTemp(1, deriv_output.GetCols(), db_temp);
+        deriv_output.SumRows(db_temp, 0, 1);
+        db_temp.Reshape(-1, conv_desc_.num_output_channels * num_modules_t_);
+        db.Mult(scale_targets);
+        for (int m = 0; m < num_modules_t_; m++) {
+          Matrix db_temp_slice;
+          db_temp.GetSlice(db_temp_slice, m * conv_desc_.num_output_channels, (m+1)*conv_desc_.num_output_channels);
+          db_temp_slice.SumRows(db, 1.0, scale_gradients_ / batch_size);
+        }
+      } else {
+        deriv_output.SumRows(db, scale_targets, scale_gradients_ / batch_size);
+      }
     }
   }
   IncrementNumGradsReceived();

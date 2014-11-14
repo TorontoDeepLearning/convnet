@@ -14,10 +14,11 @@ string UpSampleEdge::GetDescription() {
   return ss.str();
 }
 
-void UpSampleEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void UpSampleEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   num_modules_y_ = image_size_y * sample_factor_;
   num_modules_x_ = image_size_x * sample_factor_;
+  num_modules_t_ = image_size_t;
 }
 
 void UpSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {

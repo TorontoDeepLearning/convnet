@@ -118,13 +118,23 @@ class Matrix {
 
   static void ConvUp(Matrix& input, Matrix& w, Matrix& output,
                      ConvDesc conv_desc, float scale_targets);
+  
+  static void Conv3DUp(Matrix& input, Matrix& w, Matrix& output,
+                     ConvDesc conv_desc, float scale_targets);
 
   static void ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
+                       ConvDesc conv_desc, float scale_targets);
+  
+  static void Conv3DDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
                        ConvDesc conv_desc, float scale_targets);
 
   static void ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
                        ConvDesc conv_desc, int partial_sum_y, int partial_sum_x,
                        float scale_targets, float scale_outputs);
+  
+  static void Conv3DOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
+                         ConvDesc conv_desc, float scale_targets,
+                         float scale_outputs);
 
   static void LocalUp(Matrix& input, Matrix& w, Matrix& output,
                       ConvDesc conv_desc, float scale_targets);

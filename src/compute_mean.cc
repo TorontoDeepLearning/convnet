@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   int num_colors = l->GetNumChannels();
   int image_size_y = dataset_->GetImageSizeY(l->GetName());
   int image_size_x = dataset_->GetImageSizeX(l->GetName());
-  l->SetSize(image_size_y, image_size_x);
+  l->SetSize(image_size_y, image_size_x, 1);
   l->AllocateMemory(batch_size);
   vector<Layer*> layers;
   layers.push_back(l);

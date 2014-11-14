@@ -12,7 +12,7 @@ class DownSampleEdge : public Edge {
   virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
-  virtual void SetImageSize(int image_size_y, int image_size_x);
+  virtual void SetImageSize(int image_size_y, int image_size_x, int image_size_t);
 
  private:
   const int sample_factor_;

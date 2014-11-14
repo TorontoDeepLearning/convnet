@@ -139,17 +139,6 @@ class ConvDesc(ct.Structure):
                 ('num_output_channels', ct.c_int),
                 ('kernel_size_y', ct.c_int),
                 ('kernel_size_x', ct.c_int),
-                ('stride_y', ct.c_int),
-                ('stride_x', ct.c_int),
-                ('padding_y', ct.c_int),
-                ('padding_x', ct.c_int),
-                ('num_groups', ct.c_int)]
-
-class Conv3DDesc(ct.Structure):
-    _fields_ = [('num_input_channels', ct.c_int),
-                ('num_output_channels', ct.c_int),
-                ('kernel_size_y', ct.c_int),
-                ('kernel_size_x', ct.c_int),
                 ('kernel_size_t', ct.c_int),
                 ('stride_y', ct.c_int),
                 ('stride_x', ct.c_int),
@@ -162,11 +151,12 @@ class Conv3DDesc(ct.Structure):
 class Shape4D(ct.Structure):
     _fields_ = [('shape', ct.c_int * 4)]
 
-
 def GetConvDesc(num_input_channels, num_output_channels, kernel_size_y,
                 kernel_size_x, stride_y, stride_x, padding_y, padding_x,
-                num_groups=1):
-  return ConvDesc(num_input_channels, num_output_channels, kernel_size_y, kernel_size_x, stride_y, stride_x, -padding_y, -padding_x, num_groups)
+                kernel_size_t=1, stride_t=1, padding_t=0, num_groups=1):
+  return ConvDesc(num_input_channels, num_output_channels, kernel_size_y,
+                  kernel_size_x, kernel_size_t, stride_y, stride_x, stride_t,
+                  -padding_y, -padding_x, -padding_t, num_groups)
 
 def GetConvDescTuple(cd):
   return (
@@ -191,6 +181,7 @@ def GetConvDescTuple2(cd):
     -cd.padding_y,
     -cd.padding_x,
          )
+
 def GetOutputShape(image_size_y, image_size_x, conv_desc):
   _, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple2(conv_desc)
   num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1

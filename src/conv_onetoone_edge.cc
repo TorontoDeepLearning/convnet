@@ -4,10 +4,11 @@
 ConvOneToOneEdge::ConvOneToOneEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config) {}
 
-void ConvOneToOneEdge::SetImageSize(int image_size_y, int image_size_x) {
-  Edge::SetImageSize(image_size_y, image_size_x);
+void ConvOneToOneEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
+  Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   num_modules_y_ = image_size_y;
   num_modules_x_ = image_size_x;
+  num_modules_t_ = image_size_t;
 }
 
 size_t ConvOneToOneEdge::GetParameterMemoryRequirement() {

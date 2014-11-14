@@ -79,12 +79,15 @@ bool Edge::HasParameters(const config::Edge& edge_config) {
 
 ConvDesc Edge::GetConvDesc(const config::Edge& edge_config) {
   ConvDesc conv_desc;
-  conv_desc.kernel_size_y = edge_config.kernel_size();
-  conv_desc.kernel_size_x = edge_config.kernel_size();
-  conv_desc.stride_y = edge_config.stride();
-  conv_desc.stride_x = edge_config.stride();
-  conv_desc.padding_y = -edge_config.padding();
-  conv_desc.padding_x = -edge_config.padding();
+  conv_desc.kernel_size_y = edge_config.has_kernel_size_y() ? edge_config.kernel_size_y() : edge_config.kernel_size();
+  conv_desc.kernel_size_x = edge_config.has_kernel_size_x() ? edge_config.kernel_size_x() : edge_config.kernel_size();
+  conv_desc.kernel_size_t = edge_config.has_kernel_size_t() ? edge_config.kernel_size_t() : 1;
+  conv_desc.stride_y = edge_config.has_stride_y() ? edge_config.stride_y() : edge_config.stride();
+  conv_desc.stride_x = edge_config.has_stride_x() ? edge_config.stride_x() : edge_config.stride();
+  conv_desc.stride_t = edge_config.stride_t();
+  conv_desc.padding_y = -(edge_config.has_padding_y() ? edge_config.padding_y() : edge_config.padding());
+  conv_desc.padding_x = -(edge_config.has_padding_x() ? edge_config.padding_x() : edge_config.padding());
+  conv_desc.padding_t = -edge_config.padding_t();
   conv_desc.num_groups = 1;
   conv_desc.num_input_channels = 0;
   conv_desc.num_output_channels = 0;
@@ -92,10 +95,11 @@ ConvDesc Edge::GetConvDesc(const config::Edge& edge_config) {
 }
 
 void Edge::GetNumModules(const ConvDesc conv_desc,
-                         int image_size_y, int image_size_x,
-                         int& num_modules_y, int& num_modules_x) {
+                         int image_size_y, int image_size_x, int image_size_t,
+                         int& num_modules_y, int& num_modules_x, int& num_modules_t) {
   num_modules_y = (image_size_y - 2 * conv_desc.padding_y - conv_desc.kernel_size_y) / conv_desc.stride_y + 1;
   num_modules_x = (image_size_x - 2 * conv_desc.padding_x - conv_desc.kernel_size_x) / conv_desc.stride_x + 1;
+  num_modules_t = (image_size_t - 2 * conv_desc.padding_t - conv_desc.kernel_size_t) / conv_desc.stride_t + 1;
 }
 
 string Edge::GetDescription(const ConvDesc conv_desc) {
@@ -117,8 +121,10 @@ Edge::Edge(const config::Edge& edge_config) :
   num_output_channels_(0),
   image_size_y_(1),
   image_size_x_(1),
+  image_size_t_(1),
   num_modules_y_(1),
   num_modules_x_(1),
+  num_modules_t_(1),
   mark_(false),
   block_backprop_(edge_config.block_backprop()),
   is_tied_(!tied_edge_name_.empty()),
@@ -284,6 +290,10 @@ int Edge::GetNumModulesX() const {
   return num_modules_x_;
 }
 
+int Edge::GetNumModulesT() const {
+  return num_modules_t_;
+}
+
 string Edge::GetTiedEdgeName() {
   return tied_edge_name_;
 }
@@ -292,9 +302,10 @@ bool Edge::IsTied() {
   return is_tied_;
 }
 
-void Edge::SetImageSize(int image_size_y, int image_size_x) {
+void Edge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
   image_size_y_ = image_size_y;
   image_size_x_ = image_size_x;
+  image_size_t_ = image_size_t;
 }
 
 void Edge::FOV(int* size, int* sep, int* pad1, int* pad2) const {

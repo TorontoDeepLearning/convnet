@@ -92,10 +92,11 @@ class Layer {
   int GetNumChannels(const string& slice) const;
   int GetSizeY() const { return image_size_y_; }
   int GetSizeX() const { return image_size_x_; }
+  int GetSizeT() const { return image_size_t_; }
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
 
-  void SetSize(int image_size_x, int image_size_y);
+  void SetSize(int image_size_x, int image_size_y, int image_size_t);
   int GetGPUId() const { return gpu_id_; }
   void AllocateMemoryOnOtherGPUs();
   Matrix& GetOtherState(int gpu_id);
@@ -137,7 +138,7 @@ class Layer {
   // This is needed to prevent blow ups due to sampling large values.
   const float max_act_gaussian_dropout_;
 
-  int scale_targets_, image_size_y_, image_size_x_;
+  int scale_targets_, image_size_y_, image_size_x_, image_size_t_;
 
   Matrix state_;  /** State (activation) of the layer. */
   Matrix deriv_;  /** Deriv of the loss function w.r.t. the state. */
