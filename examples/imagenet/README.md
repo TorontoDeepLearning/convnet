@@ -27,7 +27,7 @@ The names of other layers can be found in `CLS_net_20140621074703.pbtxt`.
 
 To see the classification results-
 ```
-$ python show_results.py cpu_out/output.txt
+$ python ../../apps/show_results.py cpu_out/output.txt
 ```
 
 
@@ -40,14 +40,14 @@ $ extract_representation --board=<board-id> --model=<model-file> --feature-confi
 For example,
 ```
 $ extract_representation --board=0 --model=CLS_net_20140621074703.pbtxt --feature-config=feature_config.pbtxt
-$ python show_results.py output.h5
+$ python ../../apps/show_results.py output.h5
 ```
 This should produce an output like [sample_output.txt](https://github.com/TorontoDeepLearning/convnet/blob/master/examples/imagenet/sample_output.txt) The test images are from the [Toronto Deep Learning Classification Demo](http://deeplearning.cs.toronto.edu/)
 
 To average over different patches (center + 4 corners) * 2 (horizontal flip)
 ```
 $ extract_representation --board=0 --model=CLS_net_20140621074703.pbtxt --feature-config=feature_config_avg10.pbtxt
-$ python show_results.py output_avg10.h5
+$ python ../../apps/show_results.py output_avg10.h5
 ```
 
 

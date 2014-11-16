@@ -39,12 +39,12 @@ The *.log files in the checkpoint directory contain the performance metrics for
 the training and validation sets.
 Run
 ```
-$ python show_plots.py
+$ python ../../apps/show_plots.py ./checkpoint_dir
 ```
 
 ### Draw the net.
 Draw the network graph.
 ```
-$ python ../../src/pbtxt2dot.py net.pbtxt net.dot
+$ python ../../apps/pbtxt2dot.py net.pbtxt net.dot
 $ dot -Tpng net.dot -o net.png
 ```
