@@ -42,7 +42,7 @@ void _Scale(cudamat* mat, float scale) {
   if (scale == 0) {
     cudaMemset(mat->data_device, 0, sizeof(float) * mat->size[0] * mat->size[1]);
   } else if (scale != 1) {
-    cublasSscal(sizeof(float) * mat->size[0] * mat->size[1], scale, mat->data_device, 1);
+    cublasSscal(mat->size[0] * mat->size[1], scale, mat->data_device, 1);
   }
 }
 
