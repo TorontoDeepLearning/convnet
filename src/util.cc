@@ -280,6 +280,18 @@ string GetStringError(int err_code) {
   return "Some error";
 }
 
+void AddVectors(vector<float>& a, vector<float>& b) {
+  if (a.size() == 0) a.resize(b.size());
+  if (a.size() != b.size()) {
+    cerr << "Cannot add vectors of different sizes." << endl;
+    exit(1);
+  }
+  for (int i = 0; i < a.size(); i++) a[i] += b[i];
+}
+
+//
+// ImageDisplayer
+//
 
 void DrawRectange(CImg<float>& img, int xmin, int ymin, int xmax, int ymax, const float* color, int thickness) {
   for (int i = 0; i < thickness; i++) {

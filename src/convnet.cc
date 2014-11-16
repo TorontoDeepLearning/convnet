@@ -813,15 +813,6 @@ void ConvNet::TimestampModel() {
   val_log_file_ = fname + "_valid.log";
 }
 
-void ConvNet::AddVectors(vector<float>& a, vector<float>& b) {
-  if (a.size() == 0) a.resize(b.size());
-  if (a.size() != b.size()) {
-    cerr << "Cannot add vectors of different sizes." << endl;
-    exit(1);
-  }
-  for (int i = 0; i < a.size(); i++) a[i] += b[i];
-}
-
 void ConvNet::SetupLocalizationDisplay() {
   int image_size = model_.patch_size();
   localization_display_ = new ImageDisplayer(image_size, image_size, 3, false,
