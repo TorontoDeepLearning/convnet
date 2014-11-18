@@ -4,8 +4,13 @@
 ConvEdge::ConvEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config),
   conv_desc_(Edge::GetConvDesc(edge_config)),
+#ifdef USE_GEMM
+  partial_sum_y_(0),
+  partial_sum_x_(0),
+#else
   partial_sum_y_(edge_config.partial_sum()),
   partial_sum_x_(edge_config.partial_sum()),
+#endif
   shared_bias_(edge_config.shared_bias()) {}
 
 void ConvEdge::SetTiedTo(Edge* e) {
