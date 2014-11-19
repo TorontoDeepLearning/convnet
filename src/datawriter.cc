@@ -16,7 +16,6 @@ DataWriter::DataWriter(const config::FeatureExtractorConfig config) :
 
 DataWriter::~DataWriter(){
   for(auto& it : streams_) {
-    H5Sclose(it.second.dataspace);
     H5Dclose(it.second.dataset);
   }
   H5Fclose(file_);
@@ -34,15 +33,14 @@ void DataWriter::SetNumDims(const string& name, const int num_dims) {
   dimsf[1] = num_dims;
   cout << "Adding Dataspace " << name << " of size " << dimsf[0]
        << " " << dimsf[1] << endl;
-  s.dataspace = H5Screate_simple(2, dimsf, NULL);
-  bool uchar_output = false;
-  if (uchar_output) {
-  s.dataset = H5Dcreate(file_, name.c_str(), H5T_NATIVE_UCHAR, s.dataspace,
+  hid_t dataspace = H5Screate_simple(2, dimsf, NULL);
+  s.dataset = H5Dcreate(file_, name.c_str(), H5T_NATIVE_FLOAT, dataspace,
                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  } else {
-  s.dataset = H5Dcreate(file_, name.c_str(), H5T_NATIVE_FLOAT, s.dataspace,
-                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (s.dataset < 0) {
+    cerr << "Could not crete dataset for writing." << endl;
+    exit(1);
   }
+  H5Sclose(dataspace);
 }
 
 // This may not necessarily write to disk, but hold it in a buffer.
@@ -65,28 +63,32 @@ void DataWriter::WriteHDF5(Matrix& m, const string& dataset, int numcases, bool 
   dimsf[1] = s.num_dims;
   start[0] = s.current_row;
   start[1] = 0;
-  hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
-  H5Sselect_none(s.dataspace);
-  H5Sselect_hyperslab(s.dataspace, H5S_SELECT_SET, start, NULL, dimsf, NULL);
-
-  bool uchar_output = false;
-  if (uchar_output) {
-    unsigned char *uchar_buf = new unsigned char[numcases * s.num_dims];
-    for (int i = 0; i < numcases * s.num_dims; i++) {
-      float val = floor(data[i] + 0.5);
-      if (val < 0 || val > 255) {
-        cout << "outside range: " << val << endl;
-      }
-      uchar_buf[i] = val;
-    }
-    H5Dwrite(s.dataset, H5T_NATIVE_UCHAR, mem_dataspace, s.dataspace, H5P_DEFAULT,
-             uchar_buf);
-    delete[] uchar_buf;
-  } else {
-    H5Dwrite(s.dataset, H5T_NATIVE_FLOAT, mem_dataspace, s.dataspace, H5P_DEFAULT,
-            data);
+  hid_t f_dataspace   = H5Dget_space(s.dataset);
+  if (f_dataspace < 0) {
+    cerr << "Error in datawriter: Could not get file dataspace." << endl;
+    exit(1);
   }
-  H5Sclose(mem_dataspace);
+  hid_t mem_dataspace = H5Screate_simple(2, dimsf, NULL);
+  if (mem_dataspace < 0) {
+    cerr << "Error in datawriter: Could not create memory dataspace." << endl;
+    exit(1);
+  }
+  if (H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start, NULL, dimsf, NULL) < 0) {
+    cerr << "Error in datawriter: Could not select hyperslab for writing." << endl;
+    exit(1);
+  }
+  if (H5Dwrite(s.dataset, H5T_NATIVE_FLOAT, mem_dataspace, f_dataspace, H5P_DEFAULT, data) < 0) {
+    cerr << "Error in datawriter: Could not write to hdf5 file." << endl;
+    exit(1);
+  }
+  if (H5Sclose(mem_dataspace) < 0) {
+    cerr << "Error in datawriter: Could not close memory dataspace" << endl;
+    exit(1);
+  }
+  if (H5Sclose(f_dataspace) < 0) {
+    cerr << "Error in datawriter: Could not close file dataspace" << endl;
+    exit(1);
+  }
   s.current_row += numcases;
 }
 

@@ -21,7 +21,6 @@ class DataHandler {
   int GetDataSetSize() const { return dataset_size_; }
   int GetMultiplicity() const { return multiplicity_; }
   void Seek(int row);
-  void Preprocess(Matrix& input, Matrix& output);
   void Sync();
   void SetFOV(const int size, const int stride, const int pad1,
               const int pad2, const int patch_size, const int num_fov_x,
@@ -69,6 +68,7 @@ class DataIterator {
   virtual ~DataIterator() {};
   virtual void GetNext(float* data_out) = 0;
   virtual void Get(float* data_out, const int row) const = 0;
+  virtual void Get(float* data_out, const int row_start, const int row_end) const;
   virtual void Seek(int row);
   virtual int Tell() const;
   virtual void Prep(const int chunk_size);
@@ -131,6 +131,7 @@ class HDF5DataIterator : public DataIterator {
   ~HDF5DataIterator();
   void GetNext(float* data_out);
   void Get(float* data_out, const int row) const;
+  virtual void Get(float* data_out, const int row_start, const int row_end) const;
 
  protected:
   hid_t file_, dataset_, dapl_id_, m_dataspace_, type_;
@@ -244,9 +245,8 @@ class SequenceDataIterator : public DataIterator {
   virtual void GetNext(float* data_out);
   virtual void Get(float* data_out, const int row) const;
   virtual void Prep(const int chunk_size);
-  virtual void Seek(int row);
-  virtual int Tell() const;
   virtual void SetMaxDataSetSize(int max_dataset_size);
+  virtual void Preprocess(Matrix& m);
 
  protected:
   void SetupRowMapping(const vector<int>& num_frames);

@@ -62,6 +62,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
 }
 
 DataHandler::~DataHandler() {
+  Sync();  // Wait for any threads that we may have spawned.
   for (auto& it : data_it_) {
     delete it.second;
   }
@@ -213,6 +214,10 @@ void DataHandler::PipelinedDiskAccess() {
 }
 
 void DataHandler::StartPreload() {
+  if (preload_thread_ != NULL) {
+    cerr << "Trying to create new thread when previous one is still running." << endl;
+    exit(1);
+  }
   preload_thread_ = new thread(&DataHandler::DiskAccess, this);
 }
 
@@ -530,6 +535,13 @@ void DataIterator::SetFOV(const int size, const int stride,
   // no op.
 }
 
+void DataIterator::Get(float* data_out, const int row_start, const int row_end) const {
+  for (int i = row_start; i < row_end; i++) {
+    Get(data_out, i);
+    data_out += num_dims_;
+  }
+}
+
 DummyDataIterator::DummyDataIterator(const config::DataStreamConfig& config):
   DataIterator(config) {
     num_dims_ = 100;
@@ -606,35 +618,64 @@ HDF5DataIterator<T>::~HDF5DataIterator() {
 
 template <typename T>
 void HDF5DataIterator<T>::Get(float* data_ptr, const int row) const {
-  hsize_t start[2];
-  start[0] = row;
-  start[1] = 0;
-  T* buf = new T[num_dims_];
-  hid_t f_dataspace = H5Dget_space(dataset_);
-  H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start, NULL, count_, NULL);
-  H5Dread(dataset_, type_, m_dataspace_, f_dataspace, H5P_DEFAULT, buf);
-  H5Sclose(f_dataspace);
+  Get(data_ptr, row, row+1);
+}
 
-  // Copy and type-cast from buf_ to data_ptr.
-  for (int i = 0; i < num_dims_; i++) {
+template <typename T>
+void HDF5DataIterator<T>::Get(float* data_ptr, int row_start, int row_end) const {
+  int num_rows = row_end - row_start;
+  if (row_start < 0 || row_end < 0 || num_rows <= 0) {
+    cerr << "Invalid start / end " << row_start << " " << row_end << endl;
+    exit(1);
+  }
+  hsize_t start[2], count[2];
+  start[0] = row_start;
+  start[1] = 0;
+  count[0] = num_rows;
+  count[1] = num_dims_;
+
+  T* buf = new T[num_dims_ * num_rows];
+  if (buf == NULL) {
+    cerr << "Out of main memory." << endl;
+    exit(1);
+  }
+  hid_t f_dataspace = H5Dget_space(dataset_);
+  if (f_dataspace < 0) {
+    cerr << "Could not get file dataspace." << endl;
+    exit(1);
+  }
+  hid_t m_dataspace = H5Screate_simple(2, count, NULL);
+  if (m_dataspace < 0) {
+    cerr << "Could not create memory dataspace of shape " << num_rows << " x " << num_dims_ << endl;
+    exit(1);
+  }
+  if (H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start, NULL, count, NULL) < 0) {
+    cerr << "Could not select hyperslab " << row_start << ":" << row_end << endl;
+    exit(1);
+  }
+  if (H5Dread(dataset_, type_, m_dataspace, f_dataspace, H5P_DEFAULT, buf) < 0) {
+    cerr << "Could not read from " << row_start << ":" << row_end << endl;
+    exit(1);
+  }
+
+  // Copy and type-cast from T to float.
+  for (int i = 0; i < num_dims_ * num_rows; i++) {
     data_ptr[i] = static_cast<float>(buf[i]);
+  }
+  if (H5Sclose(m_dataspace) < 0) {
+    cerr << "Could not close memory dataspace" << endl;
+    exit(1);
+  }
+  if (H5Sclose(f_dataspace) < 0) {
+    cerr << "Could not close file dataspace" << endl;
+    exit(1);
   }
   delete[] buf;
 }
 
 template <typename T>
 void HDF5DataIterator<T>::GetNext(float* data_ptr) {
-  start_[0] = row_;
-  hid_t f_dataspace = H5Dget_space(dataset_);
-  H5Sselect_hyperslab(f_dataspace, H5S_SELECT_SET, start_, NULL, count_, NULL);
-  H5Dread(dataset_, type_, m_dataspace_, f_dataspace, H5P_DEFAULT, buf_);
-  H5Sclose(f_dataspace);
-
-  // Copy and type-cast from buf_ to data_ptr.
-  for (int i = 0; i < num_dims_; i++) {
-    data_ptr[i] = static_cast<float>(buf_[i]);
-  }
-
+  Get(data_ptr, row_);
   row_++;
   if (row_ == dataset_size_) row_ = 0;
 }
@@ -1020,6 +1061,7 @@ SequenceDataIterator::SequenceDataIterator(const config::DataStreamConfig& confi
   DataIterator(config),
   it_(NULL),
   seq_length_(config.seq_length()),
+  frame_size_(0),
   pick_first_(config.pick_first()) {
     config::DataStreamConfig base_config(config);
     base_config.set_is_sequence(false);
@@ -1031,6 +1073,7 @@ SequenceDataIterator::SequenceDataIterator(const config::DataStreamConfig& confi
     }
     int base_dataset_size = it_->GetDataSetSize();
     num_dims_ = frame_size_ * (pick_first_ ? 1 : seq_length_);
+    cout << "Frame size " << frame_size_ << " num dims " << num_dims_ << endl;
 
     const string& boundary_file = config.boundary_file();
     vector<int> num_frames;
@@ -1066,6 +1109,12 @@ SequenceDataIterator::~SequenceDataIterator() {
   delete it_;
 }
 
+void SequenceDataIterator::Preprocess(Matrix& m) {
+  m.Reshape(frame_size_, -1);
+  it_->Preprocess(m);
+  m.Reshape(frame_size_ * seq_length_, -1);
+}
+
 void SequenceDataIterator::SetupRowMapping(const vector<int>& num_frames) {
   int start = 0;
   for (int num_f : num_frames) {
@@ -1083,26 +1132,20 @@ void SequenceDataIterator::GetNext(float* data_out) {
 }
 
 void SequenceDataIterator::Get(float* data_out, const int row) const {
+  if (row < 0 || row >= dataset_size_) {
+    cerr << "Asking for row " << row << endl;
+    exit(1);
+  }
   int mapped_row = row_mapping_[row];
   if (pick_first_) {
-      it_->Get(data_out, mapped_row);
+    it_->Get(data_out, mapped_row);
   } else {
-    for (int i = 0; i < seq_length_; i++) {
-      it_->Get(data_out + i * frame_size_, mapped_row + i);
-    }
+    it_->Get(data_out, mapped_row, mapped_row + seq_length_);
   }
 }
 
 void SequenceDataIterator::Prep(const int chunk_size) {
   it_->Prep(chunk_size);
-}
-
-void SequenceDataIterator::Seek(int row) {
-  it_->Seek(row);
-}
-
-int SequenceDataIterator::Tell() const {
-  return it_->Tell();
 }
 
 void SequenceDataIterator::SetMaxDataSetSize(int max_dataset_size) {

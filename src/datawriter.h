@@ -18,7 +18,7 @@ class DataWriter {
   int dataset_size_;
   typedef struct {
     int num_dims, current_row, average_batches, average_online, counter, consumed;
-    hid_t dataset, dataspace;
+    hid_t dataset;
     Matrix buf, seq_buf;
   } stream;
   map<string, stream> streams_;
