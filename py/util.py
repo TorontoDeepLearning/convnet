@@ -6,8 +6,6 @@ import conv_cpu
 import sys
 import h5py
 from time import sleep
-from google.protobuf import text_format
-import convnet_config_pb2
 
 """
 This script uses the GPU locking system used at University of Toronto.

@@ -1,4 +1,6 @@
 from util import *
+from google.protobuf import text_format
+import convnet_config_pb2
 
 def ChooseEdge(edge_proto):
   if edge_proto.edge_type == convnet_config_pb2.Edge.CONVOLUTIONAL:
