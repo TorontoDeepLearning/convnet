@@ -89,6 +89,7 @@ class ConvNet(object):
 
   def Fprop(self, input_data):
     batch_size = input_data.shape[0]
+    input_data = input_data.reshape(batch_size, -1)
     if self.batch_size_ != batch_size:
       self.SetBatchSize(batch_size)
 
@@ -110,6 +111,9 @@ class ConvNet(object):
 
   def GetState(self, layer_name):
     return self.layer_name_dict_[layer_name].GetState().asarray()
+  
+  def GetNumDims(self, layer_name):
+    return self.layer_name_dict_[layer_name].GetNumDims()
 
   def SetNormalizer(self, means_file, image_size_y, image_size_x):
     f = h5py.File(means_file)

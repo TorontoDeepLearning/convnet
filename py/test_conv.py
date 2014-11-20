@@ -227,6 +227,33 @@ def TestResponseNormCrossMapUndo(images_shape, numF, add_scale, pow_scale, block
   targets_gpu.free_device_memory()
   return diff
 
+def TestConv3DUp(images_shape, conv_desc):
+  filters_shape = (conv_desc.num_output_channels, conv_desc.kernel_size_x, conv_desc.kernel_size_y, conv_desc.num_input_channels * conv_desc.num_output_channels)
+  output_shape = cm.GetOutputShape4D(images_shape, conv_desc)
+  
+  images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  filters = np.random.randn(filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]).astype(np.float32)
+ 
+  images_gpu = cm.CUDAMatrix(images)
+  filters_gpu = cm.CUDAMatrix(filters)
+  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]))
+
+  images_gpu.set_shape4d(images_shape)
+  filters_gpu.set_shape4d(filters_shape)
+  output_gpu.set_shape4d(output_shape)
+
+  if test_gemm:
+    cc_gemm.convUp(images_gpu, filters_gpu, output_gpu, conv_desc)
+  else:
+    cc.convUp(images_gpu, filters_gpu, output_gpu, conv_desc)
+  output_cpu = conv_cpu.ConvUp(images, filters, images_shape, cm.GetConvDescTuple2(conv_desc))
+
+  diff = Diff(output_cpu, output_gpu.asarray())
+  images_gpu.free_device_memory()
+  filters_gpu.free_device_memory()
+  output_gpu.free_device_memory()
+  return diff
+
 def Diff(a, b):
   scale = np.abs(a + b).mean()
   diff = np.abs(a - b).max() / scale
@@ -239,7 +266,7 @@ def Check(diff, tol=1e-4):
     result = 'FAILED'
   print diff, result
 
-def Test():
+def Test2D():
   batch_size = 128
   image_size_x = 12
   image_size_y = 12
@@ -284,8 +311,41 @@ def Test():
   print 'ResponseNormCrossMapUndo'
   Check(TestResponseNormCrossMapUndo(images_shape, sizeF, add_scale, pow_scale, blocked))
 
+def Test3D():
+  batch_size = 128
+  image_size_x = 12
+  image_size_y = 12
+  image_size_t = 12
+  num_input_channels = 32
+  sizeF = 8
+  add_scale = 0.005
+  pow_scale = 0.75
+  blocked = False
+  num_output_channels = 64
+  kernel_size_y = 3
+  kernel_size_x = 3
+  kernel_size_t = 3
+  stride_y = 2
+  stride_x = 2
+  stride_t = 2
+  padding_y = 1
+  padding_x = 1
+  padding_t = 0
+
+  images_shape = (batch_size, image_size_x, image_size_y, num_input_channels, image_size_t)
+  conv_desc = cm.GetConvDesc(num_input_channels, num_output_channels,
+                             kernel_size_y, kernel_size_x,
+                             stride_y, stride_x,
+                             padding_y, padding_x, kernel_size_t, stride_t, padding_t)
+  print 'ConvUp'
+  Check(TestConv3DUp(images_shape, conv_desc))
+  #print 'ConvDown'
+  #Check(TestConv3DDown(images_shape, conv_desc))
+  #print 'ConvOutp'
+  #Check(TestConv3DOutp(images_shape, conv_desc))
+
 def main():
-  Test()
+  Test2D()
 
 if __name__ == '__main__':
   board = LockGPU()

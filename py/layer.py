@@ -41,6 +41,9 @@ class Layer(object):
   def GetSize(self):
     return self.image_size_y_, self.image_size_x_
 
+  def GetNumDims(self):
+    return self.image_size_y_ * self.image_size_x_ * self.num_channels_
+
   def AllocateMemory(self, batch_size):
     layer_size = self.num_channels_ * self.image_size_y_ * self.image_size_x_
     if self.state_ is not None:

@@ -328,3 +328,37 @@ def ResponseNormCrossMapUndo(derivs, images, image_shape, numF, add_scale, pow_s
             * this_loc_all_channels_data[:, startPos:endPos] \
             * np.power(denoms[:, startPos:endPos], -pow_scale-1)).sum(axis=1)
   return output
+
+def Conv3DUp(images, filters, image_shape, conv_spec):
+  num_images, image_size_x, image_size_y, num_input_channels = image_shape
+  num_output_channels, kernel_size_y, kernel_size_x, kernel_size_t, stride_y, stride_x, stride_t, padding_y, padding_x, padding_t = conv_spec
+  num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
+  num_modules_x = (image_size_x + 2 * padding_x - kernel_size_x) / stride_x + 1
+  output = np.zeros((num_images, num_modules_x * num_modules_y * num_output_channels), dtype=np.float32)
+
+  for y_pos in xrange(num_modules_y):
+    for x_pos in xrange(num_modules_x):
+      input_data = np.zeros((num_images, kernel_size_x * kernel_size_y * num_input_channels), dtype=np.float32)
+
+      start_x = x_pos * stride_x - padding_x
+      start_y = y_pos * stride_y - padding_y
+      offset = y_pos * num_modules_x + x_pos
+
+      for c in xrange(num_input_channels):
+        for y in xrange(start_y, start_y + kernel_size_y):
+          if y < 0 or y >= image_size_y:
+            continue
+          for x in xrange(start_x, start_x + kernel_size_x):
+            if x < 0 or x >= image_size_x:
+              continue
+            input_data_x = x - start_x
+            input_data_y = y - start_y
+            input_data_index = (c * kernel_size_y + input_data_y) * kernel_size_x + input_data_x
+            images_index     = (c * image_size_y  +            y) * image_size_x  +            x
+            input_data[:, input_data_index] = images[:, images_index]
+      output_data = np.dot(input_data, filters.T)
+
+      for c in xrange(num_output_channels):
+        output[:, offset + c * num_modules_x * num_modules_y] = output_data[:, c]
+  return output
+

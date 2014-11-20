@@ -182,6 +182,20 @@ def GetConvDescTuple2(cd):
     -cd.padding_x,
          )
 
+def GetConvDescTuple3(cd):
+  return (
+    cd.num_output_channels,
+    cd.kernel_size_y,
+    cd.kernel_size_x,
+    cd.kernel_size_t,
+    cd.stride_y,
+    cd.stride_x,
+    cd.stride_t,
+    -cd.padding_y,
+    -cd.padding_x,
+    -cd.padding_t,
+         )
+
 def GetOutputShape(image_size_y, image_size_x, conv_desc):
   _, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple2(conv_desc)
   num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
@@ -194,6 +208,14 @@ def GetOutputShape4D(input_shape, conv_desc):
   num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
   num_modules_x = (image_size_x + 2 * padding_x - kernel_size_x) / stride_x + 1
   return batch_size, num_modules_x, num_modules_y, num_output_channels
+
+def GetOutputShape5D(input_shape, conv_desc):
+  batch_size, image_size_x, image_size_y, num_input_channels, image_size_t = input_shape
+  num_output_channels, kernel_size_y, kernel_size_x, kernel_size_t, stride_y, stride_x, stride_t, padding_y, padding_x, padding_t = GetConvDescTuple3(conv_desc)
+  num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
+  num_modules_x = (image_size_x + 2 * padding_x - kernel_size_x) / stride_x + 1
+  num_modules_t = (image_size_t + 2 * padding_t - kernel_size_t) / stride_t + 1
+  return batch_size, num_modules_x, num_modules_y, num_output_channels, num_modules_t
 
 class rnd_struct(ct.Structure):
     _fields_ = [('dev_rnd_mults', ct.POINTER(ct.c_uint)), 

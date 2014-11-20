@@ -6,6 +6,30 @@ _ConvNet = ct.cdll.LoadLibrary('libcudamat_conv_gemm.so')
 def DivUp(a, b):
   return (a + b - 1) / b
 
+def AddAtAllLocs(h, b):
+  batch_size, size_x, size_y, num_channels = h.shape4d
+  b_shape = b.shape
+  h.reshape((-1, num_channels))
+  b.reshape((1, -1))
+  assert b.shape[1] == num_channels
+  h.add_row_vec(b)
+  h.reshape((batch_size, -1))
+  b.reshape(b_shape)
+
+def AddUpAllLocs(h, b, scaleTargets=0):
+  batch_size, size_x, size_y, num_channels = h.shape4d
+  b_shape = b.shape
+  h.reshape((-1, num_channels))
+  b.reshape((1, -1))
+  assert b.shape[1] == num_channels
+  if scaleTargets == 0:
+    h.sum(axis=0, target=b)
+  else:
+    b.mult(scaleTargets)
+    b.add_sums(h, axis=0)
+  h.reshape((batch_size, -1))
+  b.reshape(b_shape)
+
 def convUp(images, filters, targets, conv_desc, scaleTargets=0):
   _ConvNet.convUpGemm(images.p_mat, filters.p_mat, targets.p_mat,
                   images.p_shape4d, filters.p_shape4d, targets.p_shape4d,
@@ -53,3 +77,10 @@ def ResponseNormCrossMapUndo(derivs, images, targets, sizeF, addScale, powScale,
     derivs.p_mat, images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
     ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
 
+def conv3DUp(images, filters, targets, conv_desc, scaleTargets=0):
+  print images.shape4d
+  print filters.shape4d
+  print targets.shape4d
+  _ConvNet.convUp3DGemm(images.p_mat, filters.p_mat, targets.p_mat,
+                  images.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                  conv_desc, ct.c_float(scaleTargets))
