@@ -1,11 +1,11 @@
 data_config {
-  file_pattern: "/ais/gobi3/u/nitish/mnist/mnist.h5"
+  file_pattern: "../data/mnist.h5"
   layer_name: "input"
   dataset_name: "train_full"
   data_type: HDF5
 }
 data_config {
-  file_pattern: "/ais/gobi3/u/nitish/mnist/mnist.h5"
+  file_pattern: "../data/mnist.h5"
   layer_name: "output"
   dataset_name: "train_full_labels"
   data_type: HDF5

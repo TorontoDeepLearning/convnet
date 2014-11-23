@@ -35,9 +35,6 @@
 using namespace cimg_library;
 using namespace std;
 
-// Outputs a string that describes the err_code.
-string GetStringError(int err_code);
-
 template<class T> void ReadPbtxt(const string& pbtxt_file, T& model);
 template<class T> void WritePbtxt(const string& pbtxt_file, const T& model);
 
@@ -63,6 +60,15 @@ void TimestampModelFile(const string& src_file, const string& dest_file, const s
 bool ReadLines(const string& filename, vector<string>& lines);
 void DrawRectange(CImg<float>& img, int xmin, int ymin, int xmax, int ymax, const float* color, int thickness);
 
+// Outputs a string that describes the err_code.
+string GetStringError(int err_code);
+
+// a+=b;
+void AddVectors(vector<float>& a, vector<float>& b);
+
+//
+// ImageDisplayer
+//
 
 class ImageDisplayer {
  public:
