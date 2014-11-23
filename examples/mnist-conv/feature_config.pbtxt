@@ -10,7 +10,7 @@ feature {
 input {
   data_config {
     layer_name: "input"
-    file_pattern: "/ais/gobi3/u/nitish/mnist/mnist.h5"
+    file_pattern: "../data/mnist.h5"
     dataset_name: "test"
     data_type: HDF5
   }

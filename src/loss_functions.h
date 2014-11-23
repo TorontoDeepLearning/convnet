@@ -6,6 +6,8 @@
 class LossFunction {
  public:
   LossFunction();
+  virtual ~LossFunction() {}
+
   virtual float GetLoss(Matrix& y, Matrix& t) = 0;
   virtual void GetLossDerivative(Matrix& y, Matrix& t, Matrix& dLbydy) = 0;
 

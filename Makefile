@@ -33,6 +33,7 @@ else
 endif
 
 SRC=src
+APP=apps
 OBJ=obj
 BIN=bin
 PYT=py
@@ -67,6 +68,9 @@ $(BIN)/image2hdf5: $(OBJ)/image_iterators.o $(OBJ)/image2hdf5.o $(OBJ)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(OBJ)/%.o: $(SRC)/%.cc
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+
+$(OBJ)/%.o: $(APP)/%.cc
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJ)/convnet_config.pb.o : proto/convnet_config.proto

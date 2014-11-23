@@ -1,10 +1,12 @@
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import sys
+
 plt.ion()
 
-data_files = list(glob.glob('checkpoint_dir/mnist_net_*_train.log'))
-valid_data_files = list(glob.glob('checkpoint_dir/mnist_net_*_valid.log'))
+data_files = list(glob.glob(sys.argv[1]+'/mnist_net_*_train.log'))
+valid_data_files = list(glob.glob(sys.argv[1]+'/mnist_net_*_valid.log'))
 
 for fname in data_files:
   data = np.loadtxt(fname).reshape(-1, 3)

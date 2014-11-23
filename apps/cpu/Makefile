@@ -11,10 +11,10 @@ OPENBLAS=$(HOME)/OpenBLAS
 #####################################
 CXX = g++
 
-BIN=../bin
-DEPS=../deps
-PROTO=../proto
-SRC=../src
+BIN=../../bin
+DEPS=../../deps
+PROTO=../../proto
+SRC=../../src
 
 CPPFLAGS = -I$(DEPS) -I$(INC)
 LIBFLAGS = -L$(LIB)
