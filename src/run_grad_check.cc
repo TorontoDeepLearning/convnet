@@ -9,12 +9,13 @@ int main(int argc, char** argv) {
   int board = atoi(argv[1]);
   string model_file(argv[2]);
   string output_file(argv[3]);
+  int batchsize = argc > 4 ? atoi(argv[4]) : 128;
 
   Matrix::SetupCUDADevice(board);
   cout << "Using board " << board << endl;
 
   GradChecker gcheck = GradChecker(model_file);
-  gcheck.SetBatchsize(128);
+  gcheck.SetBatchsize(batchsize);
   gcheck.AllocateMemory(false);
   gcheck.Run(output_file);
 

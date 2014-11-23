@@ -218,7 +218,9 @@ void Layer::SetSize(int image_size_y, int image_size_x, int image_size_t) {
   image_size_y_ = image_size_y;
   image_size_x_ = image_size_x;
   image_size_t_ = image_size_t;
-  cout << "Layer " << name_ << ": " << image_size_y << "x" << image_size_x << endl;
+  cout << "Layer " << name_ << ": " << image_size_y << "x" << image_size_x;
+  if (image_size_t > 1) cout << "x" << image_size_t;
+  cout << endl;
   if (display_) {
     if (num_channels_ == 3) {
       img_display_ = new ImageDisplayer(image_size_x, image_size_y, num_channels_, false, name_);

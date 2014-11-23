@@ -783,7 +783,7 @@ void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output,
 }
 
 void Matrix::Conv3DUp(Matrix& input, Matrix& w, Matrix& output,
-                    ConvDesc conv_desc, float scale_targets) {
+                      ConvDesc conv_desc, float scale_targets) {
 #ifdef USE_GEMM
   convUp3DGemm(input.GetMat(), w.GetMat(), output.GetMat(), &input.GetShape4D(),
                &w.GetShape4D(), &output.GetShape4D(), conv_desc, scale_targets);
@@ -807,7 +807,7 @@ void Matrix::ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
 }
 
 void Matrix::Conv3DDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                      ConvDesc conv_desc, float scale_targets) {
+                        ConvDesc conv_desc, float scale_targets) {
 #ifdef USE_GEMM
   convDown3DGemm(deriv_output.GetMat(), w.GetMat(), deriv_input.GetMat(),
            &deriv_output.GetShape4D(), &w.GetShape4D(), &deriv_input.GetShape4D(),
@@ -834,7 +834,7 @@ void Matrix::ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
 }
 
 void Matrix::Conv3DOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
-                      ConvDesc conv_desc, float scale_targets, float scale_outputs) {
+                        ConvDesc conv_desc, float scale_targets, float scale_outputs) {
 #ifdef USE_GEMM
   convOutp3DGemm(input.GetMat(), deriv_output.GetMat(), dw.GetMat(),
            &input.GetShape4D(), &deriv_output.GetShape4D(), &dw.GetShape4D(),

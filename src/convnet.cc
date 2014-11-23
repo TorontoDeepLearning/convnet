@@ -337,7 +337,6 @@ void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge) {
   Matrix& input_state = input.GetState(edge.GetSourceSliceName());
   Matrix& output_state = output.GetState(edge.GetDestSliceName());
   bool overwrite = output.AddOrOverwriteState(edge.GetDestSliceName());
-  //cout << "Fprop from " << input.GetName() << " slice " << edge.GetSourceSliceName() << " to " << output.GetName() << " slice " << edge.GetDestSliceName() << " overwrite " << overwrite << endl;
   edge.ComputeUp(input_state, output_state, overwrite);
 }
 
@@ -351,9 +350,8 @@ void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge) {
   edge.ComputeOuter(input_state, output_deriv);
   if (!input.IsInput()) {
     bool overwrite = input.AddOrOverwriteDeriv(edge.GetSourceSliceName());
-  //cout << "Bprop to " << input.GetName() << " slice " << edge.GetSourceSliceName() << " from " << output.GetName() << " slice " << edge.GetDestSliceName() << " overwrite " << overwrite << endl;
-    edge.ComputeDown(output_deriv, input_state, output_state,
-                     input_deriv, overwrite);
+    edge.ComputeDown(output_deriv, input_state, output_state, input_deriv,
+                     overwrite);
   }
 }
 

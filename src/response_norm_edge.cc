@@ -21,8 +21,10 @@ string ResponseNormEdge::GetDescription() {
   stringstream ss;
   ss << name_ << " Response norm crossmap : " <<
     "num_filters = " << num_filters_response_norm_ << " "
-    << image_size_y_ << "-" << image_size_x_ << "-" << num_input_channels_ << ":"
-    << num_modules_y_ << "-" << num_modules_x_ << "-" << num_output_channels_;
+    << image_size_y_ << "-" << image_size_x_ << "-" << num_input_channels_;
+  if (image_size_t_ != 1) ss << "-" << image_size_t_;
+  ss << ":" << num_modules_y_ << "-" << num_modules_x_ << "-" << num_output_channels_;
+  if (num_modules_t_ != 1) ss << "-" << num_modules_t_;
   return ss.str();
 }
 

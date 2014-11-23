@@ -40,7 +40,7 @@ def convDown(hidSums, filters, targets, conv_desc, scaleTargets=0):
                     hidSums.p_shape4d, filters.p_shape4d, targets.p_shape4d,
                     conv_desc, ct.c_float(scaleTargets))
 
-def convOutp(images, hidSums, targets, conv_desc, scaleTargets=0, partialSumY=0, partialSumX=0, temp=None):
+def convOutp(images, hidSums, targets, conv_desc, scaleTargets=0):
   _ConvNet.convOutpGemm(
     images.p_mat, hidSums.p_mat, targets.p_mat,
     images.p_shape4d, hidSums.p_shape4d, targets.p_shape4d,
@@ -77,10 +77,30 @@ def ResponseNormCrossMapUndo(derivs, images, targets, sizeF, addScale, powScale,
     derivs.p_mat, images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
     ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
 
-def conv3DUp(images, filters, targets, conv_desc, scaleTargets=0):
-  print images.shape4d
-  print filters.shape4d
-  print targets.shape4d
+def convUp3D(images, filters, targets, conv_desc, scaleTargets=0):
   _ConvNet.convUp3DGemm(images.p_mat, filters.p_mat, targets.p_mat,
                   images.p_shape4d, filters.p_shape4d, targets.p_shape4d,
                   conv_desc, ct.c_float(scaleTargets))
+
+def convDown3D(hidSums, filters, targets, conv_desc, scaleTargets=0):
+  _ConvNet.convDown3DGemm(hidSums.p_mat, filters.p_mat, targets.p_mat,
+                    hidSums.p_shape4d, filters.p_shape4d, targets.p_shape4d,
+                    conv_desc, ct.c_float(scaleTargets))
+
+def convOutp3D(images, hidSums, targets, conv_desc, scaleTargets=0):
+  _ConvNet.convOutp3DGemm(
+    images.p_mat, hidSums.p_mat, targets.p_mat,
+    images.p_shape4d, hidSums.p_shape4d, targets.p_shape4d,
+    conv_desc, ct.c_float(scaleTargets), ct.c_float(1))
+
+def MaxPool3D(images, targets, conv_desc):
+  MaxPool(images, targets, conv_desc)
+
+def MaxPool3DUndo(images, grad, maxes, targets, conv_desc, scaleTargets=0):
+  MaxPoolUndo(images, grad, maxes, targets, conv_desc, scaleTargets=scaleTargets)
+
+def AvgPool3D(images, targets, conv_desc):
+  AvgPool(images, targets, conv_desc)
+
+def AvgPool3DUndo(avgGrads, targets, conv_desc, scaleTargets=0):
+  AvgPoolUndo(avgGrads, targets, conv_desc, scaleTargets=scaleTargets)

@@ -12,8 +12,9 @@ size_t FCEdge::GetParameterMemoryRequirement() {
 
 string FCEdge::GetDescription() {
   stringstream ss;
-  ss << name_ << " Fully Connected :" << image_size_y_ << "-" << image_size_x_
-     << "-" << num_input_channels_ << ":" << num_output_channels_;
+  ss << name_ << " Fully Connected :" << image_size_y_ << "-" << image_size_x_ << "-" << num_input_channels_;
+  if (image_size_t_ != 1) ss << "-" << image_size_t_;
+  ss << ":" << num_output_channels_;
   return ss.str();
 }
 

@@ -22,10 +22,12 @@ void AvgPoolEdge::SetImageSize(int image_size_y, int image_size_x, int image_siz
 
 string AvgPoolEdge::GetDescription() {
   stringstream ss;
-  ss << name_ << " "
+  ss << name_
      << " AvgPool Kernel: " << Edge::GetDescription(conv_desc_)
-     << " Layer: " << image_size_y_ << "-" << image_size_x_ << " : "
-     << num_modules_y_ << "-" << num_modules_x_;
+     << " Layer: " << image_size_y_ << "-" << image_size_x_;
+  if (image_size_t_ != 1) ss << "-" << image_size_t_;
+  ss << " : " <<  num_modules_y_ << "-" << num_modules_x_;
+  if (num_modules_t_ != 1) ss << "-" << num_modules_t_;
   return ss.str();
 }
 

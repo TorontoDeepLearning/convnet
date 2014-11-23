@@ -105,7 +105,9 @@ void Edge::GetNumModules(const ConvDesc conv_desc,
 string Edge::GetDescription(const ConvDesc conv_desc) {
   stringstream ss;
   ss << conv_desc.kernel_size_y << "-" << conv_desc.kernel_size_x << "-"
-     << conv_desc.num_input_channels << " : " << conv_desc.num_output_channels;
+     << conv_desc.num_input_channels;
+  if (conv_desc.kernel_size_t != 1) ss << "-" << conv_desc.kernel_size_t;
+  ss << " : " << conv_desc.num_output_channels;
   return ss.str();
 }
 

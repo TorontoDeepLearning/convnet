@@ -53,6 +53,10 @@ void convUp3DGemm(cudamat* images, cudamat* filters, cudamat* targets,
   }
   images->data_device  = images_data_device;  // Restore from backup.
   targets->data_device = targets_data_device;  // Restore from backup.
+
+  // UnPretend.
+  images->size[1]  = images_shape->shape[1] * images_shape->shape[2] * images_shape->shape[3];
+  targets->size[1] = targets_shape->shape[1] * targets_shape->shape[2] * targets_shape->shape[3];
 }
 
 void convDown3DGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
@@ -98,6 +102,9 @@ void convDown3DGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
   }
   targets->data_device  = targets_data_device;
   derivs->data_device = derivs_data_device;
+
+  targets->size[1] = targets_shape->shape[1] * targets_shape->shape[2] * targets_shape->shape[3];
+  derivs->size[1]  = derivs_shape->shape[1] * derivs_shape->shape[2] * derivs_shape->shape[3];
 }
 
 void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
@@ -143,6 +150,8 @@ void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
   }
   images->data_device = images_data_device;  // Restore from backup.
   derivs->data_device = derivs_data_device;  // Restore from backup.
+  images->size[1] = images_shape->shape[1] * images_shape->shape[2] * images_shape->shape[3];
+  derivs->size[1] = derivs_shape->shape[1] * derivs_shape->shape[2] * derivs_shape->shape[3];
 }
 
 #ifdef __cplusplus
