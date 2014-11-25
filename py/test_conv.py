@@ -15,13 +15,9 @@ def TestConvUp(images_shape, conv_desc):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
   filters = np.random.randn(filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]).astype(np.float32)
  
-  images_gpu = cm.CUDAMatrix(images)
-  filters_gpu = cm.CUDAMatrix(filters)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]))
-
-  images_gpu.set_shape4d(images_shape)
-  filters_gpu.set_shape4d(filters_shape)
-  output_gpu.set_shape4d(output_shape)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  filters_gpu = cm.CUDAMatrix(filters, shape=filters_shape)
+  output_gpu = cm.empty(output_shape)
 
   if test_gemm:
     cc_gemm.convUp(images_gpu, filters_gpu, output_gpu, conv_desc)
@@ -42,13 +38,9 @@ def TestConvDown(images_shape, conv_desc):
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3]).astype(np.float32)
   filters = np.random.randn(filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]).astype(np.float32)
  
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  filters_gpu = cm.CUDAMatrix(filters)
-  images_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
-
-  derivs_gpu.set_shape4d(deriv_shape)
-  filters_gpu.set_shape4d(filters_shape)
-  images_gpu.set_shape4d(images_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  filters_gpu = cm.CUDAMatrix(filters, shape=filters_shape)
+  images_gpu = cm.empty(images_shape)
 
   if test_gemm:
     cc_gemm.convDown(derivs_gpu, filters_gpu, images_gpu, conv_desc)
@@ -70,13 +62,9 @@ def TestConvOutp(images_shape, conv_desc, partial_sum_y=0, partial_sum_x=0):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3]).astype(np.float32)
  
-  images_gpu = cm.CUDAMatrix(images)
-  filters_gpu = cm.empty((filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]))
-  derivs_gpu = cm.CUDAMatrix(derivs)
-
-  images_gpu.set_shape4d(images_shape)
-  filters_gpu.set_shape4d(filters_shape)
-  derivs_gpu.set_shape4d(deriv_shape)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  filters_gpu = cm.empty(filters_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
 
   if test_gemm:
     cc_gemm.convOutp(images_gpu, derivs_gpu, filters_gpu, conv_desc)
@@ -87,8 +75,7 @@ def TestConvOutp(images_shape, conv_desc, partial_sum_y=0, partial_sum_x=0):
       partial_sum_y = num_modules_y
     partial_sum_locs_y = DivUp(num_modules_y, partial_sum_y)
     partial_sum_locs_x = DivUp(num_modules_x, partial_sum_x)
-    filters_temp_gpu = cm.empty((filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3] * partial_sum_locs_x * partial_sum_locs_y))
-    filters_temp_gpu.set_shape4d((filters_shape[0], filters_shape[1], filters_shape[2], filters_shape[3] * partial_sum_locs_x * partial_sum_locs_y))
+    filters_temp_gpu = cm.empty((filters_shape[0], filters_shape[1], filters_shape[2], filters_shape[3] * partial_sum_locs_x * partial_sum_locs_y))
     cc.convOutp(images_gpu, derivs_gpu, filters_gpu, conv_desc, partialSumY=partial_sum_y, partialSumX=partial_sum_x, temp=filters_temp_gpu)
 
   filters_cpu, filters_temp_cpu = conv_cpu.ConvOutp(images, derivs, images_shape, cm.GetConvDescTuple(conv_desc), partial_sum_y=partial_sum_y, partial_sum_x=partial_sum_x)
@@ -108,11 +95,9 @@ def TestConvOutp(images_shape, conv_desc, partial_sum_y=0, partial_sum_x=0):
 def TestMaxPool(images_shape, conv_desc):
   output_shape = cm.GetOutputShape4D(images_shape, conv_desc)
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  output_gpu = cm.empty(output_shape)
 
-  images_gpu.set_shape4d(images_shape)
-  output_gpu.set_shape4d(output_shape)
   if test_gemm:
     cc_gemm.MaxPool(images_gpu, output_gpu, conv_desc)
   else:
@@ -130,15 +115,11 @@ def TestMaxPoolUndo(images_shape, conv_desc):
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3]).astype(np.float32)
   maxes  = conv_cpu.MaxPool(images, images_shape, cm.GetConvDescTuple(conv_desc))
 
-  images_gpu = cm.CUDAMatrix(images)
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  maxes_gpu = cm.CUDAMatrix(maxes)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  maxes_gpu = cm.CUDAMatrix(maxes, shape=deriv_shape)
+  targets_gpu = cm.empty(images_shape)
 
-  images_gpu.set_shape4d(images_shape)
-  derivs_gpu.set_shape4d(deriv_shape)
-  maxes_gpu.set_shape4d(deriv_shape)
-  targets_gpu.set_shape4d(images_shape)
   if test_gemm:
     cc_gemm.MaxPoolUndo(images_gpu, derivs_gpu, maxes_gpu, targets_gpu, conv_desc)
   else:
@@ -155,11 +136,9 @@ def TestMaxPoolUndo(images_shape, conv_desc):
 def TestAvgPool(images_shape, conv_desc):
   output_shape = cm.GetOutputShape4D(images_shape, conv_desc)
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  output_gpu = cm.empty(output_shape)
 
-  images_gpu.set_shape4d(images_shape)
-  output_gpu.set_shape4d(output_shape)
   if test_gemm:
     cc_gemm.AvgPool(images_gpu, output_gpu, conv_desc)
   else:
@@ -175,11 +154,9 @@ def TestAvgPoolUndo(images_shape, conv_desc):
   deriv_shape = cm.GetOutputShape4D(images_shape, conv_desc)
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3]).astype(np.float32)
 
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  targets_gpu = cm.empty(images_shape)
 
-  derivs_gpu.set_shape4d(deriv_shape)
-  targets_gpu.set_shape4d(images_shape)
   if test_gemm:
     cc_gemm.AvgPoolUndo(derivs_gpu, targets_gpu, conv_desc)
   else:
@@ -193,10 +170,8 @@ def TestAvgPoolUndo(images_shape, conv_desc):
 
 def TestResponseNormCrossMap(images_shape, numF, add_scale, pow_scale, blocked):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
-  images_gpu.set_shape4d(images_shape)
-  targets_gpu.set_shape4d(images_shape)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  targets_gpu = cm.empty(images_shape)
   if test_gemm:
     cc_gemm.ResponseNormCrossMap(images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
   else:
@@ -210,17 +185,13 @@ def TestResponseNormCrossMap(images_shape, numF, add_scale, pow_scale, blocked):
 def TestResponseNormCrossMapUndo(images_shape, numF, add_scale, pow_scale, blocked):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
   derivs = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
-  images_gpu.set_shape4d(images_shape)
-  derivs_gpu.set_shape4d(images_shape)
-  targets_gpu.set_shape4d(images_shape)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=images_shape)
+  targets_gpu = cm.empty(images_shape)
   if test_gemm:
     cc_gemm.ResponseNormCrossMapUndo(derivs_gpu, images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
   else:
-    acts_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
-    acts_gpu.set_shape4d(images_shape)
+    acts_gpu = cm.empty(images_shape)
     cc.ResponseNormCrossMap(images_gpu, acts_gpu, numF, add_scale, pow_scale, blocked)
     cc.ResponseNormCrossMapUndo(derivs_gpu, images_gpu, acts_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
     acts_gpu.free_device_memory()
@@ -237,16 +208,9 @@ def TestConvUp3D(images_shape, conv_desc):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]).astype(np.float32)
   filters = np.random.randn(filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]).astype(np.float32)
  
-  images_gpu = cm.CUDAMatrix(images)
-  filters_gpu = cm.CUDAMatrix(filters)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3] * output_shape[4]))
-
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  output_shape4d = (output_shape[0], output_shape[1], output_shape[2], output_shape[3] * output_shape[4])
-  
-  images_gpu.set_shape4d(images_shape4d)
-  filters_gpu.set_shape4d(filters_shape)
-  output_gpu.set_shape4d(output_shape4d)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  filters_gpu = cm.CUDAMatrix(filters, shape=filters_shape)
+  output_gpu = cm.empty(output_shape)
 
   assert test_gemm
   cc_gemm.convUp3D(images_gpu, filters_gpu, output_gpu, conv_desc)
@@ -265,16 +229,9 @@ def TestConvDown3D(images_shape, conv_desc):
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3] * deriv_shape[4]).astype(np.float32)
   filters = np.random.randn(filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]).astype(np.float32)
  
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  filters_gpu = cm.CUDAMatrix(filters)
-  images_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]))
-
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  deriv_shape4d = (deriv_shape[0], deriv_shape[1], deriv_shape[2], deriv_shape[3] * deriv_shape[4])
-
-  derivs_gpu.set_shape4d(deriv_shape4d)
-  filters_gpu.set_shape4d(filters_shape)
-  images_gpu.set_shape4d(images_shape4d)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  filters_gpu = cm.CUDAMatrix(filters, shape=filters_shape)
+  images_gpu = cm.empty(images_shape)
 
   assert test_gemm
   cc_gemm.convDown3D(derivs_gpu, filters_gpu, images_gpu, conv_desc)
@@ -294,17 +251,10 @@ def TestConvOutp3D(images_shape, conv_desc, partial_sum_y=0, partial_sum_x=0):
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]).astype(np.float32)
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3] * deriv_shape[4]).astype(np.float32)
  
-  images_gpu = cm.CUDAMatrix(images)
-  filters_gpu = cm.empty((filters_shape[0], filters_shape[1] * filters_shape[2] * filters_shape[3]))
-  derivs_gpu = cm.CUDAMatrix(derivs)
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  filters_gpu = cm.empty(filters_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
   
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  deriv_shape4d = (deriv_shape[0], deriv_shape[1], deriv_shape[2], deriv_shape[3] * deriv_shape[4])
-
-  images_gpu.set_shape4d(images_shape4d)
-  filters_gpu.set_shape4d(filters_shape)
-  derivs_gpu.set_shape4d(deriv_shape4d)
-
   cc_gemm.convOutp3D(images_gpu, derivs_gpu, filters_gpu, conv_desc)
   filters_cpu = conv_cpu.ConvOutp3D(images, derivs, images_shape, cm.GetConvDescTuple3D(conv_desc))
   diff = Diff(filters_gpu.asarray(), filters_cpu)
@@ -317,14 +267,9 @@ def TestConvOutp3D(images_shape, conv_desc, partial_sum_y=0, partial_sum_x=0):
 def TestMaxPool3D(images_shape, conv_desc):
   output_shape = cm.GetOutputShape5D(images_shape, conv_desc)
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3] * output_shape[4]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  output_gpu = cm.empty(output_shape)
 
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  output_shape4d = (output_shape[0], output_shape[1], output_shape[2], output_shape[3] * output_shape[4])
-
-  images_gpu.set_shape4d(images_shape4d)
-  output_gpu.set_shape4d(output_shape4d)
   assert test_gemm
   cc_gemm.MaxPool3D(images_gpu, output_gpu, conv_desc)
   output_cpu = conv_cpu.MaxPool3D(images, images_shape, cm.GetConvDescTuple3D(conv_desc))
@@ -340,18 +285,11 @@ def TestMaxPool3DUndo(images_shape, conv_desc):
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3] * deriv_shape[4]).astype(np.float32)
   maxes  = conv_cpu.MaxPool3D(images, images_shape, cm.GetConvDescTuple3D(conv_desc))
 
-  images_gpu = cm.CUDAMatrix(images)
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  maxes_gpu = cm.CUDAMatrix(maxes)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  maxes_gpu = cm.CUDAMatrix(maxes, shape=deriv_shape)
+  targets_gpu = cm.empty(images_shape)
   
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  deriv_shape4d = (deriv_shape[0], deriv_shape[1], deriv_shape[2], deriv_shape[3] * deriv_shape[4])
-
-  images_gpu.set_shape4d(images_shape4d)
-  derivs_gpu.set_shape4d(deriv_shape4d)
-  maxes_gpu.set_shape4d(deriv_shape4d)
-  targets_gpu.set_shape4d(images_shape4d)
   assert test_gemm
   cc_gemm.MaxPool3DUndo(images_gpu, derivs_gpu, maxes_gpu, targets_gpu, conv_desc)
   output_cpu = conv_cpu.MaxPool3DUndo(images, maxes, derivs, images_shape, deriv_shape, cm.GetConvDescTuple3D(conv_desc))
@@ -366,14 +304,9 @@ def TestMaxPool3DUndo(images_shape, conv_desc):
 def TestAvgPool3D(images_shape, conv_desc):
   output_shape = cm.GetOutputShape5D(images_shape, conv_desc)
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]).astype(np.float32)
-  images_gpu = cm.CUDAMatrix(images)
-  output_gpu = cm.empty((output_shape[0], output_shape[1] * output_shape[2] * output_shape[3] * output_shape[4]))
+  images_gpu = cm.CUDAMatrix(images, shape=images_shape)
+  output_gpu = cm.empty(output_shape)
 
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  output_shape4d = (output_shape[0], output_shape[1], output_shape[2], output_shape[3] * output_shape[4])
-
-  images_gpu.set_shape4d(images_shape4d)
-  output_gpu.set_shape4d(output_shape4d)
   assert test_gemm
   cc_gemm.AvgPool3D(images_gpu, output_gpu, conv_desc)
   output_cpu = conv_cpu.AvgPool3D(images, images_shape, cm.GetConvDescTuple3D(conv_desc))
@@ -387,14 +320,9 @@ def TestAvgPool3DUndo(images_shape, conv_desc):
   deriv_shape = cm.GetOutputShape5D(images_shape, conv_desc)
   derivs = np.random.randn(deriv_shape[0], deriv_shape[1] * deriv_shape[2] * deriv_shape[3] * deriv_shape[4]).astype(np.float32)
 
-  derivs_gpu = cm.CUDAMatrix(derivs)
-  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3] * images_shape[4]))
+  derivs_gpu = cm.CUDAMatrix(derivs, shape=deriv_shape)
+  targets_gpu = cm.empty(images_shape)
 
-  images_shape4d = (images_shape[0], images_shape[1], images_shape[2], images_shape[3] * images_shape[4])
-  deriv_shape4d = (deriv_shape[0], deriv_shape[1], deriv_shape[2], deriv_shape[3] * deriv_shape[4])
-
-  derivs_gpu.set_shape4d(deriv_shape4d)
-  targets_gpu.set_shape4d(images_shape4d)
   assert test_gemm
   cc_gemm.AvgPool3DUndo(derivs_gpu, targets_gpu, conv_desc)
   output_cpu = conv_cpu.AvgPool3DUndo(derivs, images_shape, cm.GetConvDescTuple3D(conv_desc))

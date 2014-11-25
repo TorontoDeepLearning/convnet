@@ -86,13 +86,13 @@ void convDown3DGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
   derivs2d_shape.shape[3]  = num_output_channels;
   targets2d_shape.shape[3] = num_input_channels * kernel_size_t;
   
+  Scale(targets, scaleTargets);
+  
   derivs->size[1]  = derivs_frame_size;
   targets->size[1] = targets_frame_size * kernel_size_t;
 
   float* derivs_data_device  = derivs->data_device;
   float* targets_data_device = targets->data_device;
-
-  Scale(targets, scaleTargets);
 
   for (int i = 0; i < num_modules_t; i++) {
     convDownGemm(derivs, filters, targets, &derivs2d_shape, filters_shape,
@@ -134,12 +134,13 @@ void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
   images2d_shape.shape[3] = num_input_channels * kernel_size_t;
   derivs2d_shape.shape[3] = num_output_channels;
  
+  Scale(targets, scaleTargets);
+
   // Pretend that images contains kernel_size_t frames only.
   images->size[1] = input_frame_size * kernel_size_t;
   // Pretend that targets contains 1 frame only.
   derivs->size[1] = deriv_frame_size;
 
-  Scale(targets, scaleTargets);
   float* images_data_device = images->data_device;  // Backup.
   float* derivs_data_device = derivs->data_device;  // Backup.
   for (int i = 0; i < num_modules_t; i++) {

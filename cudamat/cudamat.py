@@ -183,6 +183,12 @@ def GetConvDescTuple3D(cd):
     -cd.padding_t,
          )
 
+def GetInputSize(cd):
+  return cd.num_input_channels * cd.kernel_size_x * cd.kernel_size_y * cd.kernel_size_t
+
+def GetOutputSize(cd):
+  return cd.num_output_channels
+
 def GetOutputShape(image_size_y, image_size_x, conv_desc):
   _, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple(conv_desc)
   num_modules_y = (image_size_y + 2 * padding_y - kernel_size_y) / stride_y + 1
@@ -290,7 +296,7 @@ class CUDAMatrix(object):
                 raise generate_exception(err_code)
 
 
-    def __init__(self, array, copy_to_device = True, transpose = False):
+    def __init__(self, array, copy_to_device = True, transpose = False, shape=None):
         """
         Initializes a new matrix object in one of two ways. If array is a numpy
         ndarray, memory for a matrix with the same dimensions is allocated on
@@ -330,7 +336,10 @@ class CUDAMatrix(object):
         self.T = TransposedCUDAMatrix(self.mat)
         self.shape4d_ = Shape4D()
         self.p_shape4d = ct.pointer(self.shape4d_)
-        self.set_shape4d((self.shape[0], 1, 1, self.shape[1]))
+        if shape is None:
+          self.set_shape4d((self.shape[0], 1, 1, self.shape[1]))
+        else:
+          self.set_shape4d(shape)
 
         # Keep a reference to free device memory in case of a crash.
         self.__free_device_memory = _cudamat.free_device_memory
@@ -361,11 +370,18 @@ class CUDAMatrix(object):
                 self.shape4d_.shape[2], self.shape4d_.shape[3]) 
 
     def set_shape4d(self, shape):
-        assert shape[0] * shape[1] * shape[2] * shape[3] == self.shape[0] * self.shape[1], "%s %s" % (shape, self.shape)
-        s1 = ct.c_uint(shape[0])
-        s2 = ct.c_uint(shape[1])
-        s3 = ct.c_uint(shape[2])
-        s4 = ct.c_uint(shape[3])
+        if len(shape) == 4:
+          assert shape[0] * shape[1] * shape[2] * shape[3] == self.shape[0] * self.shape[1], "%s %s" % (shape, self.shape)
+          s1 = ct.c_uint(shape[0])
+          s2 = ct.c_uint(shape[1])
+          s3 = ct.c_uint(shape[2])
+          s4 = ct.c_uint(shape[3])
+        elif len(shape) == 5:
+          assert shape[0] * shape[1] * shape[2] * shape[3] * shape[4] == self.shape[0] * self.shape[1], "%s %s" % (shape, self.shape)
+          s1 = ct.c_uint(shape[0])
+          s2 = ct.c_uint(shape[1])
+          s3 = ct.c_uint(shape[2])
+          s4 = ct.c_uint(shape[3] * shape[4])
 
         err_code = _cudamat.set_shape4d(self.p_shape4d, s1, s2, s3, s4)
         if err_code:
@@ -1769,13 +1785,17 @@ def empty(shape):
       err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1]))
     elif len(shape) == 4:
       err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1] * shape[2] * shape[3]))
+    elif len(shape) == 5:
+      err_code = _cudamat.init_empty(ct.pointer(mat), ct.c_int(shape[0]), ct.c_int(shape[1] * shape[2] * shape[3] * shape[4]))
+    else:
+      raise Exception('Invalid shape.')
 
     if err_code:
         raise generate_exception(err_code)
 
     m = CUDAMatrix(mat)
 
-    if len(shape) == 4:
+    if len(shape) >= 4:
       m.set_shape4d(shape)
 
     m.assign(0)

@@ -21,7 +21,7 @@ void EstimateFreeSpace() {
   }
   */
   // How to get free contiguous space ?
-  free_space_ = 200 * (1 << 20);
+  free_space_ = MAX_MEMORY_BYTES;
 }
 
 inline bool check_cublas_error() {
@@ -461,19 +461,17 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
 
-    // Batchsize be multiple of 128 for max utilization, will still work if is isn't.
-    int num_threads_x = MIN(num_images, 128);
+    int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     
     float *expanded_images = NULL, *expanded_target = NULL;
     int num_modules_batch;
     
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
-    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
     if (free_space_ == 0) EstimateFreeSpace();
     int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
-    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MIN(max_batch_size, MAX_BLOCKS_X);
     //max_batch_size = MAX(max_batch_size, 1);
     //printf("Free space %ld max batch size %d\n", free_space, max_batch_size);
 
@@ -593,7 +591,7 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
 
-    int num_threads_x = MIN(num_images, 128); // Batchsize be multiple of 128 for max utilization, will still work if is isn't.
+    int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     float *expanded_target = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
     //GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
@@ -604,9 +602,8 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     int output_memory_size = num_images * num_output_channels * sizeof(float);
     if (free_space_ == 0) EstimateFreeSpace();
     int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
-    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
-    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MIN(max_batch_size, MAX_BLOCKS_X);
     max_batch_size = MAX(max_batch_size, 1);
 
     cudaError_t err1, err2;
@@ -721,8 +718,7 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
 
-    // Batchsize be multiple of 128 for max utilization, will still work if is isn't.
-    int num_threads_x = MIN(num_images, 128);
+    int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     
     float *expanded_images = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
@@ -734,9 +730,8 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     int output_memory_size = num_images * num_output_channels * sizeof(float);
     if (free_space_ == 0) EstimateFreeSpace();
     int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
-    //int max_batch_size = ((long) MAX_MEMORY_BYTES) / (input_memory_size + output_memory_size);
     max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
-    max_batch_size = MIN(max_batch_size, 4096);
+    max_batch_size = MIN(max_batch_size, MAX_BLOCKS_X);
     max_batch_size = MAX(max_batch_size, 1);
 
     cudaError_t err1, err2;
@@ -845,8 +840,8 @@ void _convPoolGemm(cudamat* images, cudamat* targets,
 
     _Scale(targets, scaleTargets);
 
-    dim3 threads(128);
-    int num_blocks_x = MIN(4096, num_modules);
+    dim3 threads(NUM_THREADS_PER_BLOCK);
+    int num_blocks_x = MIN(MAX_BLOCKS_X, num_modules);
     dim3 blocks = dim3(num_blocks_x, num_input_channels);
     kPool<<<blocks, threads>>>(images->data_device, targets->data_device,
                                num_images, num_input_channels,
@@ -902,8 +897,8 @@ void _avgPoolUndoGemm(cudamat* derivs, cudamat* targets,
 
     _Scale(targets, scaleTargets);
 
-    dim3 threads(128);
-    int num_blocks_x = MIN(4096, num_modules);
+    dim3 threads(NUM_THREADS_PER_BLOCK);
+    int num_blocks_x = MIN(MAX_BLOCKS_X, num_modules);
     dim3 blocks = dim3(num_blocks_x, num_input_channels);
     kAvgPoolUndo<<<blocks, threads>>>(derivs->data_device, targets->data_device,
                                num_images, num_input_channels,
@@ -960,8 +955,8 @@ void _maxPoolUndoGemm(cudamat* images, cudamat* derivs, cudamat* maxes,
 
     _Scale(targets, scaleTargets);
 
-    dim3 threads(128);
-    int num_blocks_x = MIN(4096, num_modules);
+    dim3 threads(NUM_THREADS_PER_BLOCK);
+    int num_blocks_x = MIN(MAX_BLOCKS_X, num_modules);
     dim3 blocks = dim3(num_blocks_x, num_input_channels);
     kMaxPoolUndo<<<blocks, threads>>>(images->data_device, derivs->data_device,
                                maxes->data_device, targets->data_device,
@@ -976,9 +971,8 @@ void _maxPoolUndoGemm(cudamat* images, cudamat* derivs, cudamat* maxes,
 
 void _CrossMapRNorm(cudamat* images, cudamat* targets, int num_filters, int sizeF, float addScale, float powScale, bool blocked) {
   int num_locs = (images->size[0] * images->size[1]) / num_filters;
-  int threads = 512;
-  int num_blocks = DIVUP(num_locs, threads);
-  kCrossMapRNorm<<<num_blocks, threads>>>(images->data_device, targets->data_device,
+  int num_blocks = DIVUP(num_locs, NUM_THREADS_PER_BLOCK);
+  kCrossMapRNorm<<<num_blocks, NUM_THREADS_PER_BLOCK>>>(images->data_device, targets->data_device,
                  num_locs, addScale, powScale, num_filters, sizeF, blocked);
   getLastCudaError("_CrossMapRNorm: kernel execution failed");
 }
@@ -987,13 +981,13 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
                         int num_filters, int sizeF, float addScale,
                         float powScale, bool blocked) {
   int num_locs = (images->size[0] * images->size[1]) / num_filters;
-  int threads = 512;
   int batch_offset = 0;
 
   float *denoms;
   if (free_space_ == 0) EstimateFreeSpace();
   int max_batch_size = free_space_ / (sizeof(float) * num_filters);
   max_batch_size = MIN(num_locs, max_batch_size);
+  max_batch_size = MIN(num_locs, MAX_BLOCKS_X);
   cudaError_t err;
   err = cudaMalloc((void**)&denoms, max_batch_size * num_filters * sizeof(float));
   if (cudaSuccess != err) {
@@ -1002,11 +996,11 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
   int num_batches = DIVUP(num_locs, max_batch_size);
   for (int i = 0; i < num_batches; i++) {
     int batch_size = MIN(max_batch_size, num_locs - batch_offset);
-    int num_blocks = DIVUP(batch_size, threads);
-    kCrossMapDenoms<<<num_blocks, threads>>>(images->data_device, denoms, num_locs, batch_size,
+    int num_blocks = DIVUP(batch_size, NUM_THREADS_PER_BLOCK);
+    kCrossMapDenoms<<<num_blocks, NUM_THREADS_PER_BLOCK>>>(images->data_device, denoms, num_locs, batch_size,
                     batch_offset, addScale, num_filters, sizeF, blocked);
 
-    kCrossMapRNormUndo<<<num_blocks, threads>>>(images->data_device, outGrads->data_device, denoms,
+    kCrossMapRNormUndo<<<num_blocks, NUM_THREADS_PER_BLOCK>>>(images->data_device, outGrads->data_device, denoms,
                        targets->data_device, num_locs, batch_size, batch_offset,
                        addScale, powScale, num_filters, sizeF, blocked);
     batch_offset += batch_size;
