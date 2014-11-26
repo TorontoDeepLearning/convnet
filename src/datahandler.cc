@@ -15,6 +15,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   dataset_size_(-1),
   start_(0),
   multiplicity_counter_(0),
+  random_indices_ind_(0),
   restart_(true),
   nothing_on_gpu_(true),
   fits_on_gpu_(false),
@@ -48,10 +49,14 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     SetupShuffler();
   }
   if (randomize_cpu_) {
-    distribution_ = new uniform_int_distribution<int>(0, dataset_size_ - 1);
+    random_indices_.resize(dataset_size_);
+    for (int i = 0; i < dataset_size_; i++) {
+      random_indices_[i] = i;
+    }
+    shuffle(random_indices_.begin(), random_indices_.end(), generator_);
   }
   Seek(0);
-    
+
   for (const string& layer_name : layer_names_) {
     DataIterator* it = data_it_[layer_name];
     if (it == NULL) continue;
@@ -232,8 +237,15 @@ void DataHandler::WaitForPreload() {
 void DataHandler::DiskAccess() {
   vector<int> random_rows;
   if (randomize_cpu_) {
-    for (int i = 0; i < chunk_size_; i += random_access_chunk_size_) {
-      random_rows.push_back((*distribution_)(generator_));
+    int num_rand = (chunk_size_ + random_access_chunk_size_ - 1) / random_access_chunk_size_;
+    if (random_indices_ind_ + num_rand > dataset_size_) {
+      shuffle(random_indices_.begin(), random_indices_.end(), generator_);
+      random_indices_ind_ = 0;
+    }
+    random_rows.resize(num_rand);
+    for (int i = 0; i < num_rand; i++) {
+      int val = random_indices_[random_indices_ind_++];
+      random_rows[i] = val;
     }
   }
   for (const string& layer_name: layer_names_) {

@@ -44,17 +44,18 @@ class DataHandler {
   void WaitForPreload();
 
   default_random_engine generator_;
-  uniform_int_distribution<int> * distribution_;
   map<string, DataIterator*> data_it_;
   map<string, Matrix> data_;
   vector<string> layer_names_;
   thread* preload_thread_;
   Matrix rand_perm_indices_;
   int batch_size_, chunk_size_, max_reuse_count_, reuse_counter_,
-      random_access_chunk_size_, dataset_size_, start_, multiplicity_counter_;
+      random_access_chunk_size_, dataset_size_, start_, multiplicity_counter_,
+      random_indices_ind_;
   bool restart_, nothing_on_gpu_, fits_on_gpu_;
   const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
   const int multiplicity_;
+  vector<int> random_indices_;
 };
 
 /** Base class for implementing data iterators.
