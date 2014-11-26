@@ -7,7 +7,7 @@ using namespace cv;
 int main(int argc, char** argv) {
   const char *keys =
           "{ board b || GPU board(s): 0 or 012, etc. }"
-          "{ data d || Model pbtxt file }"
+          "{ data d || Data pbtxt file }"
           "{ layer l || Layer pbtxt file }"
           "{ output  o || Output hdf5 file }";
   CommandLineParser parser(argc, argv, keys);
