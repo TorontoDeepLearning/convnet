@@ -160,10 +160,17 @@ class Matrix {
   static void ConvResponseNormCrossMap(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
       float powScale, bool blocked);
+  static void ConvResponseNormCrossMap3D(
+      Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
+      float powScale, bool blocked, int image_size_t);
 
   static void ConvResponseNormCrossMapUndo(
     Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
     int sizeF, float addScale, float powScale, bool blocked);
+  
+  static void ConvResponseNormCrossMapUndo3D(
+    Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
+    int sizeF, float addScale, float powScale, bool blocked, int image_size_t);
 
   static void ConvUpSample(Matrix& input, Matrix& output, int factor,
                            float scaleTargets);

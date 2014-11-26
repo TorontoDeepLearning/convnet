@@ -38,16 +38,28 @@ void ResponseNormEdge::SetImageSize(int image_size_y, int image_size_x, int imag
 }
 
 void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite){
-  Matrix::ConvResponseNormCrossMap(
+  if (image_size_t_ == 1) {
+    Matrix::ConvResponseNormCrossMap(
       input, output, num_input_channels_, num_filters_response_norm_,
       add_scale_, pow_scale_, blocked_);
+  } else {
+    Matrix::ConvResponseNormCrossMap3D(
+      input, output, num_input_channels_, num_filters_response_norm_,
+      add_scale_, pow_scale_, blocked_, image_size_t_);
+  }
 }
 
 void ResponseNormEdge::ComputeDown(Matrix& deriv_output, Matrix& input,
                                    Matrix& output, Matrix& deriv_input,
                                    bool overwrite) {
-  // OVERWRITES output_mat
-  Matrix::ConvResponseNormCrossMapUndo(
+  if (image_size_t_ == 1) {
+    Matrix::ConvResponseNormCrossMapUndo(
       deriv_output, input, output, deriv_input, num_input_channels_,
       num_filters_response_norm_, add_scale_, pow_scale_, blocked_);
+  } else {
+    Matrix::ConvResponseNormCrossMapUndo3D(
+      deriv_output, input, output, deriv_input, num_input_channels_,
+      num_filters_response_norm_, add_scale_, pow_scale_, blocked_,
+      image_size_t_);
+  }
 }

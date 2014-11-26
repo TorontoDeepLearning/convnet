@@ -937,6 +937,18 @@ void Matrix::ConvResponseNormCrossMap(
     blocked);
 }
 
+void Matrix::ConvResponseNormCrossMap3D(
+    Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
+    float powScale, bool blocked, int image_size_t) {
+#ifdef USE_GEMM
+  ResponseNormCrossMap3DGemm(input.GetMat(), output.GetMat(), numFilters, sizeF,
+                             addScale, powScale, blocked, image_size_t);
+#else
+  cerr << "GEMM kernels required for 3D convolutions." << endl;
+  exit(1);
+#endif
+}
+
 void Matrix::ConvResponseNormCrossMapUndo(
     Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
     int sizeF, float addScale, float powScale, bool blocked) {
@@ -950,6 +962,21 @@ void Matrix::ConvResponseNormCrossMapUndo(
                            blocked);
 #endif
 }
+
+void Matrix::ConvResponseNormCrossMapUndo3D(
+    Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
+    int sizeF, float addScale, float powScale, bool blocked, int image_size_t) {
+
+#ifdef USE_GEMM
+  ResponseNormCrossMap3DUndoGemm(
+      outGrads.GetMat(), inputs.GetMat(), targets.GetMat(),
+      numFilters, sizeF, addScale, powScale, blocked, image_size_t);
+#else
+  cerr << "GEMM kernels required for 3D convolutions." << endl;
+  exit(1);
+#endif
+}
+
 
 void Matrix::ConvUpSample(Matrix& input, Matrix& output, int factor,
                           float scaleTargets) {

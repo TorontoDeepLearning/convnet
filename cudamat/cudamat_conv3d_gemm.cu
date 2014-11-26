@@ -155,6 +155,54 @@ void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
   derivs->size[1] = derivs_shape->shape[1] * derivs_shape->shape[2] * derivs_shape->shape[3];
 }
 
+void ResponseNormCrossMap3DGemm(
+  cudamat* images, cudamat* targets, int numFilters, int sizeF, float addScale,
+  float powScale, bool blocked, int image_size_t) {
+
+  int num_images = images->size[0];
+  int frame_size = images->size[1] / image_size_t;
+  images->size[1]  = frame_size;
+  targets->size[1] = frame_size;
+  float* images_data_device  = images->data_device;  // Backup.
+  float* targets_data_device = targets->data_device;  // Backup.
+  for (int t = 0; t < image_size_t; t++) {
+    ResponseNormCrossMapGemm(images, targets, numFilters, sizeF, addScale,
+                             powScale, blocked);
+    images->data_device  += frame_size * num_images;
+    targets->data_device += frame_size * num_images;
+  }
+  images->data_device  = images_data_device;  // Restore from backup.
+  targets->data_device = targets_data_device;  // Restore from backup.
+  images->size[1]  = frame_size * image_size_t;
+  targets->size[1] = frame_size * image_size_t;
+}
+
+void ResponseNormCrossMap3DUndoGemm(
+  cudamat* outGrads, cudamat* inputs, cudamat* targets,
+  int num_filters, int sizeF, float addScale, float powScale, bool blocked,
+  int image_size_t) {
+  int num_images = inputs->size[0];
+  int frame_size = inputs->size[1] / image_size_t;
+  outGrads->size[1] = frame_size;
+  inputs->size[1]   = frame_size;
+  targets->size[1]  = frame_size;
+  float* outgrads_data_device  = outGrads->data_device;  // Backup.
+  float* inputs_data_device = inputs->data_device;  // Backup.
+  float* targets_data_device = targets->data_device;  // Backup.
+  for (int t = 0; t < image_size_t; t++) {
+    ResponseNormCrossMapUndoGemm(outGrads, inputs, targets, num_filters, sizeF,
+                                 addScale, powScale, blocked);
+    outGrads->data_device += frame_size * num_images;
+    inputs->data_device   += frame_size * num_images;
+    targets->data_device  += frame_size * num_images;
+  }
+  outGrads->data_device = outgrads_data_device;  // Backup.
+  inputs->data_device = inputs_data_device;  // Backup.
+  targets->data_device = targets_data_device;  // Backup.
+  outGrads->size[1] = frame_size * image_size_t;
+  inputs->size[1]   = frame_size * image_size_t;
+  targets->size[1]  = frame_size * image_size_t;
+}
 #ifdef __cplusplus
 }
 #endif

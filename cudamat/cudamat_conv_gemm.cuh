@@ -113,6 +113,15 @@ void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
                   Shape4D* targets_shape, ConvDesc conv_desc,
                   float scaleTargets, float scaleOutput);
 
+void ResponseNormCrossMap3DGemm(
+  cudamat* images, cudamat* targets, int numFilters, int sizeF, float addScale,
+  float powScale, bool blocked, int image_size_t);
+
+void ResponseNormCrossMap3DUndoGemm(
+  cudamat* outGrads, cudamat* inputs, cudamat* targets,
+  int numFilters, int sizeF, float addScale, float powScale, bool blocked,
+  int image_size_t);
+
 #ifdef __cplusplus
 }
 #endif
