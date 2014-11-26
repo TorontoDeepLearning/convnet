@@ -76,26 +76,29 @@ message Optimizer {
     INVERSE_T = 1;
     EXPONENTIAL = 2;
     LINEAR = 3;
+    EXPONENTIAL_STEP = 4;
   }
   optional Decay epsilon_decay = 10 [default = NONE]; 
   optional float minimum_epsilon = 11 [default=0];
+  // Relevant only for EXPONENTIAL_STEP decay.
+  optional float decay_factor = 12 [default=1.0];
 
   // Clip gradients. Default : -1 (Don't clip).
-  optional float gradient_clip = 12 [default = -1];
+  optional float gradient_clip = 13 [default = -1];
 
   // Number of steps to remember.
-  optional int32 lbfgs_memory = 13 [default=0];
+  optional int32 lbfgs_memory = 14 [default=0];
 
-  optional int32 start_optimization_after = 14 [default=0];
+  optional int32 start_optimization_after = 15 [default=0];
 
   // Adagrad delta.
-  optional float adagrad_delta = 15 [default=1];
+  optional float adagrad_delta = 16 [default=1];
 
   // Running avg factor for rms_prop. Default (0) same as rprop.
-  optional float rms_prop_factor = 16 [default=0];
+  optional float rms_prop_factor = 17 [default=0];
 
   // Use Nesterov momentum.
-  optional bool nesterov_momentum = 17 [default=false];
+  optional bool nesterov_momentum = 18 [default=false];
 }
 
 message Edge {

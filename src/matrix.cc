@@ -510,7 +510,7 @@ void Matrix::SetupCUDADevices(const vector<int>& boards) {
 
   for (int i = 0; i < num_boards_; i++) {
     temp_size_[i] = 0;
-    ones_size_[i] = 256 * 256 * 128;
+    ones_size_[i] = 1024 * 512;
   }
   SetDevice(0);
 }

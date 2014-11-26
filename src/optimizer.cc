@@ -30,6 +30,7 @@ Optimizer::Optimizer(const config::Optimizer& optimizer_config) :
   epsilon_decay_type_(optimizer_config.epsilon_decay()),
   epsilon_(optimizer_config.epsilon()),
   minimum_epsilon_(optimizer_config.minimum_epsilon()),
+  decay_factor_(optimizer_config.decay_factor()),
   epsilon_decay_timescale_(optimizer_config.epsilon_decay_timescale()),
   start_optimization_after_(optimizer_config.start_optimization_after()),
   l2_decay_(optimizer_config.l2_decay()),
@@ -66,6 +67,8 @@ float Optimizer::GetDecayedEpsilon() const {
     } else if (epsilon_decay_type_ == config::Optimizer::LINEAR) {
       decayed_epsilon = (f < 1) ? (epsilon_ * (1-f) + minimum_epsilon_ * f)
                                   : minimum_epsilon_;
+    } else if (epsilon_decay_type_ == config::Optimizer::EXPONENTIAL_STEP) {
+      decayed_epsilon = epsilon_ * pow(decay_factor_, step_ / epsilon_decay_timescale_);
     } else {
       cerr << "Unknown epsilon decay rule." << endl;
       exit(1);

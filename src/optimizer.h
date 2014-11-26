@@ -31,7 +31,7 @@ class Optimizer {
   void ApplyConstraints(Matrix& parameter);
 
   const config::Optimizer::Decay epsilon_decay_type_;
-  float epsilon_, minimum_epsilon_;
+  float epsilon_, minimum_epsilon_, decay_factor_;
   const int epsilon_decay_timescale_, start_optimization_after_;
   const float l2_decay_, weight_norm_limit_, weight_norm_constraint_;
   int step_;
