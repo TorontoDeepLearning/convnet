@@ -29,6 +29,9 @@ inline bool check_cublas_error() {
   return status != CUBLAS_STATUS_SUCCESS;
 }
 
+__device__ inline float square(float a) {
+  return a * a;
+}
 inline void __getLastCudaError(const char *errorMessage, const char *file, const int line) {
  cudaError_t err = cudaGetLastError();
  if (cudaSuccess != err) {
@@ -348,21 +351,28 @@ __global__ void kWriteRowsMult(float* data, float* target,
 }
 
 __global__ void kCrossMapDenoms(float* data, float* denoms,
-                                int num_locs, int batch_locs, int batch_offset, float addScale,
+                                int num_locs, int batch_locs, int batch_offset,
+                                float addScale, float powScale,
                                 int num_filters, int k, bool blocked) {
   long loc_id = threadIdx.x + blockDim.x * (blockIdx.x + gridDim.x * blockIdx.y);
-  data   += batch_offset + loc_id;
-  denoms += loc_id;
   if (batch_offset + loc_id < num_locs) {
+    data   += batch_offset + loc_id;
+    denoms += loc_id;
+    int prev_start = 0, prev_end = 0, start, end;
+    float sum = 0;
     for (int j = 0; j < num_filters; j++) {
-      float sum = 0;
-      int start = blocked ? (j / k) * k : -k/2 + j;
-      int end = MIN(num_filters, start + k);
+      start = blocked ? (j / k) * k : -k/2 + j;
+      end = MIN(num_filters, start + k);
       start = MAX(0, start);
-      for (int i = start; i < end; i++) {
-        sum += data[i * num_locs] * data[i * num_locs];
+      for (int i = prev_start; i < start; i++) {
+        sum -= square(data[i * num_locs]);
       }
-      denoms[j * batch_locs] = 1 + addScale * sum;
+      for (int i = prev_end; i < end; i++) {
+        sum += square(data[i * num_locs]);
+      }
+      denoms[j * batch_locs] = __powf(1 + addScale * sum, -powScale - 1);
+      prev_start = start;
+      prev_end = end;
     }
   }
 }
@@ -371,18 +381,24 @@ __global__ void kCrossMapRNorm(float* data, float* target,
                                int num_locs, float addScale, float powScale,
                                int num_filters, int k, bool blocked) {
   long loc_id = threadIdx.x + blockDim.x * (blockIdx.x + gridDim.x * blockIdx.y);
-  data   += loc_id;
-  target += loc_id;
   if (loc_id < num_locs) {
+    data   += loc_id;
+    target += loc_id;
+    float sum = 0;
+    int prev_start = 0, prev_end = 0, start, end;
     for (int j = 0; j < num_filters; j++) {
-      float sum = 0;
-      int start = blocked ? (j / k) * k : -k/2 + j;
-      int end = MIN(num_filters, start + k);
+      start = blocked ? (j / k) * k : -k/2 + j;
+      end = MIN(num_filters, start + k);
       start = MAX(0, start);
-      for (int i = start; i < end; i++) {
-        sum += data[i * num_locs] * data[i * num_locs];
+      for (int i = prev_start; i < start; i++) {
+        sum -= square(data[i * num_locs]);
+      }
+      for (int i = prev_end; i < end; i++) {
+        sum += square(data[i * num_locs]);
       }
       target[j * num_locs] = data[j * num_locs] * __powf(1 + addScale * sum, -powScale);
+      prev_start = start;
+      prev_end = end;
     }
   }
 }
@@ -391,21 +407,27 @@ __global__ void kCrossMapRNormUndo(float* data, float* deriv, float* denoms, flo
                                    int num_locs, int batch_locs, int batch_offset, float addScale, float powScale,
                                    int num_filters, int k, bool blocked) {
   long loc_id = threadIdx.x + blockDim.x * (blockIdx.x + gridDim.x * blockIdx.y);
-  data   += batch_offset + loc_id;
-  target += batch_offset + loc_id;
-  deriv  += batch_offset + loc_id;
-  denoms += loc_id;
   if (batch_offset + loc_id < num_locs) {
+    data   += batch_offset + loc_id;
+    target += batch_offset + loc_id;
+    deriv  += batch_offset + loc_id;
+    denoms += loc_id;
+    float sum = 0;
+    int prev_start = 0, prev_end = 0, start, end;
     for (int j = 0; j < num_filters; j++) {
-      float sum = 0;
-      int start = blocked ? (j / k) * k : -k + k/2 + j + 1;
-      int end = MIN(num_filters, start + k);
+      start = blocked ? (j / k) * k : -k + k/2 + j + 1;
+      end = MIN(num_filters, start + k);
       start = MAX(0, start);
-      for (int i = start; i < end; i++) {
-        sum += deriv[i * num_locs] * data[i * num_locs] * __powf(denoms[i * batch_locs], -powScale - 1);
+      for (int i = prev_start; i < start; i++) {
+        sum -= deriv[i * num_locs] * data[i * num_locs] * denoms[i * batch_locs];
       }
-      target[j * num_locs] = deriv[j * num_locs] * __powf(denoms[j * batch_locs], -powScale) -
+      for (int i = prev_end; i < end; i++) {
+        sum += deriv[i * num_locs] * data[i * num_locs] * denoms[i * batch_locs];
+      }
+      target[j * num_locs] = deriv[j * num_locs] * __powf(denoms[j * batch_locs], powScale / (powScale + 1)) -
                              2 * addScale * powScale * data[j * num_locs] * sum;
+      prev_start = start;
+      prev_end = end;
     }
   }
 }
@@ -998,7 +1020,7 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
     int batch_size = MIN(max_batch_size, num_locs - batch_offset);
     int num_blocks = DIVUP(batch_size, NUM_THREADS_PER_BLOCK);
     kCrossMapDenoms<<<num_blocks, NUM_THREADS_PER_BLOCK>>>(images->data_device, denoms, num_locs, batch_size,
-                    batch_offset, addScale, num_filters, sizeF, blocked);
+                    batch_offset, addScale, powScale, num_filters, sizeF, blocked);
 
     kCrossMapRNormUndo<<<num_blocks, NUM_THREADS_PER_BLOCK>>>(images->data_device, outGrads->data_device, denoms,
                        targets->data_device, num_locs, batch_size, batch_offset,

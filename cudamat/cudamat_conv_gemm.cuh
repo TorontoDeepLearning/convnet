@@ -26,7 +26,7 @@
 #include <assert.h>
 
 // 200 MB seems sufficient to create a big enough GEMM job.
-#define MAX_MEMORY_BYTES (200 * (1 << 20))
+#define MAX_MEMORY_BYTES (150 * (1 << 20))
 #define NUM_THREADS_PER_BLOCK 512
 #define MAX_BLOCKS_X 4096
 
