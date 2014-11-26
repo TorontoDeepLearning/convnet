@@ -276,22 +276,32 @@ void DataHandler::DiskAccess() {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  for (int i = 0; i < chunk_size_; i++) {
-    it.GetNext(data_ptr);
-    data_ptr += num_dims;
+  int row = it.Tell();
+  int end = (row + chunk_size_) % dataset_size_;
+  if (end < row) {
+    it.Get(data_ptr, row, dataset_size_);
+    it.Get(data_ptr + num_dims * (dataset_size_ - row), 0, end);
+  } else {
+    it.Get(data_ptr, row, end);
   }
+  it.Seek(end);
 }
 
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
-  int j = 0;
-  for (int i = 0; i < chunk_size_; i++) {
-    if (i % random_access_chunk_size_ == 0) {
-      it.Seek(random_rows[j++]);
-    } 
-    it.GetNext(data_ptr);
-    data_ptr += num_dims;
+  int num_rand = (chunk_size_ + random_access_chunk_size_ - 1) / random_access_chunk_size_;
+  int row, end;
+  for (int i = 0; i < num_rand; i++) {
+    row = random_rows[i];
+    end = (row + random_access_chunk_size_) % dataset_size_;
+    if (end < row) {
+      it.Get(data_ptr, row, dataset_size_);
+      it.Get(data_ptr + num_dims * (dataset_size_ - row), 0, end);
+    } else {
+      it.Get(data_ptr, row, end);
+    }
+    data_ptr += num_dims * random_access_chunk_size_;
   }
 }
 
