@@ -18,7 +18,7 @@ CUDAMAT_DIR=$(CURDIR)/cudamat
 CXX = g++
 LIBFLAGS = -L$(LIB) -L$(CUDA_LIB) -L$(CUDAMAT_DIR)
 CPPFLAGS = -I$(INC) -I$(CUDA_INC) -I$(SRC) -Ideps
-LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudart -Wl,-rpath=$(CUDAMAT_DIR) -Wl,-rpath=$(LIB) -Wl,-rpath=$(CUDA_LIB)
+LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_videoio -lhdf5 -ljpeg -lX11 -lpthread -lprotobuf -lcublas -ldl -lgomp -lcudamat -lcudart -Wl,-rpath=$(CUDAMAT_DIR) -Wl,-rpath=$(LIB) -Wl,-rpath=$(CUDA_LIB)
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare -fopenmp
 
 ifeq ($(USE_MPI), yes)
@@ -39,10 +39,10 @@ BIN=bin
 PYT=py
 EDGES_SRC := $(wildcard $(SRC)/*_edge.cc)
 EDGES_OBJS :=  $(OBJ)/optimizer.o $(OBJ)/edge.o $(OBJ)/edge_with_weight.o $(patsubst $(SRC)/%.cc, $(OBJ)/%.o, $(EDGES_SRC))
-DATAHANDLER_SRC := $(SRC)/image_iterators.cc $(SRC)/datahandler.cc $(SRC)/datawriter.cc
-DATAHANDLER_OBJS :=  $(OBJ)/image_iterators.o $(OBJ)/datahandler.o $(OBJ)/datawriter.o
+DATAHANDLER_SRC := $(SRC)/image_iterators.cc $(SRC)/video_iterators.cc $(SRC)/datahandler.cc $(SRC)/datawriter.cc
+DATAHANDLER_OBJS :=  $(OBJ)/image_iterators.o $(OBJ)/video_iterators.o $(OBJ)/datahandler.o $(OBJ)/datawriter.o
 COMMONOBJS = $(OBJ)/convnet_config.pb.o $(OBJ)/util.o $(OBJ)/matrix.o $(OBJ)/loss_functions.o $(OBJ)/layer.o $(DATAHANDLER_OBJS) $(EDGES_OBJS)
-TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/image2hdf5 $(BIN)/compute_mean $(BIN)/test_data_handler
+TARGETS := $(BIN)/train_convnet $(BIN)/train_convnet_data_parallel $(BIN)/run_grad_check $(BIN)/extract_representation $(BIN)/image2hdf5 $(BIN)/video2hdf5 $(BIN)/compute_mean $(BIN)/test_data_handler
 
 all : $(OBJ)/convnet_config.pb.o $(TARGETS)
 
@@ -65,6 +65,9 @@ $(BIN)/run_grad_check: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/grad_check.o $(OBJ)
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/image2hdf5: $(OBJ)/image_iterators.o $(OBJ)/image2hdf5.o $(OBJ)/util.o
+	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
+
+$(BIN)/video2hdf5: $(OBJ)/video_iterators.o $(OBJ)/video2hdf5.o $(OBJ)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 $(OBJ)/%.o: $(SRC)/%.cc

@@ -291,6 +291,7 @@ message DataStreamConfig {
     TXT = 4;
     BOUNDING_BOX = 5;
     CROPS = 6;
+    VIDEO_RAW = 7;
   }
   optional DataType data_type = 4 [default=HDF5];
 

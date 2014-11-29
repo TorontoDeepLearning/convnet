@@ -219,8 +219,12 @@ void WriteHDF5IntAttr(hid_t file, const string& name, const int* val) {
 
 void ReadHDF5IntAttr(hid_t file, const string& name, int* val) {
   hid_t attr = H5Aopen(file, name.c_str(), H5P_DEFAULT);
-  H5Aread(attr, H5T_NATIVE_INT, val);
-  H5Aclose(attr);
+  if (attr < 0) {
+    cout << "Attribute " << name << " not found. This probably means this is an old model file or was not written by train_convnet." << endl;
+  } else {
+    H5Aread(attr, H5T_NATIVE_INT, val);
+    H5Aclose(attr);
+  }
 }
 
 void ReadHDF5CPU(hid_t file, float* mat, int size, const string& name) {

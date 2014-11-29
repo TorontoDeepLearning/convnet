@@ -4,8 +4,11 @@ import numpy as np
 import os
 
 def ReadLog(fnames):
-  data = [np.loadtxt(fname) for fname in fnames if os.path.exists(fname)]
-  return np.vstack(tuple(data))
+  data = [np.loadtxt(fname, ndmin=2) for fname in fnames if os.path.exists(fname)]
+  if len(data) == 0:
+    return None
+  else:
+    return np.vstack(tuple(data))
 
 def GetAllTimestamps(prefix, timestamp):
   timestamps = []

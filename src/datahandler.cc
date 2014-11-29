@@ -1,5 +1,4 @@
 #include "datahandler.h"
-#include "image_iterators.h"
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -31,6 +30,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
     data_it_[layer_name] = DataIterator::ChooseDataIterator(dsc);
     data_it_[layer_name]->SetMaxDataSetSize(config.max_dataset_size());
     int dataset_size = data_it_[layer_name]->GetDataSetSize();
+    cout << "Layer " << layer_name << " has data of size " << dataset_size << endl;
     if (dataset_size_ == -1) {
       dataset_size_ = dataset_size;
     } else {
@@ -276,6 +276,11 @@ void DataHandler::DiskAccess() {
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
   float* data_ptr = mat.GetHostData();
   int num_dims = it.GetDims();
+  for (int i = 0; i < chunk_size_; i++) {
+    it.GetNext(data_ptr);
+    data_ptr += num_dims;
+  }
+  /*
   int row = it.Tell();
   int end = (row + chunk_size_) % dataset_size_;
   if (end < row) {
@@ -285,6 +290,7 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat) {
     it.Get(data_ptr, row, end);
   }
   it.Seek(end);
+  */
 }
 
 void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows) {
@@ -393,6 +399,9 @@ DataIterator* DataIterator::ChooseDataIterator(const config::DataStreamConfig& c
       break;
     case config::DataStreamConfig::BOUNDING_BOX:
       it = new BoundingBoxIterator(config);
+      break;
+    case config::DataStreamConfig::VIDEO_RAW:
+      it = new VideoDataIterator(config);
       break;
     default:
       cerr << "Unknown data type " << (int)config.data_type() << endl;
@@ -1134,13 +1143,20 @@ SequenceDataIterator::~SequenceDataIterator() {
 void SequenceDataIterator::Preprocess(Matrix& m) {
   m.Reshape(frame_size_, -1);
   it_->Preprocess(m);
-  m.Reshape(frame_size_ * seq_length_, -1);
+  m.Reshape(num_dims_, -1);
 }
 
 void SequenceDataIterator::SetupRowMapping(const vector<int>& num_frames) {
   int start = 0;
   for (int num_f : num_frames) {
-    for (int i = 0; i < num_f - seq_length_ + 1; i++) {
+    int num_valid_start_pos = num_f - seq_length_ + 1;
+    if (num_valid_start_pos <= 0) {
+      cout << "Warning: Number of frames " << num_f
+           << " is smaller than sequence length " << seq_length_
+           << " for sequence starting at " << start
+           << ". This sequence will be skipped." << endl;
+    }
+    for (int i = 0; i < num_valid_start_pos; i++) {
       row_mapping_.push_back(start + i);
     }
     start += num_f;
@@ -1172,4 +1188,47 @@ void SequenceDataIterator::Prep(const int chunk_size) {
 
 void SequenceDataIterator::SetMaxDataSetSize(int max_dataset_size) {
   it_->SetMaxDataSetSize(max_dataset_size);
+}
+
+VideoDataIterator::VideoDataIterator(const config::DataStreamConfig& config):
+  DataIterator(config) {
+  vector<string> filenames;
+  readFileList(file_pattern_, filenames);
+  it_ = new RawVideoFileIterator<unsigned char>(filenames, image_size_y_, image_size_x_, config.boundary_file());
+  dataset_size_ = it_->GetDataSetSize();
+  if (dataset_size_ == 0) {
+    cerr << "Dataset size is zero!" << endl;
+    exit(1);
+  } else {
+    cout << "Dataset size is " << dataset_size_ << endl;
+  }
+  num_dims_ = image_size_y_ * image_size_x_ * num_colors_;
+  buf_ = new unsigned char[num_dims_];
+  if (normalize_) {
+    LoadMeans(config.mean_file());
+  }
+}
+
+VideoDataIterator::~VideoDataIterator() {
+  delete[] buf_;
+  delete it_;
+}
+
+void VideoDataIterator::SetMaxDataSetSize(int max_dataset_size) {
+  it_->SetMaxDataSetSize(max_dataset_size);
+  dataset_size_ = it_->GetDataSetSize();
+}
+
+void VideoDataIterator::GetNext(float* data_out) {
+  it_->GetNext(buf_);
+  for (int i = 0; i < num_dims_; i++) {
+    data_out[i] = static_cast<float>(buf_[i]);
+  }
+  row_++;
+  if (row_ == dataset_size_) row_ = 0;
+}
+
+void VideoDataIterator::Get(float* data_out, const int row) const {
+  cerr << "Random access not implemnted for video datahandler" << endl;
+  exit(1);
 }

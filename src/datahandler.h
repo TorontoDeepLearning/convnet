@@ -2,6 +2,7 @@
 #define DATAHANDLER_H_
 #include "layer.h"
 #include "image_iterators.h"
+#include "video_iterators.h"
 #include <random>
 #include <thread>
 class DataIterator;
@@ -95,7 +96,6 @@ class DataIterator {
   Matrix& GetHeightOffset() { return height_offset_;}
   Matrix& GetFlipBit() { return flip_bit_;}
   int GetDestDims() const { return dest_num_dims_; }
-  int GetNumColors() const { return num_colors_; }
   static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
 
  protected:
@@ -257,5 +257,20 @@ class SequenceDataIterator : public DataIterator {
   vector<int> row_mapping_;
   const bool pick_first_;
 };
+
+/** An iterator over images stored as individual files.*/
+class VideoDataIterator : public DataIterator {
+ public:
+  VideoDataIterator(const config::DataStreamConfig& config);
+  ~VideoDataIterator();
+  virtual void GetNext(float* data_out);
+  virtual void Get(float* data_out, const int row) const;
+  virtual void SetMaxDataSetSize(int max_dataset_size);
+
+ protected:
+  RawVideoFileIterator<unsigned char> *it_;
+  unsigned char* buf_;
+};
+
 
 #endif
