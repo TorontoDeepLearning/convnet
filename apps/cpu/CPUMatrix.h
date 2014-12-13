@@ -1,8 +1,6 @@
 #ifndef CPUMATRIX_H
 #define CPUMATRIX_H
 
-#include <hdf5.h>
-
 #include <string>
 
 extern "C" struct eigenmat;
@@ -17,8 +15,6 @@ public:
   void FreeMemory();
   void Set(const float val);
   void Print();
-  static void ReadHDF5(hid_t file, float* mat, int size, const std::string& name);
-  static void ReadHDF5Shape(hid_t file, const std::string& name, int* rows, int* cols);
 
   float* GetData();
   int GetRows() const;

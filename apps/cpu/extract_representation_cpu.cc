@@ -1,5 +1,6 @@
 #include "convnet_cpu.h"
 #include "../../src/image_iterators.h"
+#include "../../src/util.h"
 
 #include <opencv2/core.hpp>
 
@@ -11,16 +12,6 @@
 
 using namespace std;
 using namespace cv;
-
-void split(const string &s, vector<string> &elems, char delim)
-{
-    stringstream ss(s);
-    string item;
-    while (getline(ss, item, delim))
-    {
-        elems.push_back(item);
-    }
-}
 
 int main(int argc, char** argv) {
     const char *keys =

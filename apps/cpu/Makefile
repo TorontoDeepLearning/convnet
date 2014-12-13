@@ -36,7 +36,7 @@ endif
 
 all : $(BIN)/extract_representation_cpu
 
-$(BIN)/extract_representation_cpu: convnet_config.pb.o CPUMatrix.o convnet_cpu.o extract_representation_cpu.o $(SRC)/image_iterators.o
+$(BIN)/extract_representation_cpu: convnet_config.pb.o CPUMatrix.o convnet_cpu.o extract_representation_cpu.o $(SRC)/image_iterators.o $(SRC)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 %.o: %.cc

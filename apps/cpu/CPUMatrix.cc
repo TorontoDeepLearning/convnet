@@ -1,6 +1,6 @@
 #include "CPUMatrix.h"
-
 #include "eigenmat.h"
+#include "../../src/util.h"
 
 #include <iostream>
 #include <cfloat>
@@ -17,29 +17,6 @@
 #endif
 
 using namespace std;
-
-string GetStringError(int err_code)
-{
-  if (err_code == -1)
-    return "Incompatible matrix dimensions.";
-  if (err_code == -2)
-    return "CUBLAS error.";
-  if (err_code == -3)
-    return "CUDA error ";
-  if (err_code == -4)
-    return "Operation not supported on views.";
-  if (err_code == -5)
-    return "Operation not supported on transposed matrices.";
-  if (err_code == -6)
-    return "";
-  if (err_code == -7)
-    return "Incompatible transposedness.";
-  if (err_code == -8)
-    return "Matrix is not in device memory.";
-  if (err_code == -9)
-    return "Operation not supported.";
-  return "Some error";
-}
 
 rnd_struct_e rnde_;
 
@@ -503,32 +480,3 @@ void CPUMatrix::Logistic(const float* inputs, float* outputs, const int length) 
   for (int i = 0; i < length; i++) outputs[i] = 1 / (1 + exp(-inputs[i]));
 }
 
-void CPUMatrix::ReadHDF5(hid_t file, float* mat, int size, const string& name) {
-  hid_t dataset, dataspace;
-  dataset = H5Dopen(file, name.c_str(), H5P_DEFAULT);
-  dataspace = H5Dget_space(dataset);
-  const int ndims = H5Sget_simple_extent_ndims(dataspace);
-  hsize_t dims_out[2];
-  H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
-  int rows = (ndims == 1) ? 1 : dims_out[1];
-  int datasize = dims_out[0] * rows;
-  if (size != datasize) {
-    cerr << "Dimension mismatch: Expected "
-         << size << " Got " << rows << "-" << dims_out[0] << endl;
-    exit(1);
-  }
-  H5Dread(dataset, H5T_NATIVE_FLOAT, dataspace, dataspace, H5P_DEFAULT, mat);
-  H5Dclose(dataset);
-}
-
-void CPUMatrix::ReadHDF5Shape(hid_t file, const string& name, int* rows, int* cols) {
-  hid_t dataset, dataspace;
-  dataset = H5Dopen(file, name.c_str(), H5P_DEFAULT);
-  dataspace = H5Dget_space(dataset);
-  const int ndims = H5Sget_simple_extent_ndims(dataspace);
-  hsize_t dims_out[2];
-  H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
-  *rows = dims_out[0];
-  *cols = (ndims == 1) ? 1: dims_out[1];
-  H5Dclose(dataset);
-}

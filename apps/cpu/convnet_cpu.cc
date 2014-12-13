@@ -1,4 +1,5 @@
 #include "convnet_cpu.h"
+#include "../../src/util.h"
 
 #include <google/protobuf/text_format.h>
 
@@ -94,12 +95,12 @@ ConvNetCPU::ConvNetCPU(const string& model_structure, const string& model_parame
 void ConvNetCPU::SetMean(const string& mean_file) {
   hid_t means = H5Fopen(mean_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   int rows, cols;
-  CPUMatrix::ReadHDF5Shape(means, "pixel_mean", &rows, &cols);
+  ReadHDF5Shape(means, "pixel_mean", &rows, &cols);
   mean_.AllocateMemory(rows, cols);
-  CPUMatrix::ReadHDF5(means, mean_.GetData(), mean_.GetNumEls(), "pixel_mean");
-  CPUMatrix::ReadHDF5Shape(means, "pixel_std", &rows, &cols);
+  ReadHDF5CPU(means, mean_.GetData(), mean_.GetNumEls(), "pixel_mean");
+  ReadHDF5Shape(means, "pixel_std", &rows, &cols);
   std_.AllocateMemory(rows, cols);
-  CPUMatrix::ReadHDF5(means, std_.GetData(), std_.GetNumEls(), "pixel_std");
+  ReadHDF5CPU(means, std_.GetData(), std_.GetNumEls(), "pixel_std");
   H5Fclose(means);
 }
 
@@ -386,7 +387,7 @@ void Edge::LoadParameters(hid_t file) {
     ss << source_node_ << ":" << dest_node_ << ":" << "weight";
 
     float *data = new float[weights_.GetNumEls()];
-    CPUMatrix::ReadHDF5(file, data, weights_.GetNumEls(), ss.str());
+    ReadHDF5CPU(file, data, weights_.GetNumEls(), ss.str());
     int kernel_size = (edge_type_ == config::Edge::FC) ? image_size_y_ : kernel_size_;
     CPUMatrix::Transpose(data, weights_.GetData(), num_output_channels_,
                          kernel_size, kernel_size, num_input_channels_);
@@ -399,7 +400,7 @@ void Edge::LoadParameters(hid_t file) {
       cerr << "Not implemented" << endl;
       exit(1);
     } else {
-      CPUMatrix::ReadHDF5(file, bias_.GetData(), bias_.GetNumEls(), ss.str());
+      ReadHDF5CPU(file, bias_.GetData(), bias_.GetNumEls(), ss.str());
     }
   }
 }
