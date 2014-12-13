@@ -1,5 +1,5 @@
 #include "convnet_cpu.h"
-#include "../src/image_iterators.h"
+#include "../../src/image_iterators.h"
 
 #include <opencv2/core.hpp>
 
@@ -42,18 +42,17 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    vector<string> layer_names;
-    split(layer_name, layer_names, ';');
-
-
     cpu::ConvNetCPU net(model, param, mean_file, 1);
-    vector<cpu::Layer*> layers;
     int big_image_size = 256;
     int image_size = 224;
     int num_pixels = image_size * image_size;
     unsigned char* data = new unsigned char[image_size * image_size * 3];
     unsigned char* image_buf = new unsigned char[image_size * image_size * 3];
 
+    vector<string> layer_names;
+    split(layer_name, layer_names, ',');
+
+    vector<cpu::Layer*> layers;
     vector<ofstream> outf(layer_names.size());
     cout << "Writing outputs to " << endl;
     int i = 0;
