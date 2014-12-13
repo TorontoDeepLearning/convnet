@@ -1,15 +1,19 @@
-#ifndef MATRIX_H_
-#define MATRIX_H_
-#include <string>
+#ifndef MATRIX_H
+#define MATRIX_H
+
 #ifdef USE_GEMM
 #include "../cudamat/cudamat_conv_gemm.cuh"
 #else
 #include "../cudamat/cudamat_conv.cuh"
 #endif
 #include "../cudamat/cudamat.cuh"
-#include "hdf5.h"
+
+#include <hdf5.h>
+
 #include <vector>
+#include <string>
 #include <map>
+
 using namespace std;
 
 /** A GPU matrix class.*/
@@ -18,7 +22,7 @@ class Matrix {
   Matrix();
   Matrix(const size_t rows, const size_t cols, const bool on_gpu);
   ~Matrix();
-  
+
   void Tie(Matrix &m);
   void SetupTranspose();
   void SetShape4D(int d1, int d2, int d3, int d4);
@@ -54,8 +58,7 @@ class Matrix {
   void AllocateAndReadHDF5(hid_t file, const string& name);
   string GetShapeString();
   string GetShape4DString();
-  cudamat* GetMat() { return &mat_; }
-  cudamat* GetMatTranspose() { return &mat_t_; }
+
   float* GetHostData() { return mat_.data_host; }
   size_t GetRows() const {return mat_.size[0];}
   size_t GetCols() const {return mat_.size[1];}
@@ -103,6 +106,7 @@ class Matrix {
   void AddToEachPixel(Matrix& v, float mult);
   void RectifyBBox(Matrix& width_offset, Matrix& height_offset, Matrix& flip,
                    int patch_width, int patch_height);
+
   static void LogisticCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
   static void LogisticCorrect(Matrix& state, Matrix& gt, Matrix& output);
   static void SoftmaxCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
@@ -199,12 +203,16 @@ class Matrix {
   static int GetNumBoards() {return num_boards_;}
   static void ShowMemoryUsage();
 
+protected:
   static vector<Matrix> ones_, temp_;
   static vector<rnd_struct> rnd_;
   static map<string, long> gpu_memory_;
   static Matrix rgb_to_yuv_mat_;
 
- private:
+  cudamat* GetMat() { return &mat_; }
+  cudamat* GetMatTranspose() { return &mat_t_; }
+
+private:
   cudamat mat_, mat_t_;
   cudaEvent_t ready_;
   Shape4D shape_;

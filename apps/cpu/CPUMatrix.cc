@@ -1,11 +1,16 @@
-#include "cpuconv.h"
+#include "CPUMatrix.h"
+
+#include "eigenmat.h"
+
 #include <iostream>
 #include <cfloat>
 #include <cmath>
 #include <chrono>
+
 #ifdef USE_OPENMP
 #include <omp.h>
 #endif
+
 #ifdef USE_OPENBLAS
 #include <cblas.h>
 #include <common.h>
@@ -13,37 +18,243 @@
 
 using namespace std;
 
-CPUMatrix::CPUMatrix(): data_(NULL), rows_(0), cols_(0) {
+string GetStringError(int err_code)
+{
+  if (err_code == -1)
+    return "Incompatible matrix dimensions.";
+  if (err_code == -2)
+    return "CUBLAS error.";
+  if (err_code == -3)
+    return "CUDA error ";
+  if (err_code == -4)
+    return "Operation not supported on views.";
+  if (err_code == -5)
+    return "Operation not supported on transposed matrices.";
+  if (err_code == -6)
+    return "";
+  if (err_code == -7)
+    return "Incompatible transposedness.";
+  if (err_code == -8)
+    return "Matrix is not in device memory.";
+  if (err_code == -9)
+    return "Operation not supported.";
+  return "Some error";
 }
 
-CPUMatrix::CPUMatrix(const int rows, const int cols): rows_(rows), cols_(cols) {
-  AllocateMemory(rows, cols);
+rnd_struct_e rnde_;
+
+CPUMatrix::CPUMatrix()
+{
+    mat_ = new eigenmat;
+    mat_->data = NULL;
+    mat_->size[0] = 0;
+    mat_->size[1] = 0;
+    mat_->is_trans = 0;
+    mat_->owns_data = 0;
+
+    mat_t_ = new eigenmat;
+    *mat_t_ = *mat_;
 }
 
-void CPUMatrix::FreeMemory() {
-  if (rows_ * cols_ > 0) delete[] data_;
+CPUMatrix::CPUMatrix(const int rows, const int cols)
+{
+    CPUMatrix();
+
+    AllocateMemory(rows, cols);
 }
 
-void CPUMatrix::AllocateMemory(int rows, int cols) {
-  rows_ = rows;
-  cols_ = cols;
-  data_ = new float[rows * cols];
+CPUMatrix::~CPUMatrix()
+{
+    FreeMemory();
+
+    delete mat_;
+    delete mat_t_;
 }
 
-void CPUMatrix::Print() {
-  Print(rows_, cols_);
+void CPUMatrix::FreeMemory()
+{
+    if (mat_->size[0] * mat_->size[1] > 0)
+        delete[] mat_->data;
 }
 
-void CPUMatrix::Print(int rows, int cols) {
+void CPUMatrix::AllocateMemory(int rows, int cols)
+{
+    mat_->size[0] = rows;
+    mat_->size[1] = cols;
+    mat_->data = new float[rows * cols];
+}
+
+void CPUMatrix::Set(const float val)
+{
+  int err_code = assign_scalar(mat_, val);
+  if (err_code != 0) {
+    cerr << "Error: Could not set to scalar : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void CPUMatrix::Print()
+{
+  int rows = mat_->size[0];
+  int cols = mat_->size[1];
   for (int i = 0; i < rows && i < 10; i++) {
     for (int j = 0; j < cols && j < 10; j++) {
-      cout << data_[j + i * cols] << " ";
+      cout <<  mat_->data[j + i * cols] << " ";
     }
     if (!(i == 9 || i == rows - 1)) cout << endl;
   }
   float max = -FLT_MAX;
-  for (int j = 0; j < rows * cols; j++) if (max < data_[j]) max = data_[j];
+  for (int j = 0; j < rows * cols; j++)
+    if (max <  mat_->data[j])
+      max = mat_->data[j];
   cout << "... Max " << max << endl;
+}
+
+float* CPUMatrix::GetData()
+{
+    return mat_->data;
+}
+
+int CPUMatrix::GetRows() const
+{
+    return mat_->size[0];
+}
+
+int CPUMatrix::GetCols() const
+{
+    return mat_->size[1];
+}
+
+
+int CPUMatrix::GetNumEls() const
+{
+    return mat_->size[1] * mat_->size[0];
+}
+
+void CPUMatrix::Add(float val)
+{
+    add_scalar(mat_, val, mat_);
+}
+
+void CPUMatrix::Add(CPUMatrix& m)
+{
+    add_elementwise(mat_, m.GetMat(), mat_);
+}
+
+void CPUMatrix::Add(CPUMatrix& m, float alpha)
+{
+    add_mult(mat_, m.GetMat(), alpha);
+}
+
+void CPUMatrix::AddRowVec(CPUMatrix& v)
+{
+    add_row_vec(mat_, v.GetMat(), mat_);
+}
+
+void CPUMatrix::AddRowVec(CPUMatrix& v, float alpha)
+{
+    add_row_mult(mat_, v.GetMat(), mat_, alpha);
+}
+
+void CPUMatrix::AddColVec(CPUMatrix& v, float alpha)
+{
+    add_col_mult(mat_, v.GetMat(), mat_, alpha);
+}
+
+void CPUMatrix::MultByRowVec(CPUMatrix& val)
+{
+    mult_by_row_vec(mat_, val.GetMat(), mat_);
+}
+
+void CPUMatrix::DivideByColVec(CPUMatrix& v)
+{
+    div_by_col_vec(mat_, v.GetMat(), mat_);
+}
+
+// self *= val
+void CPUMatrix::Mult(float val)
+{
+    mult_by_scalar(mat_, val, mat_);
+}
+
+void CPUMatrix::Mult(CPUMatrix& val)
+{
+    mult_elementwise(mat_, val.GetMat(), mat_);
+}
+
+void CPUMatrix::Divide(float val)
+{
+    divide_by_scalar(mat_, val, mat_);
+}
+
+void CPUMatrix::Divide(CPUMatrix& val)
+{
+    divide_elementwise(mat_, val.GetMat(), mat_);
+}
+
+void CPUMatrix::Subtract(CPUMatrix& m, CPUMatrix& target)
+{
+  int err_code = subtract_elementwise(mat_, m.GetMat(), target.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in subtract." << endl;
+    exit(1);
+  }
+}
+
+void CPUMatrix::LowerBound(float val)
+{
+    lower_bound_scalar(mat_, val, mat_);
+}
+
+void CPUMatrix::Sqrt()
+{
+    apply_sqrt(mat_, mat_);
+}
+
+// c = alpha * c + beta * a * b
+void CPUMatrix::Dot(CPUMatrix& a, CPUMatrix& b, CPUMatrix& c, float alpha, float beta)
+{
+    dot(a.GetMat(), b.GetMat(), c.GetMat(), alpha, beta);
+}
+
+// c = alpha * c + beta * T(a) * T(b)
+void CPUMatrix::Dot(CPUMatrix& a, CPUMatrix& b, CPUMatrix& c, float alpha, float beta,
+                    bool transpose_a, bool transpose_b)
+{
+    eigenmat* a_mat = transpose_a ? a.GetMatTranspose() : a.GetMat();
+    eigenmat* b_mat = transpose_b ? b.GetMatTranspose() : b.GetMat();
+    dot(a_mat, b_mat, c.GetMat(), alpha, beta);
+}
+
+void CPUMatrix::ApplyDerivativeOfReLU(CPUMatrix& state)
+{
+    apply_rectified_linear_deriv(mat_, state.GetMat(), mat_);
+}
+
+void CPUMatrix::ApplyLogistic()
+{
+    apply_sigmoid(mat_, mat_);
+}
+
+void CPUMatrix::ApplyDerivativeOfLogistic(CPUMatrix& state)
+{
+    apply_logistic_deriv(mat_, state.GetMat(), mat_);
+}
+
+float CPUMatrix::EuclidNorm()
+{
+    return euclid_norm(mat_); // TODO: return error code?
+}
+
+float CPUMatrix::VDot(CPUMatrix& m)
+{
+    int err;
+    return vdot(mat_, m.GetMat(), &err);
+}
+
+void CPUMatrix::CopyTranspose(CPUMatrix& m)
+{
+    copy_transpose(mat_, m.GetMat());
 }
 
 void CPUMatrix::Transpose(const float* i_data, float* o_data, int num_filters, int kernel_width, int kernel_height, int num_colors) {
@@ -59,10 +270,6 @@ void CPUMatrix::Transpose(const float* i_data, float* o_data, int num_filters, i
     target_ind = c + num_colors * (x + kernel_width * (y + kernel_height * f));
     o_data[target_ind] = i_data[ind];
   }
-}
-
-void CPUMatrix::SetZero(float* data, int length) {
-  for (int i = 0; i < length; i++) data[i] = 0;
 }
 
 // images : colors * inp_width * inp_height * numimages

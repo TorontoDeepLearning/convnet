@@ -1,7 +1,7 @@
 #ifndef CONVNET_CPU
 #define CONVNET_CPU
 
-#include "cpuconv.h"
+#include "CPUMatrix.h"
 #include "convnet_config.pb.h"
 
 #include <hdf5.h>

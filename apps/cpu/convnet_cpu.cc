@@ -11,9 +11,7 @@ using namespace std;
 
 namespace cpu {
 
-ConvNetCPU::ConvNetCPU(
-    const string& model_structure, const string& model_parameters,
-    const string& mean_file, int batch_size) {
+ConvNetCPU::ConvNetCPU(const string& model_structure, const string& model_parameters, const string& mean_file, int batch_size) {
   model_ = new config::Model;
   stringstream ss;
   string line;
@@ -98,10 +96,10 @@ void ConvNetCPU::SetMean(const string& mean_file) {
   int rows, cols;
   CPUMatrix::ReadHDF5Shape(means, "pixel_mean", &rows, &cols);
   mean_.AllocateMemory(rows, cols);
-  CPUMatrix::ReadHDF5(means, mean_.GetData(), mean_.GetSize(), "pixel_mean");
+  CPUMatrix::ReadHDF5(means, mean_.GetData(), mean_.GetNumEls(), "pixel_mean");
   CPUMatrix::ReadHDF5Shape(means, "pixel_std", &rows, &cols);
   std_.AllocateMemory(rows, cols);
-  CPUMatrix::ReadHDF5(means, std_.GetData(), std_.GetSize(), "pixel_std");
+  CPUMatrix::ReadHDF5(means, std_.GetData(), std_.GetNumEls(), "pixel_std");
   H5Fclose(means);
 }
 
@@ -197,7 +195,7 @@ void Layer::SetSize(int image_size_y, int image_size_x, int image_size_t) {
 }
 
 void Layer::Print() {
-  state_.Print(image_size_y_ * image_size_x_, num_channels_);
+  state_.Print();
 }
 
 void Layer::AddIncoming(Edge* e) {
@@ -384,24 +382,24 @@ void Edge::ComputeUp(const float* input, float* output, bool overwrite, int batc
 void Edge::LoadParameters(hid_t file) {
   if (is_tied_) return;
   stringstream ss;
-  if (weights_.GetSize() > 0) {
+  if (weights_.GetNumEls() > 0) {
     ss << source_node_ << ":" << dest_node_ << ":" << "weight";
 
-    float *data = new float[weights_.GetSize()];
-    CPUMatrix::ReadHDF5(file, data, weights_.GetSize(), ss.str());
+    float *data = new float[weights_.GetNumEls()];
+    CPUMatrix::ReadHDF5(file, data, weights_.GetNumEls(), ss.str());
     int kernel_size = (edge_type_ == config::Edge::FC) ? image_size_y_ : kernel_size_;
     CPUMatrix::Transpose(data, weights_.GetData(), num_output_channels_,
                          kernel_size, kernel_size, num_input_channels_);
     delete[] data;
     ss.str("");
   }
-  if (bias_.GetSize() > 0) {
+  if (bias_.GetNumEls() > 0) {
     ss << source_node_ << ":" << dest_node_ << ":" << "bias";
     if (!shared_bias_ && edge_type_ == config::Edge::CONVOLUTIONAL) {
       cerr << "Not implemented" << endl;
       exit(1);
     } else {
-      CPUMatrix::ReadHDF5(file, bias_.GetData(), bias_.GetSize(), ss.str());
+      CPUMatrix::ReadHDF5(file, bias_.GetData(), bias_.GetNumEls(), ss.str());
     }
   }
 }

@@ -11,14 +11,15 @@ OPENBLAS=$(HOME)/OpenBLAS
 #####################################
 CXX = g++
 
-BIN=../../bin
-DEPS=../../deps
-PROTO=../../proto
-SRC=../../src
+ROOT=../../
+BIN=$(ROOT)/bin
+DEPS=$(ROOT)/deps
+PROTO=$(ROOT)/proto
+SRC=$(ROOT)/src
 
-CPPFLAGS = -I$(DEPS) -I$(INC)
-LIBFLAGS = -L$(LIB)
-LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -ljpeg -lX11 -lpthread -lprotobuf -lhdf5
+CPPFLAGS = -I$(DEPS) -I$(INC) -I$(ROOT)/eigenmat
+LIBFLAGS = -L$(LIB) -L$(ROOT)/eigenmat
+LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -leigenmat -ljpeg -lX11 -lpthread -lprotobuf -lhdf5
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
 
 ifeq ($(openblas), yes)
@@ -35,7 +36,7 @@ endif
 
 all : $(BIN)/extract_representation_cpu
 
-$(BIN)/extract_representation_cpu: convnet_config.pb.o cpuconv.o convnet_cpu.o extract_representation_cpu.o $(SRC)/image_iterators.o
+$(BIN)/extract_representation_cpu: convnet_config.pb.o CPUMatrix.o convnet_cpu.o extract_representation_cpu.o $(SRC)/image_iterators.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
 
 %.o: %.cc
