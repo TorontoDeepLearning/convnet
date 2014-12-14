@@ -69,9 +69,12 @@ ConvNetCPU::ConvNetCPU(const string& model_structure, const string& model_parame
       image_size_y = l->GetSizeY();
       image_size_x = l->GetSizeX();
       image_size_t = l->GetSizeT();
-      if (image_size_y <= 0) image_size_y = model_->patch_size();
-      if (image_size_x <= 0) image_size_x = model_->patch_size();
-      if (image_size_t <= 0) image_size_t = model_->patch_size();
+      if (image_size_y <= 0)
+        image_size_y = model_->patch_size();
+      if (image_size_x <= 0)
+        image_size_x = model_->patch_size();
+      if (image_size_t <= 0)
+        image_size_t = model_->patch_size();
     } else {
       image_size_y = l->incoming_edge_[0]->GetNumModulesY();
       image_size_x = l->incoming_edge_[0]->GetNumModulesX();
@@ -96,16 +99,16 @@ void ConvNetCPU::SetMean(const string& mean_file) {
   hid_t means = H5Fopen(mean_file.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   int rows, cols;
   ReadHDF5Shape(means, "pixel_mean", &rows, &cols);
-  mean_.AllocateMemory(rows, cols);
-  ReadHDF5CPU(means, mean_.GetData(), mean_.GetNumEls(), "pixel_mean");
+  mean_.AllocateMainMemory(rows, cols);
+  ReadHDF5CPU(means, mean_.GetHostData(), mean_.GetNumEls(), "pixel_mean");
   ReadHDF5Shape(means, "pixel_std", &rows, &cols);
-  std_.AllocateMemory(rows, cols);
-  ReadHDF5CPU(means, std_.GetData(), std_.GetNumEls(), "pixel_std");
+  std_.AllocateMainMemory(rows, cols);
+  ReadHDF5CPU(means, std_.GetHostData(), std_.GetNumEls(), "pixel_std");
   H5Fclose(means);
 }
 
 void ConvNetCPU::Normalize(const unsigned char* i_data, float* o_data, int num_dims, int num_colors) {
-  float* mean = mean_.GetData(), *std = std_.GetData();
+  float* mean = mean_.GetHostData(), *std = std_.GetHostData();
 #ifdef USE_OPENMP
   #pragma omp parallel for if(num_dims > 10000)
 #endif
@@ -119,7 +122,7 @@ void ConvNetCPU::Fprop(const unsigned char* data, int batch_size) {
   for(Layer* l : layers_) {
     overwrite = true;
     for (Edge* e : l->incoming_edge_) {
-      e->ComputeUp(e->GetSource()->GetState(), l->GetState(), overwrite, batch_size);
+      e->ComputeUp(e->GetSource()->GetFullState(), l->GetFullState(), overwrite, batch_size);
       overwrite = false;
     }
     if (!l->IsInput()) {
@@ -185,7 +188,6 @@ Layer::Layer(const config::Layer& config) :
   image_size_t_(config.image_size_t()) {}
 
 Layer::~Layer() {
-  state_.FreeMemory();
 }
 
 void Layer::SetSize(int image_size_y, int image_size_x, int image_size_t) {
@@ -210,24 +212,26 @@ void Layer::AddOutgoing(Edge* e) {
 void Layer::AllocateMemory(int batch_size) {
   batch_size_ = batch_size;
   num_dims_ = image_size_y_ * image_size_x_ * image_size_t_ * num_channels_;
-  state_.AllocateMemory(batch_size_, num_dims_);
+  state_.AllocateMainMemory(batch_size_, num_dims_);
+  state_.SetShape4D(batch_size, image_size_x_, image_size_y_, num_channels_ * image_size_t_);
 }
 
-void Layer::ApplyActivation() {
+void Layer::ApplyActivation()
+{
   int num_dims = image_size_y_ * image_size_x_ * image_size_t_ * num_channels_;
-  float* data = state_.GetData();
-  switch (activation_) {
-    case config::Layer::LINEAR :
+  switch (activation_)
+  {
+    case config::Layer::LINEAR:
       // no op.
       break;
-    case config::Layer::LOGISTIC :
-      CPUMatrix::Logistic(data, data, batch_size_ * num_dims);
+    case config::Layer::LOGISTIC:
+      CPUMatrix::Logistic(state_, state_, batch_size_ * num_dims);
       break;
-    case config::Layer::RECTIFIED_LINEAR :
-      CPUMatrix::LowerBound(data, data, batch_size_ * num_dims, 0);
+    case config::Layer::RECTIFIED_LINEAR:
+      CPUMatrix::LowerBound(state_, state_, batch_size_ * num_dims, 0);
       break;
-    case config::Layer::SOFTMAX :
-      CPUMatrix::Softmax(data, data, batch_size_, num_dims);
+    case config::Layer::SOFTMAX:
+      CPUMatrix::Softmax(state_, state_, batch_size_, num_dims);
       break;
     default:
       cerr << "Undefined layer type." << endl;
@@ -296,8 +300,8 @@ void Edge::AllocateMemory() {
       cols = 0;
       bias_size = 0;
   }
-  if (rows * cols > 0) weights_.AllocateMemory(rows, cols);
-  if (bias_size > 0) bias_.AllocateMemory(bias_size, 1);
+  if (rows * cols > 0) weights_.AllocateMainMemory(rows, cols);
+  if (bias_size > 0) bias_.AllocateMainMemory(bias_size, 1);
   num_filters_response_norm_ = (int) (frac_of_filters_response_norm_ * num_input_channels_);
 }
 
@@ -334,7 +338,7 @@ void Edge::SetImageSize(int image_size_y, int image_size_x, int image_size_t) {
   }
 }
 
-void Edge::ComputeUp(const float* input, float* output, bool overwrite, int batch_size) {
+void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size) {
   if (is_tied_) {
     tied_edge_->ComputeUp(input, output, overwrite, batch_size, image_size_y_);
   } else {
@@ -342,38 +346,63 @@ void Edge::ComputeUp(const float* input, float* output, bool overwrite, int batc
   }
 }
 
-void Edge::ComputeUp(const float* input, float* output, bool overwrite, int batch_size, int image_size) {
-  float* weight = weights_.GetData();
-  float* bias = bias_.GetData();
-  int num_modules = (image_size + 2 * padding_ - kernel_size_)/ stride_ + 1;
+void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size, int image_size)
+{
+  int num_modules = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
   int input_dims = num_input_channels_ * image_size * image_size;
   int scale_targets = overwrite ? 0: 1;
-  switch (edge_type_) {
-    case config::Edge::FC :
-      CPUMatrix::FCUp(input, weight, output, batch_size, num_output_channels_, input_dims, 1, scale_targets);
-      CPUMatrix::AddBias(output, bias, output, batch_size, num_output_channels_);
+  switch (edge_type_)
+  {
+    case config::Edge::FC:
+      CPUMatrix::FCUp(input, weights_, output, batch_size, num_output_channels_, input_dims, scale_targets);
+      CPUMatrix::AddBias(output, bias_, output, batch_size, num_output_channels_);
       break;
-    case config::Edge::CONV_ONETOONE :
-      CPUMatrix::FCUp(input, weight, output, batch_size * image_size * image_size, num_output_channels_, num_input_channels_, 1, scale_targets);
-      CPUMatrix::AddBias(output, bias, output, batch_size * image_size * image_size, num_output_channels_);
+
+    case config::Edge::CONV_ONETOONE:
+      CPUMatrix::FCUp(input, weights_, output, batch_size * image_size * image_size, num_output_channels_, num_input_channels_, scale_targets);
+      CPUMatrix::AddBias(output, bias_, output, batch_size * image_size * image_size, num_output_channels_);
       break;
-    case config::Edge::CONVOLUTIONAL :
-      CPUMatrix::ConvUp(input, weight, output, batch_size, num_input_channels_, num_output_channels_,
-          image_size, image_size, kernel_size_, kernel_size_, stride_, stride_, padding_, padding_, 1, scale_targets);
+
+    case config::Edge::CONVOLUTIONAL:
+    {
+      ConvDesc conv_desc;
+      conv_desc.num_input_channels = num_input_channels_;
+      conv_desc.num_output_channels = num_output_channels_;
+      conv_desc.kernel_size_y = kernel_size_;
+      conv_desc.kernel_size_x = kernel_size_;
+      conv_desc.stride_y = stride_;
+      conv_desc.stride_x = stride_;
+      conv_desc.padding_y = padding_;
+      conv_desc.padding_x = padding_;
+      CPUMatrix::ConvUp(input, weights_, output, conv_desc, scale_targets);
       if (shared_bias_) {
-        CPUMatrix::AddBias(output, bias_.GetData(), output, batch_size * num_modules * num_modules, num_output_channels_);
+        CPUMatrix::AddBias(output, bias_, output, batch_size * num_modules * num_modules, num_output_channels_);
       } else {
-        CPUMatrix::AddBias(output, bias_.GetData(), output, batch_size, num_output_channels_ * num_modules * num_modules);
+        CPUMatrix::AddBias(output, bias_, output, batch_size, num_output_channels_ * num_modules * num_modules);
       }
+    }
       break;
-    case config::Edge::MAXPOOL :
-      CPUMatrix::MaxPool(input, output, batch_size, num_output_channels_,
-                         image_size, image_size, kernel_size_, kernel_size_, stride_, stride_, padding_, padding_, 1, scale_targets);
+
+    case config::Edge::MAXPOOL:
+    {
+      ConvDesc conv_desc;
+      conv_desc.num_output_channels = num_output_channels_;
+      conv_desc.kernel_size_y = kernel_size_;
+      conv_desc.kernel_size_x = kernel_size_;
+      conv_desc.stride_y = stride_;
+      conv_desc.stride_x = stride_;
+      conv_desc.padding_y = padding_;
+      conv_desc.padding_x = padding_;
+      CPUMatrix::ConvMaxPool(input, output, conv_desc, scale_targets);
+    }
       break;
-    case config::Edge::RESPONSE_NORM :
-      CPUMatrix::ResponseNormCrossMap(input, output, image_size * image_size * batch_size,
-          num_output_channels_, num_filters_response_norm_, blocked_, add_scale_, pow_scale_, 1, scale_targets);
+
+    case config::Edge::RESPONSE_NORM:
+      CPUMatrix::ConvResponseNormCrossMap(input, output,
+          image_size * image_size * batch_size, num_output_channels_,
+          num_filters_response_norm_, add_scale_, pow_scale_, blocked_, scale_targets);
       break;
+
     default:
       cerr << "Not implemented" << endl;
       exit(1);
@@ -389,7 +418,7 @@ void Edge::LoadParameters(hid_t file) {
     float *data = new float[weights_.GetNumEls()];
     ReadHDF5CPU(file, data, weights_.GetNumEls(), ss.str());
     int kernel_size = (edge_type_ == config::Edge::FC) ? image_size_y_ : kernel_size_;
-    CPUMatrix::Transpose(data, weights_.GetData(), num_output_channels_,
+    CPUMatrix::Transpose(data, weights_.GetHostData(), num_output_channels_,
                          kernel_size, kernel_size, num_input_channels_);
     delete[] data;
     ss.str("");
@@ -400,7 +429,7 @@ void Edge::LoadParameters(hid_t file) {
       cerr << "Not implemented" << endl;
       exit(1);
     } else {
-      ReadHDF5CPU(file, bias_.GetData(), bias_.GetNumEls(), ss.str());
+      ReadHDF5CPU(file, bias_.GetHostData(), bias_.GetNumEls(), ss.str());
     }
   }
 }

@@ -25,7 +25,8 @@ class Layer {
   void AllocateMemory(int batch_size);
   const string& GetName() const { return name_; }
   int GetDims() const { return image_size_y_ * image_size_x_ * image_size_t_ * num_channels_; }
-  float* GetState() { return state_.GetData();}
+  float* GetState() { return state_.GetHostData(); }
+  CPUMatrix& GetFullState() { return state_; }
   void AddIncoming(Edge* e);
   void AddOutgoing(Edge* e);
   int GetNumChannels() { return num_channels_; }
@@ -74,8 +75,8 @@ class Edge {
   void LoadParameters(hid_t file);
   void AllocateMemory();
 
-  void ComputeUp(const float* input, float* output, bool overwrite, int batch_size);
-  void ComputeUp(const float* input, float* output, bool overwrite, int batch_size, int image_size);
+  void ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size);
+  void ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size, int image_size);
 
  private:
   const config::Edge::EdgeType edge_type_;
