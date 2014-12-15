@@ -89,6 +89,7 @@ class Matrix {
   void UpperBoundMod(float val);
   void SqSumAxis(Matrix& target, int axis, float beta, float alpha);
   void NormLimitByAxis(int axis, float val, bool constraint);
+  void NormalizeColumnwise();
   void Dropout(float dropprob, float fill_value, float scale_factor);
   void ApplyDerivativeOfReLU(Matrix& state);
   void ApplySoftmax();

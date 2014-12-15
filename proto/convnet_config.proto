@@ -118,7 +118,6 @@ message Edge {
     RGBTOYUV = 7;
     AVERAGE_POOL = 8;
     CONV_ONETOONE = 9;
-    CONV_3D = 10;
   }
   optional EdgeType edge_type = 3 [default=FC];
 
@@ -353,6 +352,8 @@ message DataStreamConfig {
   optional int32 seq_length = 33 [default=0];
   optional string boundary_file = 34;
   optional bool pick_first = 35 [default=false];
+
+  optional bool normalize_local = 36 [default=false];
 }
 
 message DatasetConfig {

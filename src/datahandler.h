@@ -108,7 +108,7 @@ class DataIterator {
   const int image_size_y_, image_size_x_, gpu_image_size_y_, gpu_image_size_x_,
             num_colors_, gpu_id_;
   const bool translate_, flip_, normalize_, pixelwise_normalize_,
-             add_pca_noise_, parallel_disk_access_;
+             add_pca_noise_, parallel_disk_access_, normalize_local_;
   const float pca_noise_stddev_;
   DataIterator* noise_source_;
 };

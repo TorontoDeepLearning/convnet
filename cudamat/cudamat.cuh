@@ -89,6 +89,10 @@ typedef struct ConvDesc {
   int padding_y;
   int padding_x;
   int padding_t;
+  int input_channel_begin;
+  int input_channel_end;
+  int output_channel_begin;
+  int output_channel_end;
   int num_groups;
 } ConvDesc;
 
@@ -181,6 +185,7 @@ int sqsum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p);
 int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p);
 float sum_all(cudamat* mat, int* err_code);
 int normlimit_by_axis(cudamat* mat, cudamat* target, int axis, float norm, int constraint);
+int normalize_by_axis(cudamat* mat, cudamat* target, int axis);
 int sign(cudamat* mat, cudamat* target);
 int apply_cos(cudamat* mat, cudamat* target);
 int apply_sin(cudamat* mat, cudamat* target);
@@ -208,7 +213,7 @@ int add_mult_sign(cudamat* mat1, cudamat* mat2, float mult);
 int add_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target);
 int subtract_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target);
 int divide_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target);
-int mult_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target);
+int mult_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target, float scale_targets);
 int apply_sin_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
 int apply_cos_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
 int apply_logistic_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
@@ -216,7 +221,7 @@ int apply_tanh_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
 int apply_rectified_linear_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
 int apply_rectified_linear_smooth_deriv(cudamat* mat1, cudamat* mat2, cudamat* target);
 int assign_scalar(cudamat* mat, float alpha);
-int mult_by_scalar(cudamat* mat, float alpha, cudamat* target);
+int mult_by_scalar(cudamat* mat, float alpha, cudamat* target, float scale_targets);
 int divide_by_scalar(cudamat* mat, float alpha, cudamat* target);
 int add_scalar(cudamat* mat, float alpha, cudamat* target);
 float euclid_norm(cudamat* mat, int* err_code);
@@ -264,6 +269,11 @@ int get_logistic_correct_row_major_bbox(
     cudamat* height_offset, cudamat* target, int width, int height, int depth,
     float scale_width, float scale_height, float cutoff);
 int get_logistic_correct_normalized(cudamat* mat1, cudamat* mat2, cudamat* out);
+
+// LSTMs
+int lstm_fprop(cudamat* s_in, cudamat* s_out, cudamat* w_dense, cudamat* w_diag, cudamat* b, bool init, bool use_relu);
+int lstm_bprop(cudamat* s_in, cudamat* s_out, cudamat* d_in, cudamat* d_out, cudamat* w_dense, cudamat* w_diag, bool init, bool use_relu);
+int lstm_outp(cudamat* s_in, cudamat* s_out, cudamat* d_out, cudamat* dw_dense, cudamat* dw_diag, cudamat* db, bool init);
 #ifdef __cplusplus
 }
 #endif

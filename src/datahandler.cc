@@ -426,6 +426,7 @@ DataIterator::DataIterator(const config::DataStreamConfig& config):
   pixelwise_normalize_(config.pixelwise_normalize()),
   add_pca_noise_(config.pca_noise_stddev() > 0),
   parallel_disk_access_(config.parallel_disk_access()),
+  normalize_local_(config.normalize_local()),
   pca_noise_stddev_(config.pca_noise_stddev()),
   noise_source_(NULL) {}
 
@@ -491,6 +492,12 @@ void DataIterator::Prep(const int chunk_size) {
 
 // m is on the GPU, stored so that different cases are far apart.
 void DataIterator::Preprocess(Matrix& m) {
+  if (normalize_local_) {  // Normalize each color channel.
+    int dims = m.GetRows();
+    m.Reshape(dims / num_colors_, -1);
+    m.NormalizeColumnwise();
+    m.Reshape(dims, -1);
+  }
   if (normalize_) {
     m.AddColVec(mean_, -1);
     m.DivideByColVec(std_);
@@ -1193,7 +1200,12 @@ void SequenceDataIterator::SetMaxDataSetSize(int max_dataset_size) {
 VideoDataIterator::VideoDataIterator(const config::DataStreamConfig& config):
   DataIterator(config) {
   vector<string> filenames;
-  readFileList(file_pattern_, filenames);
+  string ext = file_pattern_.substr(file_pattern_.find_last_of('.') + 1);
+  if (ext.compare("txt") == 0) { 
+    readFileList(file_pattern_, filenames);
+  } else {
+    filenames.push_back(file_pattern_);
+  }
   it_ = new RawVideoFileIterator<unsigned char>(filenames, image_size_y_, image_size_x_, config.boundary_file());
   dataset_size_ = it_->GetDataSetSize();
   if (dataset_size_ == 0) {

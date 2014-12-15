@@ -146,17 +146,32 @@ class ConvDesc(ct.Structure):
                 ('padding_y', ct.c_int),
                 ('padding_x', ct.c_int),
                 ('padding_t', ct.c_int),
-                ('num_groups', ct.c_int)]
+                ('input_channel_begin', ct.c_int),
+                ('input_channel_end', ct.c_int),
+                ('output_channel_begin', ct.c_int),
+                ('output_channel_end', ct.c_int),
+                ('num_groups', ct.c_int),
+               ]
 
 class Shape4D(ct.Structure):
     _fields_ = [('shape', ct.c_int * 4)]
 
 def GetConvDesc(num_input_channels, num_output_channels, kernel_size_y,
                 kernel_size_x, stride_y, stride_x, padding_y, padding_x,
-                kernel_size_t=1, stride_t=1, padding_t=0, num_groups=1):
+                kernel_size_t=1, stride_t=1, padding_t=0,
+                input_channel_begin=0, input_channel_end=0,
+                output_channel_begin=0, output_channel_end=0,
+                num_groups=1):
+  if input_channel_end == 0:
+    input_channel_end = num_input_channels
+  if output_channel_end == 0:
+    output_channel_end = num_output_channels
   return ConvDesc(num_input_channels, num_output_channels, kernel_size_y,
                   kernel_size_x, kernel_size_t, stride_y, stride_x, stride_t,
-                  -padding_y, -padding_x, -padding_t, num_groups)
+                  -padding_y, -padding_x, -padding_t,
+                  input_channel_begin, input_channel_end,
+                  output_channel_begin, output_channel_end,
+                  num_groups)
 
 def GetConvDescTuple(cd):
   return (
@@ -184,10 +199,16 @@ def GetConvDescTuple3D(cd):
          )
 
 def GetInputSize(cd):
-  return cd.num_input_channels * cd.kernel_size_x * cd.kernel_size_y * cd.kernel_size_t
+  return (cd.input_channel_end - cd.input_channel_begin) * cd.kernel_size_x * cd.kernel_size_y * cd.kernel_size_t
 
 def GetOutputSize(cd):
-  return cd.num_output_channels
+  return cd.output_channel_end - cd.output_channel_begin
+
+def GetWShape(cd):
+  return (cd.output_channel_end - cd.output_channel_begin,
+         cd.kernel_size_x, cd.kernel_size_y,
+         cd.input_channel_end - cd.input_channel_begin,
+         cd.kernel_size_t)
 
 def GetOutputShape(image_size_y, image_size_x, conv_desc):
   _, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = GetConvDescTuple(conv_desc)
@@ -1247,11 +1268,6 @@ class CUDAMatrix(object):
         """
         return softmax(self, target)
 
-    def apply_softmax_row_major(self, num_slices=None):
-        if num_slices is None:
-          num_slices = self.shape[1]
-        _cudamat.softmax_row_major_multi(self.p_mat, ct.c_int(num_slices))
-
     def apply_softmax_row_major(self, num_slices = None):
         """
         Apply the softmax activation function.
@@ -1467,7 +1483,7 @@ class CUDAMatrix(object):
 
         return target
 
-    def mult(self, val, target = None):
+    def mult(self, val, target = None, scale_targets=0):
         """Multiply self by val, where val can be a scalar or a CUDAMatrix with
         the same dimensions as self. """
 
@@ -1475,9 +1491,9 @@ class CUDAMatrix(object):
             target = self
 
         if isinstance(val, CUDAMatrix):
-            err_code = _cudamat.mult_elementwise(self.p_mat, val.p_mat, target.p_mat)
+            err_code = _cudamat.mult_elementwise(self.p_mat, val.p_mat, target.p_mat, scale_targets)
         elif isinstance(val, (int, float)):
-            err_code = _cudamat.mult_by_scalar(self.p_mat, ct.c_float(val), target.p_mat)
+            err_code = _cudamat.mult_by_scalar(self.p_mat, ct.c_float(val), target.p_mat, scale_targets)
         else:
             raise ValueError, "Value must be of type CUDAMatrix, int, or float."
 
@@ -1539,6 +1555,22 @@ class CUDAMatrix(object):
 
         return target
 
+    def get_softmax_correct_row_major(self, labels, target):
+        """
+        target[i] = 1, iff labels[i] is correctly predicted; 0 otherwise.
+        """
+        assert labels.shape == (self.shape[0], 1), 'Labels shape %d-%d, softmax shape %d-1' % (labels.shape[0], labels.shape[1])
+        assert target.shape == labels.shape
+        if isinstance(labels, CUDAMatrix):
+            err_code = _cudamat.get_softmax_correct_row_major(self.p_mat, labels.p_mat, target.p_mat)
+        else:
+            raise ValueError, "labels must be of type CUDAMatrix."
+
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
+
     def get_softmax_cross_entropy(self, labels, target, tiny=1e-10):
         """
         target[i] = -log(self[label[i]] + tiny).
@@ -1575,6 +1607,26 @@ class CUDAMatrix(object):
             raise generate_exception(err_code)
 
         return target
+
+    def apply_softmax_grad_row_major(self, labels, target = None):
+        """
+        Apply softmax derivative, where labels are the correct labels.
+        """
+        if not target:
+            target = self
+
+        assert labels.shape == (self.shape[0], 1)
+        assert target.shape == self.shape
+        if isinstance(labels, CUDAMatrix):
+            err_code = _cudamat.apply_softmax_grad_row_major(self.p_mat, labels.p_mat, target.p_mat)
+        else:
+            raise ValueError, "labels must be of type CUDAMatrix."
+
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
+
 
 
     def apply_logistic_deriv(self, val, target = None):
@@ -2139,6 +2191,44 @@ def pow(mat, p, target = None):
 
 def extract_patches(images, patches, width_offset, height_offset, flip, img_width, img_height, patch_width, patch_height):
   err_code = _cudamat.extract_patches(images.p_mat, patches.p_mat, width_offset.p_mat, height_offset.p_mat, flip.p_mat, ct.c_int(img_width), ct.c_int(img_height), ct.c_int(patch_width), ct.c_int(patch_height))
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_fprop(s_in, s_out, w_dense, w_diag, b, use_relu=False, init=False):
+  numcases, num_lstms_mult = s_in.shape
+  num_lstms = num_lstms_mult / 6
+  assert s_out.shape == s_in.shape
+  assert w_diag.shape == (1, 3 * num_lstms)
+  assert w_dense.shape == (4 * num_lstms, num_lstms)
+  assert b.shape == (1, 4 * num_lstms)
+ 
+  err_code = _cudamat.lstm_fprop(s_in.p_mat, s_out.p_mat, w_dense.p_mat, w_diag.p_mat, b.p_mat, ct.c_bool(init), ct.c_bool(use_relu))
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_bprop(s_in, s_out, d_in, d_out, w_dense, w_diag, use_relu=False, init=False):
+  numcases, num_lstms_mult = s_in.shape
+  num_lstms = num_lstms_mult / 6
+  assert s_out.shape == s_in.shape
+  assert d_in.shape  == s_in.shape
+  assert d_out.shape == s_in.shape
+  assert w_diag.shape == (1, 3 * num_lstms)
+  assert w_dense.shape == (4 * num_lstms, num_lstms)
+
+  err_code = _cudamat.lstm_bprop(s_in.p_mat, s_out.p_mat, d_in.p_mat, d_out.p_mat, w_dense.p_mat, w_diag.p_mat, ct.c_bool(init), ct.c_bool(use_relu))
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_outp(s_in, s_out, d_out, dw_dense, dw_diag, db, init=False):
+  numcases, num_lstms_mult = s_in.shape
+  num_lstms = num_lstms_mult / 6
+  assert s_out.shape == s_in.shape
+  assert d_out.shape == s_in.shape
+  assert dw_diag.shape == (1, 3 * num_lstms)
+  assert dw_dense.shape == (4 * num_lstms, num_lstms)
+  assert db.shape == (1, 4 * num_lstms)
+
+  err_code = _cudamat.lstm_outp(s_in.p_mat, s_out.p_mat, d_out.p_mat, dw_dense.p_mat, dw_diag.p_mat, db.p_mat, ct.c_bool(init))
   if err_code:
     raise generate_exception(err_code)
 

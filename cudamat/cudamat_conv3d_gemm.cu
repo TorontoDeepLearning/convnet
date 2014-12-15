@@ -32,6 +32,9 @@ void convUp3DGemm(cudamat* images, cudamat* filters, cudamat* targets,
   ConvDesc conv2d_desc = conv_desc;
   conv2d_desc.kernel_size_t = 1;
   conv2d_desc.num_input_channels *= kernel_size_t;
+  conv2d_desc.input_channel_end  *= kernel_size_t;
+  // Slicing works only for kernel_size_t = 1, For kernel_size_t > 1, only full slices are supported in 3d conv.
+  assert(kernel_size_t == 1 || (conv_desc.input_channel_end == conv_desc.num_input_channels && conv_desc.input_channel_begin == 0));
 
   Shape4D images2d_shape   = *images_shape;
   Shape4D targets2d_shape  = *targets_shape;
@@ -80,6 +83,9 @@ void convDown3DGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
   ConvDesc conv2d_desc = conv_desc;
   conv2d_desc.kernel_size_t = 1;
   conv2d_desc.num_input_channels *= kernel_size_t;
+  conv2d_desc.input_channel_end  *= kernel_size_t;
+  // Slicing works only for kernel_size_t = 1, For kernel_size_t > 1, only full slices are supported in 3d conv.
+  assert(kernel_size_t == 1 || (conv_desc.input_channel_end == conv_desc.num_input_channels && conv_desc.input_channel_begin == 0));
 
   Shape4D targets2d_shape  = *targets_shape;
   Shape4D derivs2d_shape   = *derivs_shape;
@@ -128,6 +134,9 @@ void convOutp3DGemm(cudamat* images, cudamat* derivs, cudamat* targets,
   ConvDesc conv2d_desc = conv_desc;
   conv2d_desc.kernel_size_t = 1;
   conv2d_desc.num_input_channels *= kernel_size_t;
+  conv2d_desc.input_channel_end  *= kernel_size_t;
+  // Slicing works only for kernel_size_t = 1, For kernel_size_t > 1, only full slices are supported in 3d conv.
+  assert(kernel_size_t == 1 || (conv_desc.input_channel_end == conv_desc.num_input_channels && conv_desc.input_channel_begin == 0));
 
   Shape4D images2d_shape  = *images_shape;
   Shape4D derivs2d_shape  = *derivs_shape;

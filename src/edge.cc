@@ -79,6 +79,8 @@ bool Edge::HasParameters(const config::Edge& edge_config) {
 
 ConvDesc Edge::GetConvDesc(const config::Edge& edge_config) {
   ConvDesc conv_desc;
+  conv_desc.num_input_channels = 0;
+  conv_desc.num_output_channels = 0;
   conv_desc.kernel_size_y = edge_config.has_kernel_size_y() ? edge_config.kernel_size_y() : edge_config.kernel_size();
   conv_desc.kernel_size_x = edge_config.has_kernel_size_x() ? edge_config.kernel_size_x() : edge_config.kernel_size();
   conv_desc.kernel_size_t = edge_config.has_kernel_size_t() ? edge_config.kernel_size_t() : 1;
@@ -88,9 +90,11 @@ ConvDesc Edge::GetConvDesc(const config::Edge& edge_config) {
   conv_desc.padding_y = -(edge_config.has_padding_y() ? edge_config.padding_y() : edge_config.padding());
   conv_desc.padding_x = -(edge_config.has_padding_x() ? edge_config.padding_x() : edge_config.padding());
   conv_desc.padding_t = -edge_config.padding_t();
+  conv_desc.input_channel_begin = 0;
+  conv_desc.input_channel_end = 0;
+  conv_desc.output_channel_begin = 0;
+  conv_desc.output_channel_end = 0;
   conv_desc.num_groups = 1;
-  conv_desc.num_input_channels = 0;
-  conv_desc.num_output_channels = 0;
   return conv_desc;
 }
 

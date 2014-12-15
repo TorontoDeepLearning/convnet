@@ -76,6 +76,7 @@ __global__ void kSumRowwise(float* mat, float* target, unsigned int width, unsig
 __global__ void kSqSumColumnwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, unsigned int height, float mult, float p);
 __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint);
+__global__ void kNormalizeColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint);
 __global__ void kSumAll(float* mat, unsigned int len);
 __global__ void kSparseDot(int m, int n, int k, float *data, int* indptr, int* indices, float *dense_data, float* target, float beta, float alpha);
@@ -115,7 +116,7 @@ __global__ void kDivByRowVector(float* mat, float* vec, float* tgtMat, unsigned 
 __global__ void kAddMultSign(float* a, float* b, unsigned int numEls, float mult);
 __global__ void kAdd(float* a, float* b, float* dest, unsigned int numEls);
 __global__ void kSubtract(float* a, float* b, float* dest, unsigned int numEls);
-__global__ void kMult(float* a, float* b, float* dest, unsigned int numEls);
+__global__ void kMult(float* a, float* b, float* dest, unsigned int numEls, float scale_targets);
 __global__ void kLogisticDeriv(float* a, float* b, float* dest, unsigned int numEls);
 __global__ void kLogisticGrad(float* mat, float* targets, float* out_grad, unsigned int numEls);
 __global__ void kSinDeriv(float* a, float* b, float* dest, unsigned int numEls);
@@ -124,7 +125,7 @@ __global__ void kTanhDeriv(float* a, float* b, float* dest, unsigned int numEls)
 __global__ void kRectifiedLinearDeriv(float* a, float* b, float* dest, unsigned int numEls);
 __global__ void kRectifiedLinearSmoothDeriv(float* a, float* b, float* dest, unsigned int numEls);
 __global__ void kDivide(float* a, float* b, float* dest, unsigned int numEls);
-__global__ void kMultScalar(float* mat, float alpha, float* dest, unsigned int len);
+__global__ void kMultScalar(float* mat, float alpha, float* dest, unsigned int len, float scale_targets);
 __global__ void kAssignScalar(float* dest, float alpha, unsigned int len);
 __global__ void kDivideScalar(float* mat, float alpha, float* dest, unsigned int len);
 __global__ void kAddScalar(float* a, float alpha, float* dest, unsigned int numEls);
@@ -182,4 +183,7 @@ __global__ void kLogisticCorrectBoundingBox(
     int size, int width, int height, int depth, float scale_width,
     float scale_height, float* target, float cutoff);
 __global__ void kLogisticCorrectNormalized(float* mat, float* targets, float* out, unsigned int height, unsigned int width);
+__global__ void kLSTMFprop(float *s_in, float* s_out, float* w_diag, float* b, int numcases, int num_lstms, bool init, bool use_relu);
+__global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out, float* w_diag, int numcases, int num_lstms, bool init, bool use_relu);
+__global__ void kLSTMOutp(float* s_in, float* s_out, float* d_out, float* dw_diag, float* db, int numcases, int num_lstms, bool init);
 #endif

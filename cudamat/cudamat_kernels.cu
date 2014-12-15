@@ -128,6 +128,33 @@ __device__ void reduceToSumLocal32(float* sdata, unsigned int tid) {
   }
 }
 
+/*
+  * tanh is predefined in CUDA.
+__device__ inline float tanh(float x) {
+  return (1.0f - __expf(-x)) / (1.0f + __expf(-x));
+}
+*/
+
+__device__ inline float relu(float x) {
+  return ((x > 0) ? x : 0);
+}
+
+__device__ inline float deriv_of_relu(float y) {
+  return ((y > 0) ? 1 : 0);
+}
+
+__device__ inline float sigmoid(float x) {
+  return 1.0f / (1.0f + __expf(-x));
+}
+
+__device__ inline float deriv_of_sigmoid(float y) {
+  return y * (1 - y);
+}
+
+__device__ inline float deriv_of_tanh(float y) {
+  return 1 - y*y;
+}
+
 template __device__ void reduceToSumLocal<NUM_VECTOR_OP_THREADS_PER_BLOCK>(float* sdata, unsigned int tid);
 
 /* ------------------------- Random number generation ------------------------- */
@@ -481,7 +508,7 @@ __global__ void kApplyCos(float* mat, float* target, unsigned int len) {
 __global__ void kApplySigmoid(float* mat, float* target, unsigned int len) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
-  for (unsigned int i = idx; i < len; i += numThreads) target[i] = 1 / (1 + __expf(-mat[i]));
+  for (unsigned int i = idx; i < len; i += numThreads) target[i] = sigmoid(mat[i]);
 }
 
 __global__ void kApplyTanh(float* mat, float* target, unsigned int len) {
@@ -719,11 +746,17 @@ __global__ void kDivide(float* a, float* b, float* dest, unsigned int numEls) {
   }
 }
 
-__global__ void kMult(float* a, float* b, float* dest, unsigned int numEls) {
+__global__ void kMult(float* a, float* b, float* dest, unsigned int numEls, float scale_targets) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
-  for (unsigned int i = idx; i < numEls; i += numThreads) {
-    dest[i] = a[i] * b[i];
+  if (scale_targets == 0) {
+    for (unsigned int i = idx; i < numEls; i += numThreads) {
+      dest[i] = a[i] * b[i];
+    }
+  } else {
+    for (unsigned int i = idx; i < numEls; i += numThreads) {
+      dest[i] = scale_targets * dest[i] + a[i] * b[i];
+    }
   }
 }
 
@@ -781,7 +814,7 @@ __global__ void kTanhDeriv(float* a, float* b, float* dest, unsigned int numEls)
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
   for (unsigned int i = idx; i < numEls; i += numThreads) {
-    dest[i] = a[i] * (1.0 + b[i]) * (1.0 - b[i]) * 0.5;
+    dest[i] = a[i] * (1.0 + b[i]) * (1.0 - b[i]);
   }
 }
 
@@ -801,11 +834,17 @@ __global__ void kRectifiedLinearSmoothDeriv(float* a, float* b, float* dest, uns
   }
 }
 
-__global__ void kMultScalar(float* mat, float alpha, float* dest, unsigned int len) {
+__global__ void kMultScalar(float* mat, float alpha, float* dest, unsigned int len, float scale_targets) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
-  for (unsigned int i = idx; i < len; i += numThreads) {
-    dest[i] = alpha * mat[i];
+  if (scale_targets == 0) {
+    for (unsigned int i = idx; i < len; i += numThreads) {
+      dest[i] = alpha * mat[i];
+    }
+  } else {
+    for (unsigned int i = idx; i < len; i += numThreads) {
+      dest[i] = scale_targets * dest[i] + alpha * mat[i];
+    }
   }
 }
 
@@ -1453,6 +1492,28 @@ __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsi
   }
 }
 
+__global__ void kNormalizeColumnwise(float* mat, float* target, unsigned int width, unsigned int height) {
+  extern __shared__ float sum_vals[];
+  const int column = gridDim.x * blockIdx.y + blockIdx.x;
+  if (column < width) {
+    float cur_sum = 0;
+    float *cur_data = &mat[column * height] ; 
+    float *target_data = &target[column * height] ; 
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_sum += cur_data[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    cur_sum = sum_vals[0] / height;
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      target_data[i] = cur_data[i] - cur_sum;
+    }
+    __syncthreads();
+  }
+}
+
+
 __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint) {
   extern __shared__ float sum_vals[];
   const int row = gridDim.x * blockIdx.y + blockIdx.x;
@@ -1762,5 +1823,148 @@ __global__ void kSoftMaxCorrectBoundingBox(
       }
       target[row] = (num_bboxes > 0) ? ((correct > 0) ? 1 : 0) : ((cur_argmax == 0) ? 1: 0);
     }
+  }
+}
+
+__global__ void kLSTMFprop(float *s_in, float* s_out, float* w_diag, float* b, int numcases, int num_lstms, bool init, bool use_relu) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int numEls = numcases * num_lstms;
+  if (idx < numEls) {
+    const unsigned int numThreads = blockDim.x * gridDim.x;
+    float *h_out = s_out,
+          *c_out = s_out + numEls,
+          *i_out = s_out + 2 * numEls,
+          *f_out = s_out + 3 * numEls,
+          *a_out = s_out + 4 * numEls,
+          *o_out = s_out + 5 * numEls;
+
+    float *c_in  = s_in  + 1 * numEls;
+
+    float *w_i = w_diag,
+          *w_f = w_diag + num_lstms,
+          *w_o = w_diag + 2 * num_lstms;
+
+    float *b_i = b,
+          *b_f = b + num_lstms,
+          *b_a = b + 2 * num_lstms,
+          *b_o = b + 3 * num_lstms;
+
+    float i, f, a, o, c, h;
+    for (unsigned int p = idx; p < numEls; p += numThreads) {
+      int j = p / numcases;
+      i = i_out[p];
+      f = f_out[p];
+      a = a_out[p];
+      o = o_out[p];
+      c = init ? 0 : c_in[p];
+
+      i = sigmoid(i + c * w_i[j] + b_i[j]);
+      f = sigmoid(f + c * w_f[j] + b_f[j]);
+      a = use_relu ? relu(a + b_a[j]) : tanh(a + b_a[j]);
+      c = c * f + i * a;
+      o = sigmoid(o + c * w_o[j] + b_o[j]);
+      h = c * o;
+
+      i_out[p] = i;
+      f_out[p] = f;
+      a_out[p] = a;
+      o_out[p] = o;
+      c_out[p] = c;
+      h_out[p] = h;
+    }
+  }
+}
+
+__global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out, float* w_diag, int numcases, int num_lstms, bool init, bool use_relu) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  int numEls = numcases * num_lstms;
+  if (idx < numEls) {
+    const unsigned int numThreads = blockDim.x * gridDim.x;
+    float *s_c_out = s_out + numEls,
+          *s_i_out = s_out + 2 * numEls,
+          *s_f_out = s_out + 3 * numEls,
+          *s_a_out = s_out + 4 * numEls,
+          *s_o_out = s_out + 5 * numEls;
+
+    float *s_c_in  = s_in  + 1 * numEls;
+
+    float *d_h_out = d_out,
+          *d_c_out = d_out + numEls,
+          *d_i_out = d_out + 2 * numEls,
+          *d_f_out = d_out + 3 * numEls,
+          *d_a_out = d_out + 4 * numEls,
+          *d_o_out = d_out + 5 * numEls;
+
+    float *d_c_in  = d_in  + 1 * numEls;
+
+    float *w_i = w_diag,
+          *w_f = w_diag + num_lstms,
+          *w_o = w_diag + 2 * num_lstms;
+
+    float i, f, a, o, c,
+          grad_i, grad_f, grad_a, grad_o, grad_c, grad_h,
+          c_old;
+    for (unsigned int p = idx; p < numEls; p += numThreads) {
+      int j = p / numcases;
+      grad_h = d_h_out[p];
+      grad_c = d_c_out[p];
+      i = s_i_out[p];
+      f = s_f_out[p];
+      a = s_a_out[p];
+      o = s_o_out[p];
+      c = s_c_out[p];
+      c_old = init ? 0 : s_c_in[p];
+
+      grad_o = grad_h * c * deriv_of_sigmoid(o);
+      grad_c += grad_o * w_o[j] + grad_h * o;
+      
+      grad_a = grad_c * i * (use_relu ? deriv_of_relu(a) : deriv_of_tanh(a));
+      grad_i = grad_c * a * deriv_of_sigmoid(i);
+      grad_f = grad_c * c_old * deriv_of_sigmoid(f);
+      grad_c = grad_c * f + grad_f * w_f[j] + grad_i * w_i[j]; 
+
+      d_i_out[p] = grad_i;
+      d_f_out[p] = grad_f;
+      d_o_out[p] = grad_o;
+      d_a_out[p] = grad_a;
+      if (!init) d_c_in[p] = grad_c;
+    }
+  }
+}
+
+__global__ void kLSTMOutp(float* s_in, float* s_out, float* d_out, float* dw_diag, float* db, int numcases, int num_lstms, bool init) {
+  extern __shared__ float sum_vals[];
+  const int lstm_id = gridDim.x * blockIdx.y + blockIdx.x;
+  if (lstm_id < num_lstms) {
+    float* d_i     = d_out + numcases * (num_lstms * 2 + lstm_id);
+    float* d_f     = d_out + numcases * (num_lstms * 3 + lstm_id);
+    float* d_a     = d_out + numcases * (num_lstms * 4 + lstm_id);
+    float* d_o     = d_out + numcases * (num_lstms * 5 + lstm_id);
+    float* s_c     = s_out + numcases * (num_lstms * 1 + lstm_id);
+    float* s_c_old = s_in  + numcases * (num_lstms * 1 + lstm_id);
+
+    float dwi = 0, dwf = 0, dwo = 0, dbi = 0, dbf = 0, dba = 0, dbo = 0;
+    float c_old, grad_i, grad_f, grad_a, grad_o;
+    for (unsigned int i = threadIdx.x; i < numcases; i += blockDim.x) {
+      c_old = init ? 0 : s_c_old[i];
+      grad_i = d_i[i];
+      grad_f = d_f[i];
+      grad_a = d_a[i];
+      grad_o = d_o[i];
+      dwi += c_old * grad_i;
+      dwf += c_old * grad_f;
+      dwo += s_c[i] * grad_o;
+      dbi += grad_i;
+      dbf += grad_f;
+      dba += grad_a;
+      dbo += grad_o;
+    }
+    sum_vals[threadIdx.x] = dwi;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) dw_diag[lstm_id] += sum_vals[0];
+    sum_vals[threadIdx.x] = dwf;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) dw_diag[lstm_id + num_lstms] += sum_vals[0];
+    sum_vals[threadIdx.x] = dwo;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) dw_diag[lstm_id + num_lstms * 2] += sum_vals[0];
+    sum_vals[threadIdx.x] = dbi;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) db[lstm_id] += sum_vals[0];
+    sum_vals[threadIdx.x] = dbf;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) db[lstm_id + num_lstms] += sum_vals[0];
+    sum_vals[threadIdx.x] = dba;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) db[lstm_id + num_lstms * 2] += sum_vals[0];
+    sum_vals[threadIdx.x] = dbo;reduceToSumLocal32(sum_vals, threadIdx.x); __syncthreads(); if (threadIdx.x == 0) db[lstm_id + num_lstms * 3] += sum_vals[0];
   }
 }

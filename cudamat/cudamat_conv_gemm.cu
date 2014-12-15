@@ -302,10 +302,9 @@ __global__ void kContract(float *expanded_data, float* targets,
   }
 }
 
-__global__ void kWriteRows(float* data, float* target,
-                               int num_images, int num_modules,
-                               int num_modules_batch, int module_id_offset,
-                               float beta) {
+__global__ void kWriteRows(float* data, float* target, int num_images,
+                           int num_modules, int num_modules_batch,
+                           int module_id_offset, float beta) {
   int c = blockIdx.y;
   int src_module_id = blockIdx.x;
   int dst_module_id = module_id_offset + blockIdx.x;
@@ -445,7 +444,14 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     int stride_x             = conv_desc.stride_x;
     int padding_y            = conv_desc.padding_y;
     int padding_x            = conv_desc.padding_x;
+    int input_channel_begin  = conv_desc.input_channel_begin;
+    int input_channel_end    = conv_desc.input_channel_end;
+    int output_channel_begin = conv_desc.output_channel_begin;
+    int output_channel_end   = conv_desc.output_channel_end;
     int num_groups           = conv_desc.num_groups;
+
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
 
     int num_output_channels2 = targets_shape.shape[3];
     int num_modules_y        = targets_shape.shape[2];
@@ -463,26 +469,39 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     int num_output_channels3 = filters_shape.shape[0];
 
     int num_modules          = num_modules_y * num_modules_x;
-    int input_size           = kernel_size_y * kernel_size_x * num_input_channels;
     int filterModuleMult     = conv ? 1 : num_modules;
   
     // Consistency checks. 
     assert (num_images == num_images2);
     assert (num_output_channels == num_output_channels2);
-    assert (num_output_channels == num_output_channels3);
+    assert (output_channel_end - output_channel_begin == num_output_channels3);
     assert (num_input_channels == num_input_channels2);
-    assert (num_input_channels == num_input_channels3 / filterModuleMult);
+    assert (input_channel_end - input_channel_begin == num_input_channels3 / filterModuleMult);
     assert (num_images == images->size[0]);
     assert (num_images == targets->size[0]);
-    assert (num_output_channels == filters->size[0]);
+    assert (num_output_channels3 == filters->size[0]);
     assert (image_size_y * image_size_x * num_input_channels == images->size[1]);
     assert (num_modules_y * num_modules_x * num_output_channels == targets->size[1]);
-    assert (kernel_size_y * kernel_size_x * num_input_channels * filterModuleMult == filters->size[1]);
+    assert (kernel_size_y * kernel_size_x * num_input_channels3 * filterModuleMult == filters->size[1]);
     assert (kernel_size_y == kernel_size_y2);
     assert (kernel_size_x == kernel_size_x2);
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
+    assert (input_channel_begin  >= 0);
+    assert (output_channel_begin >= 0);
+    assert (input_channel_end    <= num_input_channels);
+    assert (output_channel_end   <= num_output_channels);
+    assert (input_channel_begin  <= input_channel_end);
+    assert (output_channel_begin <= output_channel_end);
+    num_input_channels = input_channel_end - input_channel_begin;
+    num_output_channels = output_channel_end - output_channel_begin;
+    assert(num_input_channels  > 0);
+    assert(num_output_channels > 0);
+    float* w = filters->data_device;
+    float* images_data = images->data_device + input_channel_begin * image_size_y * image_size_x * num_images;
+    float* targets_data = targets->data_device + output_channel_begin * num_modules * num_images;
 
+    int input_size = kernel_size_y * kernel_size_x * num_input_channels;
     int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     
     float *expanded_images = NULL, *expanded_target = NULL;
@@ -502,16 +521,6 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     err2 = cudaMalloc((void**)&expanded_target, max_batch_size * output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
       printf("Could not allocate memory.\n");
-      /*
-      if (cudaSuccess == err1) cudaFree(expanded_images);
-      if (cudaSuccess == err2) cudaFree(expanded_target);
-      err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
-      err2 = cudaMalloc((void**)&expanded_target, output_memory_size);
-      if (cudaSuccess != err1 || cudaSuccess != err2) {
-        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
-        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
-      }
-      */
       num_modules_batch = 1;
     } else {
       num_modules_batch = max_batch_size;
@@ -520,14 +529,13 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
     int num_iter = DIVUP(num_modules, num_modules_batch);
 
     int module_id_start = 0;
-    float* w = filters->data_device;
     for (int i = 0; i < num_iter; i++) {
       int this_num_modules_batch = MIN(num_modules_batch, num_modules - module_id_start);
       //printf("Step %d num_modules %d\n", i, this_num_modules_batch);
 
       dim3 threads(num_threads_x);
-      dim3 blocks = dim3(this_num_modules_batch, num_input_channels);
-      kExpand<<<blocks, threads>>>(images->data_device, expanded_images,
+      dim3 blocks = dim3(this_num_modules_batch, input_channel_end - input_channel_begin);
+      kExpand<<<blocks, threads>>>(images_data, expanded_images,
                                    num_images, num_input_channels,
                                    image_size_y, image_size_x,
                                    num_modules_y, num_modules_x,
@@ -538,19 +546,19 @@ void _convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
       if (!conv) w += num_output_channels * input_size;
       cublasSgemm('n', 't', 
                   num_images * this_num_modules_batch, num_output_channels,
-                  kernel_size_x * kernel_size_y * num_input_channels,
+                  input_size,
                   1, expanded_images, num_images * this_num_modules_batch,
                   w, num_output_channels,
                   0, expanded_target, num_images * this_num_modules_batch);
 
       dim3 blocks2 = dim3(this_num_modules_batch, num_output_channels);
       if (scaleTargets == 0) {
-        kWriteRows<<<blocks2, threads>>>(expanded_target, targets->data_device,
+        kWriteRows<<<blocks2, threads>>>(expanded_target, targets_data,
                                          num_images, num_modules,
                                          this_num_modules_batch, module_id_start,
                                          scaleOutput);
       } else {
-        kWriteRowsMult<<<blocks2, threads>>>(expanded_target, targets->data_device,
+        kWriteRowsMult<<<blocks2, threads>>>(expanded_target, targets_data,
                                          num_images, num_modules,
                                          this_num_modules_batch, module_id_start,
                                          scaleTargets, scaleOutput);
@@ -575,7 +583,13 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     int stride_x             = conv_desc.stride_x;
     int padding_y            = conv_desc.padding_y;
     int padding_x            = conv_desc.padding_x;
+    int input_channel_begin  = conv_desc.input_channel_begin;
+    int input_channel_end    = conv_desc.input_channel_end;
+    int output_channel_begin = conv_desc.output_channel_begin;
+    int output_channel_end   = conv_desc.output_channel_end;
     int num_groups           = conv_desc.num_groups;
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
 
     int num_output_channels2 = derivs_shape.shape[3];
     int num_modules_y        = derivs_shape.shape[2];
@@ -593,32 +607,42 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     int num_output_channels3 = filters_shape.shape[0];
 
     int num_modules          = num_modules_y * num_modules_x;
-    int input_size           = kernel_size_y * kernel_size_x * num_input_channels;
     int filterModuleMult     = conv ? 1 : num_modules;
   
     // Consistency checks. 
     assert (num_images == num_images2);
     assert (num_output_channels == num_output_channels2);
-    assert (num_output_channels == num_output_channels3);
+    assert (output_channel_end - output_channel_begin == num_output_channels3);
     assert (num_input_channels == num_input_channels2);
-    assert (num_input_channels == num_input_channels3 / filterModuleMult);
-    assert (num_images == targets->size[0]);
+    assert (input_channel_end - input_channel_begin == num_input_channels3 / filterModuleMult);
+    assert (num_images2 == targets->size[0]);
     assert (num_images == derivs->size[0]);
-    assert (num_output_channels == filters->size[0]);
-    assert (image_size_y * image_size_x * num_input_channels == targets->size[1]);
-    assert (num_modules_y * num_modules_x * num_output_channels == derivs->size[1]);
-    assert (kernel_size_y * kernel_size_x * num_input_channels * filterModuleMult == filters->size[1]);
+    assert (num_output_channels3 == filters->size[0]);
+    assert (image_size_y * image_size_x * num_input_channels2 == targets->size[1]);
+    assert (num_modules_y * num_modules_x * num_output_channels2 == derivs->size[1]);
+    assert (kernel_size_y * kernel_size_x * num_input_channels3 * filterModuleMult == filters->size[1]);
     assert (kernel_size_y == kernel_size_y2);
     assert (kernel_size_x == kernel_size_x2);
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
-
+    assert (input_channel_begin  >= 0);
+    assert (output_channel_begin >= 0);
+    assert (input_channel_end    <= num_input_channels);
+    assert (output_channel_end   <= num_output_channels);
+    assert (input_channel_begin  <= input_channel_end);
+    assert (output_channel_begin <= output_channel_end);
+    num_input_channels = input_channel_end - input_channel_begin;
+    num_output_channels = output_channel_end - output_channel_begin;
+    assert(num_input_channels  > 0);
+    assert(num_output_channels > 0);
+    float* w = filters->data_device;
+    float* derivs_data = derivs->data_device + output_channel_begin * num_modules * num_images;
+    float* targets_data = targets->data_device + input_channel_begin * image_size_y * image_size_x * num_images;
+    
+    int input_size = kernel_size_y * kernel_size_x * num_input_channels;
     int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     float *expanded_target = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
-    //GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
-    //              expanded_target, expanded_derivs, &num_modules_batch);
-
 
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
@@ -653,14 +677,13 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
     _Scale(targets, scaleTargets); 
 
     int module_id_start = 0;
-    float* w = filters->data_device;
     for (int i = 0; i < num_iter; i++) {
       int this_num_modules_batch = MIN(num_modules_batch, num_modules - module_id_start);
       //printf("Step %d num_modules %d\n", i, this_num_modules_batch);
 
       dim3 blocks = dim3(this_num_modules_batch, num_output_channels);
       dim3 threads(num_threads_x);
-      kReadRows<<<blocks, threads>>>(derivs->data_device, expanded_derivs,
+      kReadRows<<<blocks, threads>>>(derivs_data, expanded_derivs,
                                      num_images, num_modules,
                                      this_num_modules_batch, module_id_start);
       if (!conv) w += num_output_channels * input_size;
@@ -675,7 +698,7 @@ void _convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
         printf("Error in dot or before it.\n");
       }
       dim3 blocks2 = dim3(this_num_modules_batch, num_input_channels);
-      kContract<<<blocks2, threads>>>(expanded_target, targets->data_device,
+      kContract<<<blocks2, threads>>>(expanded_target, targets_data,
                                    num_images, num_input_channels,
                                    image_size_y, image_size_x,
                                    num_modules_y, num_modules_x,
@@ -702,7 +725,13 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     int stride_x             = conv_desc.stride_x;
     int padding_y            = conv_desc.padding_y;
     int padding_x            = conv_desc.padding_x;
+    int input_channel_begin  = conv_desc.input_channel_begin;
+    int input_channel_end    = conv_desc.input_channel_end;
+    int output_channel_begin = conv_desc.output_channel_begin;
+    int output_channel_end   = conv_desc.output_channel_end;
     int num_groups           = conv_desc.num_groups;
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
 
     int num_output_channels2 = derivs_shape.shape[3];
     int num_modules_y        = derivs_shape.shape[2];
@@ -720,33 +749,45 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     int num_output_channels3 = targets_shape.shape[0];
 
     int num_modules          = num_modules_y * num_modules_x;
-    int input_size           = kernel_size_y * kernel_size_x * num_input_channels;
     int filterModuleMult     = conv ? 1 : num_modules;
   
     // Consistency checks. 
     assert (num_images == num_images2);
     assert (num_output_channels == num_output_channels2);
-    assert (num_output_channels == num_output_channels3);
+    assert (output_channel_end - output_channel_begin == num_output_channels3);
     assert (num_input_channels == num_input_channels2);
-    assert (num_input_channels * filterModuleMult == num_input_channels3Mult);
-    assert (num_images == images->size[0]);
+    assert (input_channel_end - input_channel_begin == num_input_channels3Mult / filterModuleMult);
+    assert (num_images2 == images->size[0]);
     assert (num_images == derivs->size[0]);
-    assert (num_output_channels == targets->size[0]);
-    assert (image_size_y * image_size_x * num_input_channels == images->size[1]);
-    assert (num_modules_y * num_modules_x * num_output_channels == derivs->size[1]);
-    assert (kernel_size_y * kernel_size_x * num_input_channels3Mult == targets->size[1]);
+    assert (num_output_channels3 == targets->size[0]);
+    assert (image_size_y * image_size_x * num_input_channels2 == images->size[1]);
+    assert (num_modules_y * num_modules_x * num_output_channels2 == derivs->size[1]);
+    assert (kernel_size_y2 * kernel_size_x2 * num_input_channels3Mult == targets->size[1]);
     assert (kernel_size_y == kernel_size_y2);
     assert (kernel_size_x == kernel_size_x2);
     assert (num_input_channels % num_groups == 0);
     assert (num_groups == 1);
-
+    assert (input_channel_begin  >= 0);
+    assert (output_channel_begin >= 0);
+    assert (input_channel_end    <= num_input_channels);
+    assert (output_channel_end   <= num_output_channels);
+    assert (input_channel_begin  <= input_channel_end);
+    assert (output_channel_begin <= output_channel_end);
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
+    num_input_channels = input_channel_end - input_channel_begin;
+    num_output_channels = output_channel_end - output_channel_begin;
+    assert(num_input_channels  > 0);
+    assert(num_output_channels > 0);
+    float* dw = targets->data_device;
+    float* images_data = images->data_device + input_channel_begin * image_size_y * image_size_x * num_images;
+    float* derivs_data = derivs->data_device + output_channel_begin * num_modules * num_images;
+    
+    int input_size = kernel_size_y * kernel_size_x * num_input_channels;
     int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
     
     float *expanded_images = NULL, *expanded_derivs = NULL;
     int num_modules_batch;
-    //GetTempMemory(num_images, input_size, num_output_channels, num_modules / filterModuleMult,
-    //              expanded_images, expanded_derivs, &num_modules_batch);
-
 
     int input_memory_size  = num_images * input_size * sizeof(float);
     int output_memory_size = num_images * num_output_channels * sizeof(float);
@@ -761,16 +802,6 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
     if (cudaSuccess != err1 || cudaSuccess != err2) {
       printf("Out of memory.\n");
-      /*
-      if (cudaSuccess == err1) cudaFree(expanded_images);
-      if (cudaSuccess == err2) cudaFree(expanded_derivs);
-      err1 = cudaMalloc((void**)&expanded_images,  input_memory_size);
-      err2 = cudaMalloc((void**)&expanded_derivs, output_memory_size);
-      if (cudaSuccess != err1 || cudaSuccess != err2) {
-        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err1));
-        printf("Out of memory on GPU! %s \n", cudaGetErrorString(err2));
-      } 
-      */
       num_modules_batch = 1;
     } else {
       num_modules_batch = max_batch_size;
@@ -782,17 +813,16 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
 
     int module_id_start = 0;
     dim3 threads(num_threads_x);
-    float* dw = targets->data_device;
     for (int i = 0; i < num_iter; i++) {
       int this_num_modules_batch = MIN(num_modules_batch, num_modules - module_id_start);
       //printf("Step %d num_modules %d\n", i, this_num_modules_batch);
 
       dim3 blocks = dim3(this_num_modules_batch, num_output_channels);
-      kReadRows<<<blocks, threads>>>(derivs->data_device, expanded_derivs,
+      kReadRows<<<blocks, threads>>>(derivs_data, expanded_derivs,
                                      num_images, num_modules,
                                      this_num_modules_batch, module_id_start);
       dim3 blocks2 = dim3(this_num_modules_batch, num_input_channels);
-      kExpand<<<blocks2, threads>>>(images->data_device, expanded_images,
+      kExpand<<<blocks2, threads>>>(images_data, expanded_images,
                                    num_images, num_input_channels,
                                    image_size_y, image_size_x,
                                    num_modules_y, num_modules_x,
@@ -803,7 +833,7 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
       if (!conv) dw += num_output_channels * input_size;
       cublasSgemm('t', 'n', 
                   num_output_channels,
-                  kernel_size_x * kernel_size_y * num_input_channels,
+                  input_size,
                   num_images * this_num_modules_batch,
                   scaleOutput, expanded_derivs, num_images * this_num_modules_batch,
                   expanded_images, num_images * this_num_modules_batch,

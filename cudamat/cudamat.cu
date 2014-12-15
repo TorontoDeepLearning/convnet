@@ -1628,6 +1628,32 @@ int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
     return 0;
 }
 
+int normalize_by_axis(cudamat* mat, cudamat* target, int axis) {
+    unsigned int h = mat->size[0],
+                 w = mat->size[1];
+
+    if (!mat->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat->is_trans)
+        return ERROR_TRANSPOSED;
+
+    if (target->size[0] != mat->size[0] || target->size[1] != mat->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    int shared_mem_size = 32 * sizeof(float) ;
+    if (axis == 0) {
+        int w1 = floor(sqrt(w));
+        int w2 = DIVUP(w, w1);
+        dim3 gridDim(w1, w2, 1);
+        kNormalizeColumnwise<<<gridDim,32, shared_mem_size>>>(mat->data_device, target->data_device, w, h);
+    } else {
+      return ERROR_UNSUPPORTED;
+    }
+    if (checkCUDAError())
+        return CUDA_ERROR;
+    return 0;
+}
 
 int normlimit_by_axis(cudamat* mat, cudamat* target, int axis,
                                    float norm, int constraint) {
@@ -2191,7 +2217,7 @@ int divide_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target) {
 }
 
 /* Elementwise multiplication of 2 matrices */
-int mult_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target) {
+int mult_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target, float scale_targets) {
     int len = mat1->size[0]*mat1->size[1];
 
     if (!mat1->on_device || !mat2->on_device || !target->on_device)
@@ -2204,7 +2230,7 @@ int mult_elementwise(cudamat* mat1, cudamat* mat2, cudamat* target) {
         mat1->size[0] != target->size[0] || mat1->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kMult<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat1->data_device, mat2->data_device, target->data_device, len);
+    kMult<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat1->data_device, mat2->data_device, target->data_device, len, scale_targets);
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -2425,7 +2451,7 @@ float read_from(cudamat* mat, int row, int col, int* err_code) {
     return val;
 }
 
-int mult_by_scalar(cudamat* mat, float alpha, cudamat* target) {
+int mult_by_scalar(cudamat* mat, float alpha, cudamat* target, float scale_targets) {
     int len = mat->size[0]*mat->size[1];
 
     if (!mat->on_device || !target->on_device)
@@ -2434,7 +2460,7 @@ int mult_by_scalar(cudamat* mat, float alpha, cudamat* target) {
     if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kMultScalar<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, alpha, target->data_device, len);
+    kMultScalar<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, alpha, target->data_device, len, scale_targets);
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -3170,6 +3196,85 @@ int rms_prop(cudamat* history, cudamat* grad, float factor) {
     return 0;
 }
 
+int lstm_fprop(cudamat* s_in, cudamat* s_out, cudamat* w_dense, cudamat* w_diag, cudamat* b, bool init, bool use_relu) {
+  int numcases = s_in->size[0];
+  int num_lstms = s_in->size[1] / 6;
+
+  if (!init) {
+    // Fprop from previous hidden state to all gates.
+    // This is the only dense operation, everything else is mostly elementwise (done in kLSTMFprop).
+    cublasSgemm('n', 't', numcases, 4 * num_lstms, num_lstms,
+                1,
+                s_in->data_device,
+                numcases,
+                w_dense->data_device, 4 * num_lstms,
+                1,
+                s_out->data_device + numcases * num_lstms * 2,
+                numcases);
+    if (checkCUDAError()) {
+        printf("Error in dot prod.\n");
+      return CUDA_ERROR;
+    }
+  }
+
+  kLSTMFprop<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+      s_in->data_device, s_out->data_device, w_diag->data_device, b->data_device, numcases, num_lstms, init, use_relu);
+
+  if (checkCUDAError()) {
+      printf("Error in lstm.\n");
+    return CUDA_ERROR;
+  }
+  return 0;
+}
+
+int lstm_bprop(cudamat* s_in, cudamat* s_out, cudamat* d_in, cudamat* d_out, cudamat* w_dense, cudamat* w_diag, bool init, bool use_relu) {
+  int numcases = s_in->size[0];
+  int num_lstms = s_in->size[1] / 6;
+
+  kLSTMBprop<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+      s_in->data_device, s_out->data_device, d_in->data_device, d_out->data_device, w_diag->data_device, numcases, num_lstms, init, use_relu);
+  if (checkCUDAError())
+    return CUDA_ERROR;
+ 
+  if (!init) { 
+    cublasSgemm('n', 'n', numcases, num_lstms, 4 * num_lstms,
+                1,
+                d_out->data_device + numcases * num_lstms * 2,
+                numcases,
+                w_dense->data_device, 4 * num_lstms,
+                1,
+                d_in->data_device,
+                numcases);
+    if (check_cublas_error())
+      return CUBLAS_ERROR;
+  }
+
+  return 0;
+}
+
+int lstm_outp(cudamat* s_in, cudamat* s_out, cudamat* d_out, cudamat* dw_dense, cudamat* dw_diag, cudamat* db, bool init) {
+  int numcases = s_in->size[0];
+  int num_lstms = s_in->size[1] / 6;
+
+  if (!init) { 
+    cublasSgemm('t', 'n', 4 * num_lstms, num_lstms, numcases,
+                1, d_out->data_device + numcases * num_lstms * 2, numcases,
+                s_in->data_device, numcases,
+                1, dw_dense->data_device, 4 * num_lstms);
+    if (check_cublas_error())
+      return CUBLAS_ERROR;
+  }
+  
+  // Gradients for diagonal "peephole" weights.
+  int shared_mem_size = 32 * sizeof(float);
+  kLSTMOutp<<<num_lstms, 32, shared_mem_size>>>(
+      s_in->data_device, s_out->data_device, d_out->data_device,
+      dw_diag->data_device, db->data_device, numcases, num_lstms, init);
+ 
+  if (checkCUDAError())
+    return CUDA_ERROR;
+  return 0;
+}
 #ifdef __cplusplus
 }
 #endif

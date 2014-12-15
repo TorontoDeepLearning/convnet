@@ -639,10 +639,10 @@ void Matrix::DivideByColVec(Matrix& v) {
 
 // self *= val
 void Matrix::Mult(float val) {
-  mult_by_scalar(&mat_, val, &mat_);
+  mult_by_scalar(&mat_, val, &mat_, 1);
 }
 void Matrix::Mult(Matrix& val) {
-  mult_elementwise(&mat_, val.GetMat(), &mat_);
+  mult_elementwise(&mat_, val.GetMat(), &mat_, 1);
 }
 void Matrix::MultByRowVec(Matrix& val) {
   mult_by_row_vec(&mat_, val.GetMat(), &mat_);
@@ -765,6 +765,10 @@ void Matrix::SqSumAxis(Matrix& target, int axis, float beta, float alpha) {
 
 void Matrix::NormLimitByAxis(int axis, float val, bool constraint) {
   normlimit_by_axis(&mat_, &mat_, axis, val, constraint);
+}
+
+void Matrix::NormalizeColumnwise() {
+  normalize_by_axis(&mat_, &mat_, 0);
 }
 
 void Matrix::ShuffleColumns(Matrix& rand_perm_indices) {
