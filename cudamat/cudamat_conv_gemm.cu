@@ -1154,6 +1154,10 @@ void UpSampleGemm(cudamat* images, cudamat* targets, Shape4D* images_shape,
   conv_desc.padding_x = 0;
   conv_desc.num_input_channels = images_shape->shape[3];
   conv_desc.num_output_channels = targets_shape->shape[3];
+  conv_desc.output_channel_end = targets_shape->shape[3];
+  conv_desc.input_channel_end = images_shape->shape[3];
+  conv_desc.input_channel_begin = 0;
+  conv_desc.output_channel_begin = 0;
   conv_desc.num_groups = 1;
   _avgPoolUndoGemm(images, targets, *images_shape, *targets_shape, conv_desc,
                    scaleTargets, factor * factor);
@@ -1170,6 +1174,10 @@ void DownSampleGemm(cudamat* images, cudamat* targets, Shape4D* images_shape, Sh
   conv_desc.padding_x = 0;
   conv_desc.num_input_channels = images_shape->shape[3];
   conv_desc.num_output_channels = targets_shape->shape[3];
+  conv_desc.output_channel_end = targets_shape->shape[3];
+  conv_desc.input_channel_end = images_shape->shape[3];
+  conv_desc.input_channel_begin = 0;
+  conv_desc.output_channel_begin = 0;
   conv_desc.num_groups = 1;
   _convPoolGemm<AvgPooler>(images, targets, *images_shape, *targets_shape,
                            conv_desc, 0, 1, pooler);

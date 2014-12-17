@@ -639,10 +639,10 @@ void Matrix::DivideByColVec(Matrix& v) {
 
 // self *= val
 void Matrix::Mult(float val) {
-  mult_by_scalar(&mat_, val, &mat_, 1);
+  mult_by_scalar(&mat_, val, &mat_, 0);
 }
 void Matrix::Mult(Matrix& val) {
-  mult_elementwise(&mat_, val.GetMat(), &mat_, 1);
+  mult_elementwise(&mat_, val.GetMat(), &mat_, 0);
 }
 void Matrix::MultByRowVec(Matrix& val) {
   mult_by_row_vec(&mat_, val.GetMat(), &mat_);

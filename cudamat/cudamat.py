@@ -391,7 +391,12 @@ class CUDAMatrix(object):
                 self.shape4d_.shape[2], self.shape4d_.shape[3]) 
 
     def set_shape4d(self, shape):
-        if len(shape) == 4:
+        if len(shape) == 2:
+          s1 = ct.c_uint(shape[0])
+          s2 = ct.c_uint(1)
+          s3 = ct.c_uint(1)
+          s4 = ct.c_uint(shape[1])
+        elif len(shape) == 4:
           assert shape[0] * shape[1] * shape[2] * shape[3] == self.shape[0] * self.shape[1], "%s %s" % (shape, self.shape)
           s1 = ct.c_uint(shape[0])
           s2 = ct.c_uint(shape[1])
@@ -1846,9 +1851,7 @@ def empty(shape):
         raise generate_exception(err_code)
 
     m = CUDAMatrix(mat)
-
-    if len(shape) >= 4:
-      m.set_shape4d(shape)
+    m.set_shape4d(shape)
 
     m.assign(0)
     return m

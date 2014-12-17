@@ -26,6 +26,8 @@ void ConvEdge::SetImageSize(int image_size_y, int image_size_x, int image_size_t
   Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   conv_desc_.num_input_channels = num_input_channels_;
   conv_desc_.num_output_channels = num_output_channels_;
+  conv_desc_.input_channel_end = num_input_channels_;
+  conv_desc_.output_channel_end = num_output_channels_;
   Edge::GetNumModules(conv_desc_, image_size_y, image_size_x, image_size_t,
                       num_modules_y_, num_modules_x_, num_modules_t_);
   if (partial_sum_y_ == 0) partial_sum_y_ = num_modules_y_;

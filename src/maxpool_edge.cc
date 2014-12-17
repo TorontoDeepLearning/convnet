@@ -14,6 +14,8 @@ void MaxPoolEdge::SetImageSize(int image_size_y, int image_size_x, int image_siz
   Edge::SetImageSize(image_size_y, image_size_x, image_size_t);
   conv_desc_.num_input_channels = num_input_channels_;
   conv_desc_.num_output_channels = num_output_channels_;
+  conv_desc_.input_channel_end = num_input_channels_;
+  conv_desc_.output_channel_end = num_output_channels_;
   if (conv_desc_.kernel_size_y <= 0) conv_desc_.kernel_size_y = image_size_y;
   if (conv_desc_.kernel_size_x <= 0) conv_desc_.kernel_size_x = image_size_x;
   if (conv_desc_.kernel_size_t <= 0) conv_desc_.kernel_size_t = image_size_t;
