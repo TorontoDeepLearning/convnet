@@ -303,7 +303,7 @@ void DataHandler::LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_r
     end = (row + random_access_chunk_size_) % dataset_size_;
     if (end < row) {
       it.Get(data_ptr, row, dataset_size_);
-      it.Get(data_ptr + num_dims * (dataset_size_ - row), 0, end);
+      if (end > 0) it.Get(data_ptr + num_dims * (dataset_size_ - row), 0, end);
     } else {
       it.Get(data_ptr, row, end);
     }
