@@ -1,16 +1,18 @@
-#ifndef MATRIX_H_
-#define MATRIX_H_
-#include <string>
+#ifndef MATRIX_H
+#define MATRIX_H
+
 #ifdef USE_GEMM
 #include "../cudamat/cudamat_conv_gemm.cuh"
 #else
 #include "../cudamat/cudamat_conv.cuh"
 #endif
 #include "../cudamat/cudamat.cuh"
-#include "hdf5.h"
+
+#include <hdf5.h>
+
 #include <vector>
+#include <string>
 #include <map>
-using namespace std;
 
 /** A GPU matrix class.*/
 class Matrix {
@@ -18,13 +20,13 @@ class Matrix {
   Matrix();
   Matrix(const size_t rows, const size_t cols, const bool on_gpu);
   ~Matrix();
-  
+
   void Tie(Matrix &m);
   void SetupTranspose();
   void SetShape4D(int d1, int d2, int d3, int d4);
   void SetShape4D_like(Matrix& mat);
   Shape4D& GetShape4D();
-  void AllocateGPUMemory(const size_t rows, const size_t cols, const string& name);
+  void AllocateGPUMemory(const size_t rows, const size_t cols, const std::string& name);
   void AllocateGPUMemory(const size_t rows, const size_t cols);
   void AllocateMainMemory(const size_t rows, const size_t cols);
   void Set(const float val);
@@ -43,19 +45,14 @@ class Matrix {
   void CopyToHostSlice(const size_t start, const size_t end);
   void CopyFromMainMemory(Matrix& mat);
   void Reshape(const size_t rows, const size_t cols);
-  float Norm();
   void Print();
   bool CheckNaN();
-  void PrintToFile(const string& filename);
-  void WriteToFile(FILE* file);
-  void ReadFromFile(FILE* file);
-  void WriteHDF5(hid_t file, const string& name);
-  void ReadHDF5(hid_t file, const string& name);
-  void AllocateAndReadHDF5(hid_t file, const string& name);
-  string GetShapeString();
-  string GetShape4DString();
-  cudamat* GetMat() { return &mat_; }
-  cudamat* GetMatTranspose() { return &mat_t_; }
+  void WriteHDF5(hid_t file, const std::string& name);
+  void ReadHDF5(hid_t file, const std::string& name);
+  void AllocateAndReadHDF5(hid_t file, const std::string& name);
+  std::string GetShapeString();
+  std::string GetShape4DString();
+
   float* GetHostData() { return mat_.data_host; }
   size_t GetRows() const {return mat_.size[0];}
   size_t GetCols() const {return mat_.size[1];}
@@ -103,6 +100,7 @@ class Matrix {
   void AddToEachPixel(Matrix& v, float mult);
   void RectifyBBox(Matrix& width_offset, Matrix& height_offset, Matrix& flip,
                    int patch_width, int patch_height);
+
   static void LogisticCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
   static void LogisticCorrect(Matrix& state, Matrix& gt, Matrix& output);
   static void SoftmaxCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
@@ -141,7 +139,7 @@ class Matrix {
                       ConvDesc conv_desc, float scale_targets);
 
   static void LocalDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                       ConvDesc conv_desc, float scale_targets);
+                        ConvDesc conv_desc, float scale_targets);
 
   static void LocalOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
                         ConvDesc conv_desc,
@@ -161,6 +159,7 @@ class Matrix {
   static void ConvResponseNormCrossMap(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
       float powScale, bool blocked);
+
   static void ConvResponseNormCrossMap3D(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
       float powScale, bool blocked, int image_size_t);
@@ -187,33 +186,42 @@ class Matrix {
 
   static void GetOnes(size_t rows, size_t cols, Matrix& ones);
   static void RegisterTempMemory(size_t size);
-  static void RegisterTempMemory(size_t size, const string& why);
+  static void RegisterTempMemory(size_t size, const std::string& why);
   static void RegisterOnes(size_t size);
   static void GetTemp(size_t rows, size_t cols, Matrix& temp);
   static void InitRandom(int seed);
   static void SetupCUDADevice(int gpu_id);
-  static void SetupCUDADevices(const vector<int>& boards);
+  static void SetupCUDADevices(const std::vector<int>& boards);
   static void SetDevice(int gpu_id);
   static void SyncAllDevices();
   static int GetDevice();
   static int GetNumBoards() {return num_boards_;}
   static void ShowMemoryUsage();
 
-  static vector<Matrix> ones_, temp_;
-  static vector<rnd_struct> rnd_;
-  static map<string, long> gpu_memory_;
+protected:
+  static std::vector<Matrix> ones_, temp_;
+  static std::vector<rnd_struct> rnd_;
+  static std::map<std::string, long> gpu_memory_;
   static Matrix rgb_to_yuv_mat_;
 
- private:
+  cudamat* GetMat() { return &mat_; }
+  cudamat* GetMatTranspose() { return &mat_t_; }
+
+  void PrintToFile(const std::string& filename);
+  void WriteToFile(FILE* file);
+  void ReadFromFile(FILE* file);
+  float Norm(); // duplicated
+
+private:
   cudamat mat_, mat_t_;
   cudaEvent_t ready_;
   Shape4D shape_;
   int gpu_id_;
-  string name_;
+  std::string name_;
   static int num_boards_;
   static int current_gpu_id_;
-  static vector<int> boards_;
-  static vector<size_t> temp_size_, ones_size_;
+  static std::vector<int> boards_;
+  static std::vector<size_t> temp_size_, ones_size_;
 };
 
 #endif

@@ -13,13 +13,13 @@ There are two ways to extract features -
 
 - **One-at-a-time on a CPU.**
 
-Run make in the convnet/cpu directory. This should produce a binary called `extract_representation_cpu` in convnet/bin. Then the run the `extract_representation_cpu` binary as follows -
+Run make in the convnet/apps/cpu directory. This should produce a binary called `extract_representation_cpu` in convnet/bin. Then the run the `extract_representation_cpu` binary as follows -
 ```
-$ extract_representation_cpu --model=<model-file> --parameters=<model-parameters> --mean=<pixel-mean> --output=<output-dir> --layer=<layer-name>[;<layer-name>;..]  < <image-files>
+$ extract_representation_cpu --model=<model-file> --parameters=<model-parameters> --mean=<pixel-mean> --output=<output-dir> --layer=<layer-name>[,<layer-name>,..]  < <image-files>
 ```
 For example,
 ```
-$ extract_representation_cpu --model=CLS_net_20140621074703.pbtxt --parameters=CLS_net_20140621074703.h5 --mean=pixel_mean.h5 --output=cpu_out --layer=hidden7;output  < test_images.txt
+$ extract_representation_cpu --model=CLS_net_20140621074703.pbtxt --parameters=CLS_net_20140621074703.h5 --mean=pixel_mean.h5 --output=cpu_out --layer=hidden7,output  < test_images.txt
 ```
 This will take each image in `test_images.txt` at write out the features at layers
 `hidden7` and `output` into text files in the `cpu_out` directory. `hidden7` are the top-level features and `output` is the distribution over the 1000 ILSVRC 2013 categories.

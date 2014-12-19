@@ -1,27 +1,39 @@
 #ifndef CONVNET_CPU
 #define CONVNET_CPU
-#include "cpuconv.h"
-#include "hdf5.h"
+
+#include "CPUMatrix.h"
 #include "convnet_config.pb.h"
+
+#include <hdf5.h>
+
 #include <vector>
 #include <string>
+
 using namespace std;
+
 namespace cpu {
 
 class Edge;
+
 class Layer {
  public:
   Layer(const config::Layer& config);
   ~Layer();
+
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
-  void AllocateMemory(int image_size, int batch_size);
+  void AllocateMemory(int batch_size);
   const string& GetName() const { return name_; }
-  int GetDims() const { return image_size_ * image_size_ * num_channels_; }
-  float* GetState() { return state_.GetData();}
+  int GetDims() const { return image_size_y_ * image_size_x_ * image_size_t_ * num_channels_; }
+  float* GetState() { return state_.GetHostData(); }
+  CPUMatrix& GetFullState() { return state_; }
   void AddIncoming(Edge* e);
   void AddOutgoing(Edge* e);
   int GetNumChannels() { return num_channels_; }
+  int GetSizeY() const { return image_size_y_; }
+  int GetSizeX() const { return image_size_x_; }
+  int GetSizeT() const { return image_size_t_; }
+  void SetSize(int image_size_y, int image_size_x, int image_size_t);
   void ApplyActivation();
   void Print();
 
@@ -32,7 +44,8 @@ class Layer {
   const string name_;
   const int num_channels_;
   const bool is_input_, is_output_;
-  int image_size_, batch_size_, num_dims_;
+  int batch_size_, num_dims_;
+  int image_size_y_, image_size_x_, image_size_t_;
   CPUMatrix state_;
 };
 
@@ -40,6 +53,7 @@ class Edge {
  public:
   Edge(const config::Edge& edge_config);
   ~Edge();
+
   void SetSource(Layer* source) { source_ = source;}
   void SetDest(Layer* dest) { dest_ = dest;}
   Layer* GetSource() { return source_;}
@@ -54,20 +68,24 @@ class Edge {
   string GetTiedEdgeName() { return tied_edge_name_;}
   bool IsTied() { return is_tied_;}
   void SetTiedTo(Edge* e) { tied_edge_ = e;}
-  int GetNumModules() { return num_modules_;}
-  void SetImageSize(int image_size);
+  int GetNumModulesY() { return num_modules_y_;}
+  int GetNumModulesX() { return num_modules_x_;}
+  int GetNumModulesT() { return num_modules_t_;}
+  void SetImageSize(int image_size_y, int image_size_x, int image_size_t);
   void LoadParameters(hid_t file);
   void AllocateMemory();
 
-  void ComputeUp(const float* input, float* output, bool overwrite, int batch_size);
-  void ComputeUp(const float* input, float* output, bool overwrite, int batch_size, int image_size);
+  void ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size);
+  void ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size, int image_size);
 
  private:
   const config::Edge::EdgeType edge_type_;
   Layer *source_, *dest_;
   const string source_node_, dest_node_, name_, tied_edge_name_;
   Edge* tied_edge_;
-  int num_input_channels_, num_output_channels_, image_size_, num_modules_;
+  int num_input_channels_, num_output_channels_;
+  int num_modules_y_, num_modules_x_, num_modules_t_;
+  int image_size_y_, image_size_x_, image_size_t_;
   bool mark_;  // Used for topological sorting.
 
   const int kernel_size_, stride_, padding_, factor_;
@@ -81,6 +99,7 @@ class ConvNetCPU {
  public:
   ConvNetCPU(const string& model_structure, const string& model_parameters,
              const string& mean_file, int batch_size);
+
   void Fprop(const unsigned char* data, int batch_size);
   int GetDims(const string& layer_name) const;
   Layer* GetLayerByName(const string& name);
@@ -95,5 +114,8 @@ class ConvNetCPU {
   vector<Edge*> edges_;
   CPUMatrix mean_, std_;
 };
+
 }  // end namespace.
+
 #endif
+

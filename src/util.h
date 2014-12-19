@@ -51,6 +51,7 @@ void ReadHDF5Shape(hid_t file, const string& name, int* rows, int* cols);
 void ReadHDF5ShapeFromFile(const string& file_name, const string& dataset_name, int* rows, int* cols);
 
 void readFileList(const string& list_name, vector<string>& filenames);
+void split(const string &s, vector<string> &elems, char delim);
 void ParseBoardIds(const string& board, vector<int>& boards);
 void WaitForEnter();
 int Bound(int val, int lb, int ub);

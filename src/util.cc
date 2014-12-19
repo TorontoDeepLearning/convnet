@@ -19,13 +19,24 @@ void readFileList(const string& list_name, vector<string>& filenames)
   while (!f.eof()) {
     string str;
     f >> str;
-    if (!f.eof()) filenames.push_back(str);
+    if (!f.eof())
+      filenames.push_back(str);
   }
   f.close();
 }
 
+void split(const string &s, vector<string> &elems, char delim)
+{
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim))
+    {
+        elems.push_back(item);
+    }
+}
+
 void ParseBoardIds(const string& board, vector<int>& boards) {
-  for (auto b:board)  {
+  for (auto b:board) {
     string currBoard;
     currBoard.push_back(b);
     boards.push_back(atoi(currBoard.c_str()));
