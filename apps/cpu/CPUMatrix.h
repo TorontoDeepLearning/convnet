@@ -26,6 +26,12 @@ typedef struct ConvDesc
   int padding_y;
   int padding_x;
   int padding_t;
+
+  int input_channel_begin;
+  int input_channel_end;
+  int output_channel_begin;
+  int output_channel_end;
+  int num_groups;
 } ConvDesc;
 
 inline void notImpl()
@@ -34,11 +40,12 @@ inline void notImpl()
     exit(1);
 }
 
+// A CPU matrix class
 class CPUMatrix
 {
 public:
   CPUMatrix();
-  CPUMatrix(const int rows, const int cols);
+  CPUMatrix(const size_t rows, const size_t cols, const bool on_gpu);
   ~CPUMatrix();
 
   void Tie(CPUMatrix &m);
@@ -46,17 +53,23 @@ public:
   void SetShape4D(int d1, int d2, int d3, int d4);
   void SetShape4D_like(CPUMatrix& mat);
   Shape4D& GetShape4D();
-  void AllocateGPUMemory(const size_t rows, const size_t cols, const std::string& name) { /*Do nothing*/ }
-  void AllocateGPUMemory(const size_t rows, const size_t cols) { /*Do nothing*/ }
+  void AllocateGPUMemory(const size_t rows, const size_t cols, const std::string& name);
+  void AllocateGPUMemory(const size_t rows, const size_t cols);
   void AllocateMainMemory(const size_t rows, const size_t cols);
   void Set(const float val);
   void Set(CPUMatrix& val);
+  float ReadValue(int row, int col);
+  float ReadValue(int index);
+  void WriteValue(int row, int col, float val);
+  void WriteValue(int index, float val);
   void CopyP2PAsync(CPUMatrix& val);
   void GetSlice(CPUMatrix& slice, size_t start, size_t end);
   void FillWithRand();
   void FillWithRandn();
   void CopyToHost() { /*Do nothing*/ }
   void CopyToDevice() { /*Do nothing*/ }
+  void CopyToDeviceSlice(const size_t start, const size_t end) { /*Do nothing*/ }
+  void CopyToHostSlice(const size_t start, const size_t end) { /*Do nothing*/ }
   void CopyFromMainMemory(CPUMatrix& mat);
   void Reshape(const size_t rows, const size_t cols);
   void Print();
@@ -87,9 +100,9 @@ public:
   void AddColVec(CPUMatrix& v, float alpha);
   void MultByRowVec(CPUMatrix& v);
   void DivideByColVec(CPUMatrix& v);
-  float Sum() { notImpl(); return 0; }
-  void SumRows(CPUMatrix& target, float alpha, float beta) { notImpl(); }
-  void SumCols(CPUMatrix& target, float alpha, float beta) { notImpl(); }
+  float Sum();
+  void SumRows(CPUMatrix& target, float alpha, float beta);
+  void SumCols(CPUMatrix& target, float alpha, float beta);
   void Mult(float val);
   void Mult(CPUMatrix& val);
   void Divide(float val);
@@ -97,13 +110,13 @@ public:
   void Subtract(CPUMatrix& m, CPUMatrix& target);
   void LowerBound(float val);
   void Sqrt();
-  void UpperBoundMod(float val) { notImpl(); }
-  void SqSumAxis(CPUMatrix& target, int axis, float beta, float alpha) { notImpl(); }
+  void UpperBoundMod(float val);
+  void SqSumAxis(CPUMatrix& target, int axis, float beta, float alpha);
   void NormLimitByAxis(int axis, float val, bool constraint) { notImpl(); }
   void NormalizeColumnwise() { notImpl(); }
-  void Dropout(float dropprob, float fill_value, float scale_factor) { notImpl(); }
+  void Dropout(float dropprob, float fill_value, float scale_factor);
   void ApplyDerivativeOfReLU(CPUMatrix& state);
-  void ApplySoftmax() { notImpl(); }
+  void ApplySoftmax();
   void ApplyLogistic();
   void ApplyDerivativeOfLogistic(CPUMatrix& state);
   float EuclidNorm();
@@ -139,7 +152,7 @@ public:
                        ConvDesc &conv_desc, float scale_targets) { notImpl(); }
 
   static void Conv3DDown(CPUMatrix& deriv_output, CPUMatrix& w, CPUMatrix& deriv_input,
-                       ConvDesc &conv_desc, float scale_targets) { notImpl(); }
+                         ConvDesc &conv_desc, float scale_targets) { notImpl(); }
 
   static void ConvOutp(CPUMatrix& input, CPUMatrix& deriv_output, CPUMatrix& dw,
                        ConvDesc &conv_desc, int partial_sum_y, int partial_sum_x,
@@ -159,20 +172,20 @@ public:
                         ConvDesc &conv_desc,
                         float scale_targets, float scale_outputs) { notImpl(); }
 
-  static void ConvMaxPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc, float scale_targets);
+  static void ConvMaxPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc);
 
   static void ConvMaxPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output, CPUMatrix& output,
                               CPUMatrix& deriv_input, ConvDesc &conv_desc,
-                              float scale_targets) { notImpl(); }
+                              float scale_targets);
 
-  static void ConvAvgPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc) { notImpl(); }
+  static void ConvAvgPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc);
 
   static void ConvAvgPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output,
-                              ConvDesc &conv_desc, float scale_targets) { notImpl(); }
+                              ConvDesc &conv_desc, float scale_targets);
 
   static void ConvResponseNormCrossMap(
-      CPUMatrix& input, CPUMatrix& output, int num_locs, int num_filters, int sizeF, float add_scale,
-      float pow_scale, bool blocked, float scale_targets);
+      CPUMatrix& input, CPUMatrix& output, int numFilters, int sizeF, float addScale,
+      float powScale, bool blocked);
 
   static void ConvResponseNormCrossMap3D(
       CPUMatrix& input, CPUMatrix& output, int numFilters, int sizeF, float addScale,
@@ -196,24 +209,26 @@ public:
   static void ExtractPatches(CPUMatrix& source, CPUMatrix& dest, CPUMatrix& width_offset,
                              CPUMatrix& height_offset, CPUMatrix& flip_bit,
                              int image_size_y, int image_size_x, int patch_size_y,
-                             int patch_size_x) { notImpl(); }
+                             int patch_size_x);
 
+  void ApplySoftmax2();
+  static void ConvUp2(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
+                     ConvDesc &conv_desc, float scale_targets);
+  static void ConvMaxPool2(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc);
+  static void ConvResponseNormCrossMap2(
+      CPUMatrix& input, CPUMatrix& output, int numFilters, int sizeF, float addScale,
+      float powScale, bool blocked);
   static void FCUp(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
     int num_images, int num_outputs, int num_inputs, float scale_targets);
+  static void AddBias(CPUMatrix& input, CPUMatrix& b, CPUMatrix& output, const int num_images, const int num_dims);
   static void Transpose(const float* i_data, float* o_data, int num_filters,
     int kernel_width, int kernel_height, int num_colors);
-  static void UpperBound(CPUMatrix& input, CPUMatrix& output, const int length, const float limit);
-  static void LowerBound(CPUMatrix& input, CPUMatrix& output, const int length, const float limit);
-  static void AddBias(CPUMatrix& input, CPUMatrix& b, CPUMatrix& output, const int num_images, const int num_dims);
-  static void Argmax(CPUMatrix& input, int* outputs, const int num_images, const int num_dims);
-  static void Softmax(CPUMatrix& input, CPUMatrix& output, const int num_images, const int num_dims);
-  static void Logistic(CPUMatrix& input, CPUMatrix& output, const int length);
 
   static void GetOnes(size_t rows, size_t cols, CPUMatrix& ones) { notImpl(); }
-  static void RegisterTempMemory(size_t size) { notImpl(); }
-  static void RegisterTempMemory(size_t size, const std::string& why) { notImpl(); }
-  static void RegisterOnes(size_t size) { notImpl(); }
-  static void GetTemp(size_t rows, size_t cols, CPUMatrix& temp) { notImpl(); }
+  static void RegisterTempMemory(size_t size) { /*Do nothing*/ }
+  static void RegisterTempMemory(size_t size, const std::string& why) { /*Do nothing*/ }
+  static void RegisterOnes(size_t size) { /*Do nothing*/ }
+  static void GetTemp(size_t rows, size_t cols, CPUMatrix& temp);
   static void InitRandom(int seed);
   static void SetupCUDADevice(int gpu_id) { /*Do nothing*/ }
   static void SetupCUDADevices(const std::vector<int>& boards) { /*Do nothing*/ }
@@ -232,6 +247,8 @@ private:
   eigenmat *mat_;
   eigenmat *mat_t_;
   Shape4D shape_;
+
+  static CPUMatrix temp_;
 };
 
 #endif

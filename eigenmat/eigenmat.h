@@ -1,6 +1,8 @@
 #ifndef EIGENMAT_H
 #define EIGENMAT_H
 
+#include <random>
+
 #define ERROR_INCOMPATIBLE_DIMENSIONS -1
 #define CUBLAS_ERROR -2
 #define CUDA_ERROR -3
@@ -21,9 +23,10 @@ struct eigenmat
 
 struct rnd_struct_e
 {
-  unsigned long seed;
-  int kn[128];
-  float fn[128], wn[128];
+    rnd_struct_e() : pGenerator(NULL) {}
+    ~rnd_struct_e() { if (pGenerator) { delete pGenerator; } }
+
+    std::default_random_engine *pGenerator;
 };
 
 int get_leading_dimension(eigenmat* mat);
@@ -31,13 +34,15 @@ int get_nonleading_dimension(eigenmat* mat);
 void set_transpose(eigenmat* mat, int is_trans);
 inline char get_transpose_char(eigenmat* mat);
 
+float read_from(eigenmat* mat, int row, int col, int* err_code);
+int write_at(eigenmat* mat, int row, int col, float val);
 int allocate_memory(eigenmat* mat);
 int copy_on_device(eigenmat* mat1, eigenmat* mat2);
 int get_row_slice(eigenmat* source, eigenmat* target, unsigned int start, unsigned int end);
 int set_row_slice(eigenmat* source, eigenmat* target, unsigned int start, unsigned int end);
 int copy_transpose(eigenmat* source, eigenmat* target);
 int set_shape(eigenmat* mat, unsigned int m, unsigned int n);
-int reshape(eigenmat* mat, unsigned int m, unsigned int n);
+int reshape(eigenmat* mat, int m, int n);
 int get_slice(eigenmat* source, eigenmat* target, unsigned int first_col, unsigned int last_col);
 int get_vector_slice(eigenmat* source, eigenmat* target, unsigned int first_ind, unsigned int last_ind);
 
@@ -54,16 +59,16 @@ int sample_bernoulli_tanh(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* targ
 int sample_gaussian(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target, float mult);
 int perturb_energy(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target);
 int perturb_prob(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target);
-int dropout(rnd_struct_e* rnd_state, eigenmat* mat, float dropprob, float val);
+int dropout(rnd_struct_e* rnd_state, eigenmat* mat, float dropprob, float val, float scale);
 
 int cumsum_by_axis(eigenmat* mat, eigenmat* target, int axis);
-int add_sum_by_axis(eigenmat* mat, eigenmat* target, int axis, const float mult);
 
 int selectCols(eigenmat* source, eigenmat* target, eigenmat* indices);
 int swapColumns(eigenmat* source, eigenmat* target, eigenmat* indices1, eigenmat* indices2);
 int swapRows(eigenmat* source, eigenmat* target, eigenmat* indices1, eigenmat* indices2);
 int setSelectedCols(eigenmat* source, eigenmat* target, eigenmat* indices);
 int apply_softmax(eigenmat* mat, eigenmat* target);
+int apply_softmax_row_major(eigenmat* mat, eigenmat* target);
 
 int add_col_vec(eigenmat* mat, eigenmat* vec, eigenmat* target);
 int add_mult_sign(eigenmat* mat, eigenmat* mat2, float mult);
@@ -84,14 +89,15 @@ int greater_than(eigenmat* mat1, eigenmat* mat2, eigenmat* target);
 int greater_than_scalar(eigenmat* mat, float val, eigenmat* target);
 int upper_bound(eigenmat* mat1, eigenmat* mat2, eigenmat* target);
 int lower_bound(eigenmat* mat1, eigenmat* mat2, eigenmat* target);
+int upper_bound_mod_scalar(eigenmat* mat, float val, eigenmat* target);
 int upper_bound_scalar(eigenmat* mat, float val, eigenmat* target);
 int lower_bound_scalar(eigenmat* mat, float val, eigenmat* target);
 int max_by_axis(eigenmat* mat, eigenmat* target, int axis);
 int choose_max_and_accumulate(eigenmat* mat, eigenmat* acc);
 int choose_max_by_axis(eigenmat* mat, eigenmat* target, int axis);
 int argmax_by_axis(eigenmat* mat, eigenmat* target, int axis);
-int sqsum_by_axis(eigenmat* mat, eigenmat* target, int axis);
-int sum_by_axis(eigenmat* mat, eigenmat* target, int axis);
+int sqsum_by_axis(eigenmat* mat, eigenmat* target, int axis, float mult, float p);
+int sum_by_axis(eigenmat* mat, eigenmat* target, int axis, float mult, float p);
 float sum_all(eigenmat* mat);
 int sign(eigenmat* mat, eigenmat* target);
 int apply_cos(eigenmat* mat, eigenmat* target);
@@ -135,6 +141,9 @@ int blockify(eigenmat* source, eigenmat* target, int blocksize);
 int apply_softmax_grad(eigenmat* mat, eigenmat* labels, eigenmat* target);
 int get_softmax_cross_entropy(eigenmat* mat, eigenmat* labels, eigenmat* target, const float tiny);
 int get_softmax_correct(eigenmat* mat, eigenmat* labels, eigenmat* target);
+int extract_patches(eigenmat* images, eigenmat* patches, eigenmat* width_offset,
+                    eigenmat* height_offset, eigenmat* flip, int img_width,
+                    int img_height, int patch_width, int patch_height);
 
 #endif
 

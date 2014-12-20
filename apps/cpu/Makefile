@@ -7,7 +7,8 @@ LIB=$(HOME)/local/lib
 
 openmp=yes
 openblas=no
-OPENBLAS=$(HOME)/OpenBLAS
+OPENBLAS_LIB=$(HOME)/OpenBLAS/lib
+OPENBLAS_INC=$(HOME)/OpenBLAS/include
 #####################################
 CXX = g++
 
@@ -17,14 +18,14 @@ DEPS=$(ROOT)/deps
 PROTO=$(ROOT)/proto
 SRC=$(ROOT)/src
 
-CPPFLAGS = -I$(DEPS) -I$(INC) -I$(ROOT)/eigenmat
+CPPFLAGS = -I$(DEPS) -I$(INC) -I$(ROOT)/eigenmat -I$(SRC)
 LIBFLAGS = -L$(LIB) -L$(ROOT)/eigenmat
 LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -leigenmat -ljpeg -lX11 -lpthread -lprotobuf -lhdf5
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
 
 ifeq ($(openblas), yes)
-	CPPFLAGS += -DUSE_OPENBLAS -I$(OPENBLAS)
-	LIBFLAGS += -L$(OPENBLAS)
+	CPPFLAGS += -DUSE_OPENBLAS -I$(OPENBLAS_INC)
+	LIBFLAGS += -L$(OPENBLAS_LIB)
 	LINKFLAGS += -lopenblas
 endif
 

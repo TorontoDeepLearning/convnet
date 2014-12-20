@@ -4,7 +4,8 @@
 #include <Eigen/Dense>
 
 #include "eigenmat.h"
-#include "ziggurat.h"
+
+using namespace std;
 
 /* ------------------------------ Utility routines ------------------------------ */
 
@@ -83,12 +84,22 @@ int set_shape(eigenmat* mat, unsigned int m, unsigned int n) {
   return 0;
 }
 
-int reshape(eigenmat* mat, unsigned int m, unsigned int n) {
-  if (mat->size[0] * mat->size[1] != m * n)
-    return ERROR_INCOMPATIBLE_DIMENSIONS;
-  mat->size[0] = m;
-  mat->size[1] = n;
-  return 0;
+int reshape(eigenmat* mat, int m, int n) {
+    if (m < 0 && n < 0)
+        return ERROR_GENERIC;
+
+    if (m < 0)
+        m = (mat->size[0] * mat->size[1]) / n;
+    if (n < 0)
+        n = (mat->size[0] * mat->size[1]) / m;
+
+    if (mat->size[0] * mat->size[1] != m * n)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    mat->size[0] = m;
+    mat->size[1] = n;
+
+    return 0;
 }
 
 int get_slice(eigenmat* source, eigenmat* target, unsigned int first_col, unsigned int last_col) {
@@ -164,28 +175,39 @@ int init_empty(eigenmat* mat, int m, int n) {
 
 /* ------------------------------ Random number generation ------------------------------ */
 
-int init_random(rnd_struct_e* rnd_state, int seed) {
-  rnd_state->seed = seed;
-  r4_nor_setup(rnd_state->kn, rnd_state->fn, rnd_state->wn);
+int init_random(rnd_struct_e* rnd_state, int seed)
+{
+    if (rnd_state->pGenerator)
+    {
+        delete rnd_state->pGenerator;
+    }
+    rnd_state->pGenerator = new default_random_engine(seed);
+    return 0;
 }
 
-float uniform(rnd_struct_e* rnd_state) {
-  return r4_uni(&rnd_state->seed);
+float uniform(rnd_struct_e* rnd_state)
+{
+    uniform_real_distribution<float> distribution(0, 1);
+    return distribution(*rnd_state->pGenerator);
 }
 
-float normal(rnd_struct_e* rnd_state) {
-  return r4_nor(&rnd_state->seed, rnd_state->kn, rnd_state->fn, rnd_state->wn);
+float normal(rnd_struct_e* rnd_state)
+{
+    normal_distribution<float> distribution(0, 1);
+    return distribution(*rnd_state->pGenerator);
 }
 
 int fill_with_rand(rnd_struct_e* rnd_state, eigenmat* mat) {
   const int len = mat->size[0] * mat->size[1];
-  for (int i = 0; i < len; i++) mat->data[i] = uniform(rnd_state); 
+  for (int i = 0; i < len; i++)
+    mat->data[i] = uniform(rnd_state); 
   return 0;
 }
 
 int fill_with_randn(rnd_struct_e* rnd_state, eigenmat* mat) {
   const int len = mat->size[0] * mat->size[1];
-  for (int i = 0; i < len; i++) mat->data[i] = normal(rnd_state);
+  for (int i = 0; i < len; i++)
+    mat->data[i] = normal(rnd_state);
   return 0;
 }
 
@@ -199,6 +221,7 @@ int sample_bernoulli(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target) {
 
   return 0;
 }
+
 int sample_bernoulli_tanh(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target) {
   int len = mat->size[0] * mat->size[1];
   if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
@@ -243,13 +266,21 @@ int perturb_prob(rnd_struct_e* rnd_state, eigenmat* mat, eigenmat* target) {
   return 0;
 }
 
-int dropout(rnd_struct_e* rnd_state, eigenmat* mat, float dropprob, float val) {
-  const int len = mat->size[0] * mat->size[1];
+int dropout(rnd_struct_e* rnd_state, eigenmat* mat, float dropprob, float val, float scale)
+{
+    const int len = mat->size[0] * mat->size[1];
+    for (int i=0; i<len; i++)
+    {
+        if (dropprob > uniform(rnd_state))
+        {
+            mat->data[i] = val;
+        } else
+        {
+            mat->data[i] *= scale;
+        }
+    }
 
-  for (int i = 0; i < len; i++)
-    mat->data[i] = dropprob > uniform(rnd_state) ? 0 : mat->data[i];
-
-  return 0;
+    return 0;
 }
 
 /* ------------------------------ Algebraic operations ------------------------------ */
@@ -360,7 +391,7 @@ int add_row_mult(eigenmat* mat, eigenmat* vec, eigenmat* target, float mult) {
     return ERROR_INCOMPATIBLE_DIMENSIONS;
 
   Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, h, w);
-  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, h);
+  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, w);
   Eigen::Map<Eigen::ArrayXXf> eig_target(target->data, h, w);
 
   eig_target = eig_mat.rowwise() + eig_vec.transpose() * mult;
@@ -379,7 +410,7 @@ int add_row_vec(eigenmat* mat, eigenmat* vec, eigenmat* target) {
     return ERROR_INCOMPATIBLE_DIMENSIONS;
 
   Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, h, w);
-  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, h);
+  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, w);
   Eigen::Map<Eigen::ArrayXXf> eig_target(target->data, h, w);
 
   eig_target = eig_mat.rowwise() + eig_vec.transpose();
@@ -418,7 +449,7 @@ int mult_by_row_vec(eigenmat* mat, eigenmat* vec, eigenmat* target) {
     return ERROR_INCOMPATIBLE_DIMENSIONS;
 
   Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, h, w);
-  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, h);
+  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, w);
   Eigen::Map<Eigen::ArrayXXf> eig_target(target->data, h, w);
 
   eig_target = eig_mat.rowwise() * eig_vec.transpose();
@@ -455,7 +486,7 @@ int div_by_row_vec(eigenmat* mat, eigenmat* vec, eigenmat* target) {
     mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
     return ERROR_INCOMPATIBLE_DIMENSIONS;
   Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, h, w);
-  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, h);
+  Eigen::Map<Eigen::ArrayXf> eig_vec(vec->data, w);
   Eigen::Map<Eigen::ArrayXXf> eig_target(target->data, h, w);
 
   eig_target = eig_mat.rowwise() / eig_vec.transpose();
@@ -556,6 +587,35 @@ int greater_than_scalar(eigenmat* mat, float val, eigenmat* target) {
   for (int i = 0; i < len; i++)
     target->data[i] = mat->data[i] > val ? 1:0;
   return 0;
+}
+
+int upper_bound_mod_scalar(eigenmat* mat, float val, eigenmat* target)
+{
+    int len = mat->size[0]*mat->size[1];
+
+    if (mat->is_trans != target->is_trans)
+      return ERROR_TRANSPOSEDNESS;
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    for (int i=0; i<len; i++)
+    {
+        float curr = mat->data[i];
+        if (curr > val)
+        {
+            target->data[i] = val;
+        } else
+        if (curr < -val)
+        {
+            target->data[i] = -val;
+        } else
+        {
+            target->data[i] = curr;
+        }
+    }
+
+    return 0;
 }
 
 int upper_bound_scalar(eigenmat* mat, float val, eigenmat* target) {
@@ -706,22 +766,26 @@ int argmax_by_axis(eigenmat* mat, eigenmat* target, int axis) {
   return 0;
 }
 
-int sqsum_by_axis(eigenmat* mat, eigenmat* target, int axis) {
-  const unsigned int h = mat->size[0], w = mat->size[1];
+int sqsum_by_axis(eigenmat* mat, eigenmat* target, int axis, float mult, float p) {
+  const unsigned int h = mat->size[0];
+  const unsigned int w = mat->size[1];
 
   if (axis == 0) {
     for (int i = 0; i < w; i++) {
       float sum = 0;
       const float *mat_data = &mat->data[i * h];
-      for (int j = 0; j < h; j++) sum += mat_data[j] * mat_data[j];
-      target->data[i] = sum;
+      for (int j = 0; j < h; j++)
+        sum += mat_data[j] * mat_data[j];
+      target->data[i] = p * target->data[i] + mult * sum;
     }
-  } else if (axis == 1) {
+  } else
+  if (axis == 1) {
     for (int i = 0; i < h; i++) {
       float sum = 0;
       const float *mat_data = &mat->data[i];
-      for (int j = 0; j < w; j++) sum += mat_data[j*h] * mat_data[j*h];
-      target->data[i] = sum;
+      for (int j = 0; j < w; j++)
+        sum += mat_data[j*h] * mat_data[j*h];
+      target->data[i] = p * target->data[i] + mult * sum;
     }
   } else {
     return ERROR_UNSUPPORTED;
@@ -729,30 +793,17 @@ int sqsum_by_axis(eigenmat* mat, eigenmat* target, int axis) {
   return 0;
 }
 
-int add_sum_by_axis(eigenmat* mat, eigenmat* target, int axis, const float mult) {
+int sum_by_axis(eigenmat* mat, eigenmat* target, int axis, float mult, float p) {
   int len_mat = mat->size[0] * mat->size[1];
   int len_target = target->size[0] * target->size[1];
   Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, mat->size[0], mat->size[1]);
   Eigen::Map<Eigen::ArrayXf> eig_target(target->data, len_target);
-  if (mat->is_trans) axis = 1 - axis;
+  if (mat->is_trans)
+    axis = 1 - axis;
   if (axis == 0) {
-    eig_target += mult * eig_mat.colwise().sum();
+    eig_target = p * eig_target + mult * eig_mat.colwise().sum();
   } else {
-    eig_target += mult * eig_mat.rowwise().sum();
-  }
-  return 0;
-}
-
-int sum_by_axis(eigenmat* mat, eigenmat* target, int axis) {
-  int len_mat = mat->size[0] * mat->size[1];
-  int len_target = target->size[0] * target->size[1];
-  Eigen::Map<Eigen::ArrayXXf> eig_mat(mat->data, mat->size[0], mat->size[1]);
-  Eigen::Map<Eigen::ArrayXf> eig_target(target->data, len_target);
-  if (mat->is_trans) axis = 1 - axis;
-  if (axis == 0) {
-    eig_target = eig_mat.colwise().sum();
-  } else {
-    eig_target = eig_mat.rowwise().sum();
+    eig_target = p * eig_target + mult * eig_mat.rowwise().sum();
   }
   return 0;
 }
@@ -797,24 +848,83 @@ int apply_sin(eigenmat* mat, eigenmat* target) {
   return 0;
 }
 
-int apply_softmax(eigenmat* mat, eigenmat* target) {
-  int width = mat->size[1], height = mat->size[0];
+int apply_softmax(eigenmat* mat, eigenmat* target)
+{
+    int width = mat->size[1];
+    int height = mat->size[0];
 
-  if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
-    return ERROR_INCOMPATIBLE_DIMENSIONS;
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-  #pragma omp parallel for
-  for (int i = 0; i < width; i++) {
-    float *mat_data = &mat->data[i * height];
-    float *target_data = &target->data[i * height];
-    float temp = mat->data[i * height];
-    for (int j = 1; j < height; j++) if (temp < mat_data[j]) temp = mat_data[j];
-    for (int j = 0; j < height; j++) target_data[j] = exp(mat_data[j] - temp);
-    temp = 0;
-    for (int j = 0; j < height; j++) temp += target_data[j];
-    for (int j = 0; j < height; j++) target_data[j] /= temp;
-  }
-  return 0;
+    if (mat->is_trans)
+        return ERROR_TRANSPOSED;
+
+    #pragma omp parallel for
+    for (int i=0; i<width; i++)
+    {
+        float *mat_data = &mat->data[i * height];
+        float *target_data = &target->data[i * height];
+        float max = mat_data[0], sum = 0;
+        for (int j=1; j<height; j++)
+        {
+            if (max < mat_data[j])
+            {
+                max = mat_data[j];
+            }
+        }
+
+        for (int j=0; j<height; j++)
+        {
+            target_data[j] = exp(mat_data[j] - max);
+            sum += target_data[j];
+        }
+
+        for (int j=0; j<height; j++)
+        {
+            target_data[j] /= sum;
+        }
+    }
+
+    return 0;
+}
+
+int apply_softmax_row_major(eigenmat* mat, eigenmat* target)
+{
+    unsigned int width = mat->size[1];
+    unsigned int height = mat->size[0];
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (mat->is_trans)
+        return ERROR_TRANSPOSED;
+
+    #pragma omp parallel for
+    for (int i=0; i<height; i++)
+    {
+        float max = mat->data[i], sum = 0;
+        for (int j=1; j<width; j++)
+        {
+            float curr = mat->data[j * height + i];
+            if (max < curr)
+            {
+                max = curr;
+            }
+        }
+
+        for (int j=0; j<width; j++)
+        {
+            int idx = j * height + i;
+            target->data[idx] = exp(mat->data[idx] - max);
+            sum += target->data[idx];
+        }
+        for (int j=0; j<width; j++)
+        {
+            target->data[j * height + i] /= sum;
+        }
+    }
+
+    return 0;
 }
 
 int apply_softmax_grad(eigenmat* mat, eigenmat* labels, eigenmat* target) {
@@ -1271,6 +1381,25 @@ int apply_rectified_linear_smooth_deriv(eigenmat* mat1, eigenmat* mat2, eigenmat
   return 0;
 }
 
+int write_at(eigenmat* mat, int row, int col, float val)
+{
+    if (row >= mat->size[0] || col >= mat->size[1] || row < 0 || col < 0)
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    mat->data[col * mat->size[0] + row] = val;
+
+    return 0;
+}
+
+float read_from(eigenmat* mat, int row, int col, int* err_code)
+{
+    *err_code = 0;
+    if (row >= mat->size[0] || col >= mat->size[1] || row < 0 || col < 0)
+        *err_code = ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    return mat->data[col * mat->size[0] + row];
+}
+
 int assign_scalar(eigenmat* mat, float alpha) {
   int len = mat->size[0]*mat->size[1];
   Eigen::Map<Eigen::ArrayXf> eig_mat(mat->data, len);
@@ -1408,6 +1537,52 @@ int setSelectedRows(eigenmat* source, eigenmat* target, eigenmat* indices){
     }
   }
   return 0;
+}
+
+int extract_patches(eigenmat* images, eigenmat* patches, eigenmat* width_offset,
+                    eigenmat* height_offset, eigenmat* flip, int img_width,
+                    int img_height, int patch_width, int patch_height)
+{
+    int num_images = images->size[1];
+    int num_colors = images->size[0] / (img_width * img_height);
+
+    if (patches->size[1]  != num_colors * patch_width * patch_height || patches->size[0] != num_images)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (width_offset->size[0] * width_offset->size[1] != num_images)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (height_offset->size[0] * height_offset->size[1] != num_images)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (flip->size[0] * flip->size[1] != num_images)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    for (int image_id=0; image_id<num_images; ++image_id)
+    {
+        for (int dest_col=0; dest_col<patch_width; ++dest_col)
+        {
+            int source_col = int(width_offset->data[image_id]) + dest_col;
+            if (flip->data[image_id] > 0.5)
+            {
+                source_col = (img_width - source_col - 1);
+            }
+
+            for (int dest_row=0; dest_row<patch_height; ++dest_row)
+            {
+                int source_row = int(height_offset->data[image_id]) + dest_row;
+                for (int color=0; color<num_colors; ++color)
+                {
+                    unsigned long dest_index = image_id + num_images * (dest_col  + patch_width * (dest_row + patch_height * color));
+                    unsigned long source_index = source_col + img_width * (source_row + img_height * (color + num_colors * image_id));
+
+                    patches->data[dest_index] = images->data[source_index];
+                }
+            }
+        }
+    }
+
+    return 0;
 }
 
 int blockify(eigenmat* source, eigenmat* target, int blocksize) {

@@ -1,5 +1,5 @@
 #include "convnet_cpu.h"
-#include "../../src/util.h"
+#include "util.h"
 
 #include <google/protobuf/text_format.h>
 
@@ -218,20 +218,19 @@ void Layer::AllocateMemory(int batch_size) {
 
 void Layer::ApplyActivation()
 {
-  int num_dims = image_size_y_ * image_size_x_ * image_size_t_ * num_channels_;
   switch (activation_)
   {
     case config::Layer::LINEAR:
       // no op.
       break;
     case config::Layer::LOGISTIC:
-      CPUMatrix::Logistic(state_, state_, batch_size_ * num_dims);
+      state_.ApplyLogistic();
       break;
     case config::Layer::RECTIFIED_LINEAR:
-      CPUMatrix::LowerBound(state_, state_, batch_size_ * num_dims, 0);
+      state_.LowerBound(0);
       break;
     case config::Layer::SOFTMAX:
-      CPUMatrix::Softmax(state_, state_, batch_size_, num_dims);
+      state_.ApplySoftmax2();
       break;
     default:
       cerr << "Undefined layer type." << endl;
@@ -348,7 +347,6 @@ void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int ba
 
 void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int batch_size, int image_size)
 {
-  int num_modules = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
   int input_dims = num_input_channels_ * image_size * image_size;
   int scale_targets = overwrite ? 0: 1;
   switch (edge_type_)
@@ -374,7 +372,8 @@ void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int ba
       conv_desc.stride_x = stride_;
       conv_desc.padding_y = padding_;
       conv_desc.padding_x = padding_;
-      CPUMatrix::ConvUp(input, weights_, output, conv_desc, scale_targets);
+      CPUMatrix::ConvUp2(input, weights_, output, conv_desc, scale_targets);
+      int num_modules = (image_size + 2 * padding_ - kernel_size_) / stride_ + 1;
       if (shared_bias_) {
         CPUMatrix::AddBias(output, bias_, output, batch_size * num_modules * num_modules, num_output_channels_);
       } else {
@@ -393,14 +392,13 @@ void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int ba
       conv_desc.stride_x = stride_;
       conv_desc.padding_y = padding_;
       conv_desc.padding_x = padding_;
-      CPUMatrix::ConvMaxPool(input, output, conv_desc, scale_targets);
+      CPUMatrix::ConvMaxPool2(input, output, conv_desc);
     }
       break;
 
     case config::Edge::RESPONSE_NORM:
-      CPUMatrix::ConvResponseNormCrossMap(input, output,
-          image_size * image_size * batch_size, num_output_channels_,
-          num_filters_response_norm_, add_scale_, pow_scale_, blocked_, scale_targets);
+      CPUMatrix::ConvResponseNormCrossMap2(input, output, num_output_channels_,
+          num_filters_response_norm_, add_scale_, pow_scale_, blocked_);
       break;
 
     default:
@@ -409,8 +407,11 @@ void Edge::ComputeUp(CPUMatrix& input, CPUMatrix& output, bool overwrite, int ba
   }
 }
 
-void Edge::LoadParameters(hid_t file) {
-  if (is_tied_) return;
+void Edge::LoadParameters(hid_t file)
+{
+  if (is_tied_)
+    return;
+
   stringstream ss;
   if (weights_.GetNumEls() > 0) {
     ss << source_node_ << ":" << dest_node_ << ":" << "weight";
@@ -433,4 +434,6 @@ void Edge::LoadParameters(hid_t file) {
     }
   }
 }
+
 }
+
