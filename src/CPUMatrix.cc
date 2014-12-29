@@ -22,9 +22,9 @@
 using namespace std;
 
 rnd_struct_e rnde_;
-CPUMatrix CPUMatrix::temp_;
+Matrix Matrix::temp_;
 
-CPUMatrix::CPUMatrix()
+Matrix::Matrix()
 {
     mat_ = new eigenmat;
     mat_->data = NULL;
@@ -42,14 +42,14 @@ CPUMatrix::CPUMatrix()
     shape_.shape[3] = 0;
 }
 
-CPUMatrix::CPUMatrix(const size_t rows, const size_t cols, const bool on_gpu)
+Matrix::Matrix(const size_t rows, const size_t cols, const bool on_gpu)
 {
-    CPUMatrix();
+    Matrix();
 
     AllocateMainMemory(rows, cols);
 }
 
-CPUMatrix::~CPUMatrix()
+Matrix::~Matrix()
 {
     if (mat_->owns_data == 1)
     {
@@ -60,20 +60,20 @@ CPUMatrix::~CPUMatrix()
     delete mat_t_;
 }
 
-void CPUMatrix::Tie(CPUMatrix &m)
+void Matrix::Tie(Matrix &m)
 {
     cout << "Tying" << endl;
     *mat_ = *(m.GetMat());
     *mat_t_ = *(m.GetMatTranspose());
 }
 
-void CPUMatrix::SetupTranspose()
+void Matrix::SetupTranspose()
 {
     *mat_t_ = *mat_;
     mat_t_->is_trans = 1 - mat_->is_trans;
 }
 
-void CPUMatrix::SetShape4D(int d1, int d2, int d3, int d4)
+void Matrix::SetShape4D(int d1, int d2, int d3, int d4)
 {
     shape_.shape[0] = d1;
     shape_.shape[1] = d2;
@@ -81,18 +81,18 @@ void CPUMatrix::SetShape4D(int d1, int d2, int d3, int d4)
     shape_.shape[3] = d4;
 }
 
-void CPUMatrix::SetShape4D_like(CPUMatrix& mat)
+void Matrix::SetShape4D_like(Matrix& mat)
 {
     Shape4D &s = mat.GetShape4D();
     SetShape4D(s.shape[0], s.shape[1], s.shape[2], s.shape[3]);
 }
 
-Shape4D& CPUMatrix::GetShape4D()
+Shape4D& Matrix::GetShape4D()
 {
     return shape_;
 }
 
-void CPUMatrix::AllocateGPUMemory(const size_t rows, const size_t cols, const std::string& name)
+void Matrix::AllocateGPUMemory(const size_t rows, const size_t cols, const std::string& name)
 {
     if (rows != mat_->size[0] || cols != mat_->size[1])
     {
@@ -101,12 +101,12 @@ void CPUMatrix::AllocateGPUMemory(const size_t rows, const size_t cols, const st
     }
 }
 
-void CPUMatrix::AllocateGPUMemory(const size_t rows, const size_t cols)
+void Matrix::AllocateGPUMemory(const size_t rows, const size_t cols)
 {
     AllocateGPUMemory(rows, cols, "");
 }
 
-void CPUMatrix::AllocateMainMemory(const size_t rows, const size_t cols)
+void Matrix::AllocateMainMemory(const size_t rows, const size_t cols)
 {
     FreeMemory();
 
@@ -117,7 +117,7 @@ void CPUMatrix::AllocateMainMemory(const size_t rows, const size_t cols)
     mat_->data = new float[rows * cols];
 }
 
-void CPUMatrix::FreeMemory()
+void Matrix::FreeMemory()
 {
     if (mat_->size[0] * mat_->size[1] > 0)
     {
@@ -127,7 +127,7 @@ void CPUMatrix::FreeMemory()
     }
 }
 
-void CPUMatrix::Set(const float val)
+void Matrix::Set(const float val)
 {
     int err_code = assign_scalar(mat_, val);
     if (err_code != 0)
@@ -137,7 +137,7 @@ void CPUMatrix::Set(const float val)
     }
 }
 
-void CPUMatrix::Set(CPUMatrix& val)
+void Matrix::Set(Matrix& val)
 {
     int err_code = copy_on_device(val.GetMat(), mat_); // source, dest.
     if (err_code != 0)
@@ -147,17 +147,17 @@ void CPUMatrix::Set(CPUMatrix& val)
     }
 }
 
-void CPUMatrix::WriteValue(int index, float val)
+void Matrix::WriteValue(int index, float val)
 {
     WriteValue(index % mat_->size[0], index / mat_->size[0], val);
 }
 
-float CPUMatrix::ReadValue(int index)
+float Matrix::ReadValue(int index)
 {
     return ReadValue(index % mat_->size[0], index / mat_->size[0]);
 }
 
-void CPUMatrix::WriteValue(int row, int col, float val)
+void Matrix::WriteValue(int row, int col, float val)
 {
     int err_code = write_at(mat_, row, col, val);
     if (err_code != 0)
@@ -167,7 +167,7 @@ void CPUMatrix::WriteValue(int row, int col, float val)
     }
 }
 
-float CPUMatrix::ReadValue(int row, int col)
+float Matrix::ReadValue(int row, int col)
 {
     int err_code;
     float res = read_from(mat_, row, col, &err_code);
@@ -179,7 +179,7 @@ float CPUMatrix::ReadValue(int row, int col)
     return res;
 }
 
-void CPUMatrix::CopyFromMainMemory(CPUMatrix& mat)
+void Matrix::CopyFromMainMemory(Matrix& mat)
 {
     int err_code = copy_on_device(mat.GetMat(), mat_); // source, dest.
     if (err_code != 0)
@@ -189,7 +189,7 @@ void CPUMatrix::CopyFromMainMemory(CPUMatrix& mat)
     }
 }
 
-void CPUMatrix::CopyP2PAsync(CPUMatrix& val)
+void Matrix::CopyP2PAsync(Matrix& val)
 {
     int err_code = copy_on_device(val.GetMat(), mat_); // source, dest.
     if (err_code != 0)
@@ -199,13 +199,13 @@ void CPUMatrix::CopyP2PAsync(CPUMatrix& val)
     }
 }
 
-void CPUMatrix::GetSlice(CPUMatrix& slice, size_t start, size_t end)
+void Matrix::GetSlice(Matrix& slice, size_t start, size_t end)
 {
     get_slice(mat_, slice.GetMat(), start, end);
     slice.SetupTranspose();
 }
 
-void CPUMatrix::FillWithRand()
+void Matrix::FillWithRand()
 {
     int err_code = fill_with_rand(&rnde_, mat_);
     if (err_code != 0)
@@ -215,7 +215,7 @@ void CPUMatrix::FillWithRand()
     }
 }
 
-void CPUMatrix::FillWithRandn()
+void Matrix::FillWithRandn()
 {
     int err_code = fill_with_randn(&rnde_, mat_);
     if (err_code != 0)
@@ -225,14 +225,14 @@ void CPUMatrix::FillWithRandn()
     }
 }
 
-void CPUMatrix::Reshape(const size_t rows, const size_t cols)
+void Matrix::Reshape(const size_t rows, const size_t cols)
 {
     reshape(mat_, rows, cols);
     *mat_t_ = *mat_;
     mat_t_->is_trans = 1;
 }
 
-bool CPUMatrix::CheckNaN()
+bool Matrix::CheckNaN()
 {
     float* data = mat_->data;
     bool is_nan = false;
@@ -248,18 +248,18 @@ bool CPUMatrix::CheckNaN()
     return is_nan;
 }
 
-void CPUMatrix::WriteHDF5(hid_t file, const string& name)
+void Matrix::WriteHDF5(hid_t file, const string& name)
 {
     // cols, rows swapped because cudamat is col major, but hdf5 is row major.
     WriteHDF5CPU(file, mat_->data, mat_->size[1], mat_->size[0], name);
 }
 
-void CPUMatrix::ReadHDF5(hid_t file, const string& name)
+void Matrix::ReadHDF5(hid_t file, const string& name)
 {
     ReadHDF5CPU(file, mat_->data, mat_->size[0] * mat_->size[1], name);
 }
 
-void CPUMatrix::AllocateAndReadHDF5(hid_t file, const string& name)
+void Matrix::AllocateAndReadHDF5(hid_t file, const string& name)
 {
     int rows, cols;
     ReadHDF5Shape(file, name, &rows, &cols);
@@ -267,7 +267,7 @@ void CPUMatrix::AllocateAndReadHDF5(hid_t file, const string& name)
     ReadHDF5(file, name);
 }
 
-void CPUMatrix::Print()
+void Matrix::Print()
 {
     int rows = mat_->size[0];
     int cols = mat_->size[1];
@@ -293,99 +293,99 @@ void CPUMatrix::Print()
     cout << "... Max " << max << endl;
 }
 
-string CPUMatrix::GetShapeString()
+string Matrix::GetShapeString()
 {
     stringstream ss;
     ss << mat_->size[0] << " " << mat_->size[1];
     return ss.str();
 }
 
-string CPUMatrix::GetShape4DString()
+string Matrix::GetShape4DString()
 {
     stringstream ss;
     ss << shape_.shape[0] << " " << shape_.shape[1] << " " << shape_.shape[2] << " " << shape_.shape[3];
     return ss.str();
 }
 
-float* CPUMatrix::GetHostData()
+float* Matrix::GetHostData()
 {
     return mat_->data;
 }
 
-size_t CPUMatrix::GetRows() const
+size_t Matrix::GetRows() const
 {
     return mat_->size[0];
 }
 
-size_t CPUMatrix::GetCols() const
+size_t Matrix::GetCols() const
 {
     return mat_->size[1];
 }
 
-size_t CPUMatrix::GetNumEls() const
+size_t Matrix::GetNumEls() const
 {
     return mat_->size[1] * mat_->size[0];
 }
 
-void CPUMatrix::Add(float val)
+void Matrix::Add(float val)
 {
     add_scalar(mat_, val, mat_);
 }
 
-void CPUMatrix::Add(CPUMatrix& m)
+void Matrix::Add(Matrix& m)
 {
     add_elementwise(mat_, m.GetMat(), mat_);
 }
 
-void CPUMatrix::Add(CPUMatrix& m, float alpha)
+void Matrix::Add(Matrix& m, float alpha)
 {
     add_mult(mat_, m.GetMat(), alpha);
 }
 
-void CPUMatrix::AddRowVec(CPUMatrix& v)
+void Matrix::AddRowVec(Matrix& v)
 {
     add_row_vec(mat_, v.GetMat(), mat_);
 }
 
-void CPUMatrix::AddRowVec(CPUMatrix& v, float alpha)
+void Matrix::AddRowVec(Matrix& v, float alpha)
 {
     add_row_mult(mat_, v.GetMat(), mat_, alpha);
 }
 
-void CPUMatrix::AddColVec(CPUMatrix& v, float alpha)
+void Matrix::AddColVec(Matrix& v, float alpha)
 {
     add_col_mult(mat_, v.GetMat(), mat_, alpha);
 }
 
-void CPUMatrix::MultByRowVec(CPUMatrix& val)
+void Matrix::MultByRowVec(Matrix& val)
 {
     mult_by_row_vec(mat_, val.GetMat(), mat_);
 }
 
-void CPUMatrix::DivideByColVec(CPUMatrix& v)
+void Matrix::DivideByColVec(Matrix& v)
 {
     div_by_col_vec(mat_, v.GetMat(), mat_);
 }
 
-float CPUMatrix::Sum()
+float Matrix::Sum()
 {
     return sum_all(mat_);
 }
 
 // target = alpha * target + beta * sum_rows(self)
-void CPUMatrix::SumRows(CPUMatrix& target, float alpha, float beta)
+void Matrix::SumRows(Matrix& target, float alpha, float beta)
 {
     sum_by_axis(mat_, target.GetMat(), 0, beta, alpha);
 }
 
 // target = alpha * target + beta * sum_cols(self)
-void CPUMatrix::SumCols(CPUMatrix& target, float alpha, float beta)
+void Matrix::SumCols(Matrix& target, float alpha, float beta)
 {
     sum_by_axis(mat_, target.GetMat(), 1, beta, alpha);
 }
 
 // target = alpha * target + beta * sum_cols(self**2)
-void CPUMatrix::SqSumAxis(CPUMatrix& target, int axis, float beta, float alpha)
+void Matrix::SqSumAxis(Matrix& target, int axis, float beta, float alpha)
 {
     int err_code = sqsum_by_axis(mat_, target.GetMat(), axis, beta, alpha);
     if (err_code != 0)
@@ -396,27 +396,27 @@ void CPUMatrix::SqSumAxis(CPUMatrix& target, int axis, float beta, float alpha)
 }
 
 // self *= val
-void CPUMatrix::Mult(float val)
+void Matrix::Mult(float val)
 {
     mult_by_scalar(mat_, val, mat_);
 }
 
-void CPUMatrix::Mult(CPUMatrix& val)
+void Matrix::Mult(Matrix& val)
 {
     mult_elementwise(mat_, val.GetMat(), mat_);
 }
 
-void CPUMatrix::Divide(float val)
+void Matrix::Divide(float val)
 {
     divide_by_scalar(mat_, val, mat_);
 }
 
-void CPUMatrix::Divide(CPUMatrix& val)
+void Matrix::Divide(Matrix& val)
 {
     divide_elementwise(mat_, val.GetMat(), mat_);
 }
 
-void CPUMatrix::Subtract(CPUMatrix& m, CPUMatrix& target)
+void Matrix::Subtract(Matrix& m, Matrix& target)
 {
     int err_code = subtract_elementwise(mat_, m.GetMat(), target.GetMat());
     if (err_code != 0)
@@ -426,34 +426,34 @@ void CPUMatrix::Subtract(CPUMatrix& m, CPUMatrix& target)
     }
 }
 
-void CPUMatrix::UpperBoundMod(float val)
+void Matrix::UpperBoundMod(float val)
 {
     upper_bound_mod_scalar(mat_, val, mat_);
 }
 
-void CPUMatrix::LowerBound(float val)
+void Matrix::LowerBound(float val)
 {
     lower_bound_scalar(mat_, val, mat_);
 }
 
-void CPUMatrix::Sqrt()
+void Matrix::Sqrt()
 {
     apply_sqrt(mat_, mat_);
 }
 
-void CPUMatrix::Dropout(float dropprob, float fill_value, float scale_factor)
+void Matrix::Dropout(float dropprob, float fill_value, float scale_factor)
 {
     dropout(&rnde_, mat_, dropprob, fill_value, scale_factor);
 }
 
 // c = alpha * c + beta * a * b
-void CPUMatrix::Dot(CPUMatrix& a, CPUMatrix& b, CPUMatrix& c, float alpha, float beta)
+void Matrix::Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta)
 {
     dot(a.GetMat(), b.GetMat(), c.GetMat(), alpha, beta);
 }
 
 // c = alpha * c + beta * T(a) * T(b)
-void CPUMatrix::Dot(CPUMatrix& a, CPUMatrix& b, CPUMatrix& c, float alpha, float beta,
+void Matrix::Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta,
                     bool transpose_a, bool transpose_b)
 {
     eigenmat* a_mat = transpose_a ? a.GetMatTranspose() : a.GetMat();
@@ -461,17 +461,17 @@ void CPUMatrix::Dot(CPUMatrix& a, CPUMatrix& b, CPUMatrix& c, float alpha, float
     dot(a_mat, b_mat, c.GetMat(), alpha, beta);
 }
 
-void CPUMatrix::ApplyDerivativeOfReLU(CPUMatrix& state)
+void Matrix::ApplyDerivativeOfReLU(Matrix& state)
 {
     apply_rectified_linear_deriv(mat_, state.GetMat(), mat_);
 }
 
-void CPUMatrix::ApplySoftmax()
+void Matrix::ApplySoftmax()
 {
     apply_softmax_row_major(mat_, mat_);
 }
 
-void CPUMatrix::ApplySoftmax2()
+void Matrix::ApplySoftmax2()
 {
   float *inputs = GetHostData();
   int num_images = shape_.shape[0];
@@ -504,38 +504,38 @@ void CPUMatrix::ApplySoftmax2()
   }
 }
 
-void CPUMatrix::ApplyLogistic()
+void Matrix::ApplyLogistic()
 {
     apply_sigmoid(mat_, mat_);
 }
 
-void CPUMatrix::ApplyDerivativeOfLogistic(CPUMatrix& state)
+void Matrix::ApplyDerivativeOfLogistic(Matrix& state)
 {
     apply_logistic_deriv(mat_, state.GetMat(), mat_);
 }
 
-float CPUMatrix::EuclidNorm()
+float Matrix::EuclidNorm()
 {
     return euclid_norm(mat_); // TODO: return error code?
 }
 
-float CPUMatrix::VDot(CPUMatrix& m)
+float Matrix::VDot(Matrix& m)
 {
     int err;
     return vdot(mat_, m.GetMat(), &err);
 }
 
-void CPUMatrix::CopyTransposeBig(CPUMatrix& m)
+void Matrix::CopyTransposeBig(Matrix& m)
 {
     copy_transpose(mat_, m.GetMat());
 }
 
-void CPUMatrix::CopyTranspose(CPUMatrix& m)
+void Matrix::CopyTranspose(Matrix& m)
 {
     copy_transpose(mat_, m.GetMat());
 }
 
-void CPUMatrix::Transpose(const float* i_data, float* o_data, int num_filters, int kernel_width, int kernel_height, int num_colors)
+void Matrix::Transpose(const float* i_data, float* o_data, int num_filters, int kernel_width, int kernel_height, int num_colors)
 {
   int f, x, y, c;
   long i, target_ind;
@@ -558,7 +558,7 @@ void CPUMatrix::Transpose(const float* i_data, float* o_data, int num_filters, i
 // images : colors * inp_width * inp_height * numimages
 // filters: colors * kernel_x * kernel_y * num_filters
 // targets : num_filters * out_width * out_height * numimages
-void CPUMatrix::ConvUp2(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
+void Matrix::ConvUp2(Matrix& input, Matrix& w, Matrix& output,
                         ConvDesc &conv_desc, float scale_targets)
 {
   int num_images = input.shape_.shape[0];
@@ -631,7 +631,7 @@ void CPUMatrix::ConvUp2(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
 // images : colors * inp_width * inp_height * numimages
 // filters: colors * kernel_x * kernel_y * num_filters
 // targets : num_filters * out_width * out_height * numimages
-void CPUMatrix::ConvUp(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
+void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output,
                        ConvDesc &conv_desc, float scale_targets)
 {
     int num_images = input.shape_.shape[0];
@@ -708,7 +708,7 @@ void CPUMatrix::ConvUp(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
 
 // images : colors * inp_width * inp_height * numimages
 // targets : num_filters * out_width * out_height * numimages
-void CPUMatrix::ConvMaxPool2(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc)
+void Matrix::ConvMaxPool2(Matrix& input, Matrix& output, ConvDesc &conv_desc)
 {
   int num_images = input.shape_.shape[0];
   int inp_width = input.shape_.shape[1];
@@ -770,7 +770,7 @@ void CPUMatrix::ConvMaxPool2(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv
 
 // images : colors * inp_width * inp_height * numimages
 // targets : num_filters * out_width * out_height * numimages
-void CPUMatrix::ConvMaxPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc)
+void Matrix::ConvMaxPool(Matrix& input, Matrix& output, ConvDesc &conv_desc)
 {
     int num_images = input.shape_.shape[0];
     int inp_width = input.shape_.shape[1];
@@ -832,8 +832,8 @@ void CPUMatrix::ConvMaxPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_
     }
 }
 
-void CPUMatrix::ConvMaxPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output, CPUMatrix& output,
-                                CPUMatrix& deriv_input, ConvDesc &conv_desc, float scale_targets)
+void Matrix::ConvMaxPoolUndo(Matrix& input, Matrix& deriv_output, Matrix& output,
+                             Matrix& deriv_input, ConvDesc &conv_desc, float scale_targets)
 {
     int num_images = deriv_output.shape_.shape[0];
     int inp_width = deriv_output.shape_.shape[1];
@@ -894,7 +894,7 @@ void CPUMatrix::ConvMaxPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output, CPUMa
 
 // images : colors * inp_width * inp_height * numimages
 // targets : num_filters * out_width * out_height * numimages
-void CPUMatrix::ConvAvgPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_desc)
+void Matrix::ConvAvgPool(Matrix& input, Matrix& output, ConvDesc &conv_desc)
 {
     int num_images = input.shape_.shape[0];
     int inp_width = input.shape_.shape[1];
@@ -956,7 +956,7 @@ void CPUMatrix::ConvAvgPool(CPUMatrix& input, CPUMatrix& output, ConvDesc &conv_
     }
 }
 
-void CPUMatrix::ConvAvgPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output, ConvDesc &conv_desc, float scale_targets)
+void Matrix::ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, ConvDesc &conv_desc, float scale_targets)
 {
     int num_images = input.shape_.shape[0];
     int inp_width = input.shape_.shape[1];
@@ -1019,7 +1019,7 @@ void CPUMatrix::ConvAvgPoolUndo(CPUMatrix& input, CPUMatrix& deriv_output, ConvD
 
 // images : numFilters * num_locs
 // targets : numFilters * num_locs
-void CPUMatrix::ConvResponseNormCrossMap2(CPUMatrix& input, CPUMatrix& output, int numFilters,
+void Matrix::ConvResponseNormCrossMap2(Matrix& input, Matrix& output, int numFilters,
                                          int sizeF, float addScale, float powScale, bool blocked)
 {
   float *images = input.GetHostData();
@@ -1056,7 +1056,7 @@ void CPUMatrix::ConvResponseNormCrossMap2(CPUMatrix& input, CPUMatrix& output, i
 
 // images : numFilters * num_locs
 // targets : numFilters * num_locs
-void CPUMatrix::ConvResponseNormCrossMap(CPUMatrix& input, CPUMatrix& output, int numFilters,
+void Matrix::ConvResponseNormCrossMap(Matrix& input, Matrix& output, int numFilters,
                                          int sizeF, float addScale, float powScale, bool blocked)
 {
     int num_images = input.shape_.shape[0];
@@ -1103,8 +1103,8 @@ void CPUMatrix::ConvResponseNormCrossMap(CPUMatrix& input, CPUMatrix& output, in
     }
 }
 
-void CPUMatrix::ExtractPatches(CPUMatrix& source, CPUMatrix& dest, CPUMatrix& width_offset,
-                               CPUMatrix& height_offset, CPUMatrix& flip_bit,
+void Matrix::ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
+                               Matrix& height_offset, Matrix& flip_bit,
                                int image_size_y, int image_size_x, int patch_size_y, int patch_size_x)
 {
     int err_code = extract_patches(source.GetMat(), dest.GetMat(),
@@ -1121,7 +1121,7 @@ void CPUMatrix::ExtractPatches(CPUMatrix& source, CPUMatrix& dest, CPUMatrix& wi
 // inputs: num_inputs * num_images
 // weights:  num_inputs * num_outputs
 // outputs: num_outputs * num_images
-void CPUMatrix::FCUp(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
+void Matrix::FCUp(Matrix& input, Matrix& w, Matrix& output,
     int num_images, int num_outputs, int num_inputs, float scale_targets)
 {
   float *inputs = input.GetHostData();
@@ -1153,7 +1153,7 @@ void CPUMatrix::FCUp(CPUMatrix& input, CPUMatrix& w, CPUMatrix& output,
 #endif
 }
 
-void CPUMatrix::AddBias(CPUMatrix& input, CPUMatrix& b, CPUMatrix& output, const int num_images, const int num_dims)
+void Matrix::AddBias(Matrix& input, Matrix& b, Matrix& output, const int num_images, const int num_dims)
 {
   float *inputs = input.GetHostData();
   float *bias = b.GetHostData();
@@ -1169,7 +1169,7 @@ void CPUMatrix::AddBias(CPUMatrix& input, CPUMatrix& b, CPUMatrix& output, const
   }
 }
 
-void CPUMatrix::SoftmaxDistCE(CPUMatrix& state, CPUMatrix& gt, CPUMatrix& output)
+void Matrix::SoftmaxDistCE(Matrix& state, Matrix& gt, Matrix& output)
 {
     int err = compute_cross_entropy(gt.GetMat(), state.GetMat(), output.GetMat(), 1e-10);
     if (err != 0)
@@ -1179,9 +1179,9 @@ void CPUMatrix::SoftmaxDistCE(CPUMatrix& state, CPUMatrix& gt, CPUMatrix& output
     }
 }
 
-void CPUMatrix::GetTemp(size_t rows, size_t cols, CPUMatrix& temp)
+void Matrix::GetTemp(size_t rows, size_t cols, Matrix& temp)
 {
-    CPUMatrix& t = CPUMatrix::temp_;
+    Matrix& t = Matrix::temp_;
     size_t size = t.GetNumEls();
     const size_t length = rows * cols;
     if (length > size)
@@ -1194,7 +1194,7 @@ void CPUMatrix::GetTemp(size_t rows, size_t cols, CPUMatrix& temp)
     reshape(temp.GetMat(), rows, cols);
 }
 
-void CPUMatrix::InitRandom(int seed)
+void Matrix::InitRandom(int seed)
 {
     int err_code = init_random(&rnde_, seed);
     if (err_code != 0)

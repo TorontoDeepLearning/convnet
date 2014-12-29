@@ -1,7 +1,13 @@
 #ifndef LOSS_FUNCTIONS_H_
 #define LOSS_FUNCTIONS_H_
-#include "util.h"
+
+#ifdef USE_CUDA
 #include "matrix.h"
+#else
+#include "CPUMatrix.h"
+#endif
+
+#include "util.h"
 
 class LossFunction {
  public:

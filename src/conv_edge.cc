@@ -1,5 +1,10 @@
 #include "conv_edge.h"
+
 #include <iostream>
+
+#ifndef DIVUP
+#define DIVUP(x, y) (((x) + (y) - 1) / (y))
+#endif
 
 ConvEdge::ConvEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config),
