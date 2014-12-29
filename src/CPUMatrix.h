@@ -211,19 +211,6 @@ public:
                              int image_size_y, int image_size_x, int patch_size_y,
                              int patch_size_x);
 
-  void ApplySoftmax2();
-  static void ConvUp2(Matrix& input, Matrix& w, Matrix& output,
-                     ConvDesc &conv_desc, float scale_targets);
-  static void ConvMaxPool2(Matrix& input, Matrix& output, ConvDesc &conv_desc);
-  static void ConvResponseNormCrossMap2(
-      Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
-      float powScale, bool blocked);
-  static void FCUp(Matrix& input, Matrix& w, Matrix& output,
-    int num_images, int num_outputs, int num_inputs, float scale_targets);
-  static void AddBias(Matrix& input, Matrix& b, Matrix& output, const int num_images, const int num_dims);
-  static void Transpose(const float* i_data, float* o_data, int num_filters,
-    int kernel_width, int kernel_height, int num_colors);
-
   static void GetOnes(size_t rows, size_t cols, Matrix& ones) { notImpl(); }
   static void RegisterTempMemory(size_t size) { /*Do nothing*/ }
   static void RegisterTempMemory(size_t size, const std::string& why) { /*Do nothing*/ }

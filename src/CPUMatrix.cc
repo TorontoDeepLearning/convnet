@@ -471,39 +471,6 @@ void Matrix::ApplySoftmax()
     apply_softmax_row_major(mat_, mat_);
 }
 
-void Matrix::ApplySoftmax2()
-{
-  float *inputs = GetHostData();
-  int num_images = shape_.shape[0];
-  int num_dims = shape_.shape[1]*shape_.shape[2]*shape_.shape[3];
-
-#ifdef USE_OPENMP
-  #pragma omp parallel for if(num_images > 1000)
-#endif
-  for (int i = 0; i < num_images; i++)
-  {
-    float *inp = inputs + i * num_dims;
-    float max = -FLT_MAX, sum = 0;
-    for (int j = 0; j < num_dims; j++)
-    {
-      if (max < inp[j])
-      {
-        max = inp[j];
-      }
-    }
-
-    for (int j = 0; j < num_dims; j++)
-    {
-      inp[j] = exp(inp[j] - max);
-      sum += inp[j];
-    }
-    for (int j = 0; j < num_dims; j++)
-    {
-      inp[j] /= sum;
-    }
-  }
-}
-
 void Matrix::ApplyLogistic()
 {
     apply_sigmoid(mat_, mat_);
@@ -533,99 +500,6 @@ void Matrix::CopyTransposeBig(Matrix& m)
 void Matrix::CopyTranspose(Matrix& m)
 {
     copy_transpose(mat_, m.GetMat());
-}
-
-void Matrix::Transpose(const float* i_data, float* o_data, int num_filters, int kernel_width, int kernel_height, int num_colors)
-{
-  int f, x, y, c;
-  long i, target_ind;
-  long long size = num_filters * kernel_width * kernel_height * num_colors;
-  for (long ind = 0; ind < size; ind++)
-  {
-    i = ind;
-    f = i % num_filters;
-    i /= num_filters;
-    x = i % kernel_width;
-    i /= kernel_width;
-    y = i % kernel_height;
-    i /= kernel_height;
-    c = i;
-    target_ind = c + num_colors * (x + kernel_width * (y + kernel_height * f));
-    o_data[target_ind] = i_data[ind];
-  }
-}
-
-// images : colors * inp_width * inp_height * numimages
-// filters: colors * kernel_x * kernel_y * num_filters
-// targets : num_filters * out_width * out_height * numimages
-void Matrix::ConvUp2(Matrix& input, Matrix& w, Matrix& output,
-                        ConvDesc &conv_desc, float scale_targets)
-{
-  int num_images = input.shape_.shape[0];
-  int inp_width = input.shape_.shape[1];
-  int inp_height = input.shape_.shape[2];
-  float *images = input.GetHostData();
-  float *filters = w.GetHostData();
-  float *targets = output.GetHostData();
-  int num_colors = conv_desc.num_input_channels;
-  int num_filters = conv_desc.num_output_channels;
-  int kernel_width = conv_desc.kernel_size_x;
-  int kernel_height = conv_desc.kernel_size_y;
-  int stride_y = conv_desc.stride_y;
-  int stride_x = conv_desc.stride_x;
-  int padding_y = conv_desc.padding_y;
-  int padding_x = conv_desc.padding_x;
-  float scale_outputs = 1.0;
-
-  const int out_height = (inp_height + 2 * padding_y - kernel_height ) / stride_y + 1;
-  const int out_width = (inp_width + 2 * padding_x - kernel_width ) / stride_x + 1;
-
-  const int chunk = 16;
-
-#ifdef USE_OPENMP
-  #pragma omp parallel for
-#endif
-  for (long loc = 0; loc < num_images * out_height * out_width; loc++)
-  {
-    long i = loc;
-    int out_x = i % out_width; i /= out_width;
-    int out_y = i % out_height; i /= out_height;
-    long image_ind, target_ind, filter_ind;
-
-    for (int f = 0; f < num_filters; f+=chunk)
-    {
-      // Do the convolution.
-      float res[chunk];
-      for (int ff = 0; ff < chunk; ff++)
-        res[ff] = 0;
-
-      for (int k_y = 0, inp_y = out_y * stride_y -padding_y; k_y < kernel_height && inp_y < inp_height; k_y++, inp_y++)
-      {
-        if (inp_y < 0)
-          continue;
-        for (int k_x = 0, inp_x = out_x * stride_x -padding_x; k_x < kernel_width && inp_x < inp_width; k_x++, inp_x++)
-        {
-          if (inp_x < 0)
-            continue;
-          image_ind = num_colors * (inp_x + inp_width * (inp_y + inp_height * i));
-          for (int c = 0; c < num_colors; c++)
-          {
-            for (int ff = 0; ff < chunk; ff++)
-            {
-              filter_ind = c + num_colors * (k_x + kernel_width * (k_y + kernel_height * (f + ff)));
-              res[ff] += images[image_ind + c] * filters[filter_ind];
-            }
-          }
-        }
-      }
-
-      for (int ff = 0; ff < chunk; ff++)
-      {
-        target_ind = f + ff + num_filters * loc;
-        targets[target_ind] = scale_targets * targets[target_ind] + scale_outputs * res[ff];
-      }
-    }
-  }
 }
 
 // images : colors * inp_width * inp_height * numimages
@@ -704,68 +578,6 @@ void Matrix::ConvUp(Matrix& input, Matrix& w, Matrix& output,
             }
         }
     }
-}
-
-// images : colors * inp_width * inp_height * numimages
-// targets : num_filters * out_width * out_height * numimages
-void Matrix::ConvMaxPool2(Matrix& input, Matrix& output, ConvDesc &conv_desc)
-{
-  int num_images = input.shape_.shape[0];
-  int inp_width = input.shape_.shape[1];
-  int inp_height = input.shape_.shape[2];
-  float *images = input.GetHostData();
-  float *targets = output.GetHostData();
-  int num_filters = conv_desc.num_output_channels;
-  int kernel_width = conv_desc.kernel_size_x;
-  int kernel_height = conv_desc.kernel_size_y;
-  int stride_y = conv_desc.stride_y;
-  int stride_x = conv_desc.stride_x;
-  int padding_y = conv_desc.padding_y;
-  int padding_x = conv_desc.padding_x;
-  float scale_outputs = 1.0;
-  float scale_targets = 0.0;
-
-  const int out_height = (inp_height + 2 * padding_y - kernel_height ) / stride_y + 1;
-  const int out_width = (inp_width + 2 * padding_x - kernel_width ) / stride_x + 1;
-
-#ifdef USE_OPENMP
-  #pragma omp parallel for
-#endif
-  for (long loc = 0; loc < num_images * out_height * out_width; loc++)
-  {
-    long i = loc;
-    int out_x = i % out_width;
-    i /= out_width;
-    int out_y = i % out_height;
-    i /= out_height;
-
-    for (int f = 0; f < num_filters; f++)
-    {
-      long target_ind = f + num_filters * loc;
-
-      // Do the maxpool.
-      float res = -FLT_MAX;
-      for (int k_y = 0, inp_y = out_y * stride_y - padding_y + k_y;
-           k_y < kernel_height && inp_y < inp_height; k_y++, inp_y++)
-      {
-        if (inp_y < 0)
-          continue;
-
-        for (int k_x = 0, inp_x = out_x * stride_x - padding_x + k_x;
-             k_x < kernel_width && inp_x < inp_width; k_x++, inp_x++)
-        {
-          if (inp_x < 0)
-            continue;
-
-          long image_ind = f + num_filters * (inp_x + inp_width * (inp_y + inp_height * i));
-          if (res < images[image_ind])
-            res = images[image_ind];
-        }
-      }
-
-      targets[target_ind] = scale_targets * targets[target_ind] + scale_outputs * res;
-    }
-  }
 }
 
 // images : colors * inp_width * inp_height * numimages
@@ -1019,43 +831,6 @@ void Matrix::ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output, ConvDesc &conv
 
 // images : numFilters * num_locs
 // targets : numFilters * num_locs
-void Matrix::ConvResponseNormCrossMap2(Matrix& input, Matrix& output, int numFilters,
-                                         int sizeF, float addScale, float powScale, bool blocked)
-{
-  float *images = input.GetHostData();
-  float *targets = output.GetHostData();
-  int num_locs = input.shape_.shape[0] * input.shape_.shape[1] * input.shape_.shape[2];
-  float scale_outputs = 1.0;
-  float scale_targets = 0.0;
-
-#ifdef USE_OPENMP
-  #pragma omp parallel for
-#endif
-  for (int i = 0; i < num_locs; i++)
-  {
-    for (int f = 0; f < numFilters; f++)
-    {
-      int start = blocked ? ((f / sizeF) * sizeF) : (f - sizeF/2);
-      int end = start + sizeF;
-      if (start < 0)
-        start = 0;
-      if (end > numFilters)
-        end = numFilters;
-      float sum = 0, act;
-      for (int j = start; j < end; j++)
-      {
-        act = images[j + i * numFilters];
-        sum += act * act;
-      }
-      sum = pow(1 + addScale * sum, -powScale);
-      targets[f + i * numFilters] = scale_targets * targets[f + i * numFilters] +
-                                    scale_outputs * images[f + i * numFilters] * sum;
-    }
-  }
-}
-
-// images : numFilters * num_locs
-// targets : numFilters * num_locs
 void Matrix::ConvResponseNormCrossMap(Matrix& input, Matrix& output, int numFilters,
                                          int sizeF, float addScale, float powScale, bool blocked)
 {
@@ -1116,57 +891,6 @@ void Matrix::ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
         cerr << "Error extracting patches " << GetStringError(err_code) << endl;
         exit(1);
     }
-}
-
-// inputs: num_inputs * num_images
-// weights:  num_inputs * num_outputs
-// outputs: num_outputs * num_images
-void Matrix::FCUp(Matrix& input, Matrix& w, Matrix& output,
-    int num_images, int num_outputs, int num_inputs, float scale_targets)
-{
-  float *inputs = input.GetHostData();
-  float *weights = w.GetHostData();
-  float *targets = output.GetHostData();
-  float scale_outputs = 1.0;
-
-#ifdef USE_OPENBLAS
-  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, num_images,
-              num_outputs, num_inputs, scale_outputs, inputs, num_inputs,
-              weights, num_inputs, scale_targets, targets, num_outputs);
-#else
-  for (int i = 0; i < num_images; i++)
-  {
-#ifdef USE_OPENMP
-    #pragma omp parallel for
-#endif
-    for (int j = 0; j < num_outputs; j++)
-    {
-      float res = 0;
-      for (int k = 0; k < num_inputs; k++)
-      {
-        res += inputs[k + i * num_inputs] * weights[k + j * num_inputs];
-      }
-      int target_ind = j + i * num_outputs;
-      targets[target_ind] = scale_targets * targets[target_ind] + scale_outputs * res;
-    }
-  }
-#endif
-}
-
-void Matrix::AddBias(Matrix& input, Matrix& b, Matrix& output, const int num_images, const int num_dims)
-{
-  float *inputs = input.GetHostData();
-  float *bias = b.GetHostData();
-  float *outputs = output.GetHostData();
-
-  int length = num_dims * num_images;
-#ifdef USE_OPENMP
-  #pragma omp parallel for if(length > 10000)
-#endif
-  for (int i = 0; i < length; i++)
-  {
-    outputs[i] = inputs[i] + bias[i % num_dims];
-  }
 }
 
 void Matrix::SoftmaxDistCE(Matrix& state, Matrix& gt, Matrix& output)
