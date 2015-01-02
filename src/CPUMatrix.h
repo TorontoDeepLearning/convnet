@@ -1,38 +1,14 @@
 #ifndef CPUMATRIX_H
 #define CPUMATRIX_H
 
+#include "common.h"
+
 #include <hdf5.h>
 
 #include <vector>
 #include <string>
 
 extern "C" struct eigenmat;
-
-typedef struct Shape4D
-{
-  int shape[4];
-} Shape4D;
-
-typedef struct ConvDesc
-{
-  int num_input_channels;
-  int num_output_channels;
-  int kernel_size_y;
-  int kernel_size_x;
-  int kernel_size_t;
-  int stride_y;
-  int stride_x;
-  int stride_t;
-  int padding_y;
-  int padding_x;
-  int padding_t;
-
-  int input_channel_begin;
-  int input_channel_end;
-  int output_channel_begin;
-  int output_channel_end;
-  int num_groups;
-} ConvDesc;
 
 inline void notImpl()
 {
@@ -94,7 +70,7 @@ public:
   void Add(float val);
   void Add(Matrix& m);
   void Add(Matrix& m, float alpha);
-  void SquashRelu() { notImpl(); }
+  void SquashRelu();
   void AddRowVec(Matrix& v);
   void AddRowVec(Matrix& v, float alpha);
   void AddColVec(Matrix& v, float alpha);
@@ -112,8 +88,8 @@ public:
   void Sqrt();
   void UpperBoundMod(float val);
   void SqSumAxis(Matrix& target, int axis, float beta, float alpha);
-  void NormLimitByAxis(int axis, float val, bool constraint) { notImpl(); }
-  void NormalizeColumnwise() { notImpl(); }
+  void NormLimitByAxis(int axis, float val, bool constraint);
+  void NormalizeColumnwise();
   void Dropout(float dropprob, float fill_value, float scale_factor);
   void ApplyDerivativeOfReLU(Matrix& state);
   void ApplySoftmax();
@@ -123,21 +99,21 @@ public:
   float VDot(Matrix& m);
   void CopyTransposeBig(Matrix& m);
   void CopyTranspose(Matrix& m);
-  void ShuffleColumns(Matrix& rand_perm_indices) { notImpl(); }
-  void AddToEachPixel(Matrix& v, float mult) { notImpl(); }
+  void ShuffleColumns(Matrix& rand_perm_indices);
+  void AddToEachPixel(Matrix& v, float mult);
   void RectifyBBox(Matrix& width_offset, Matrix& height_offset, Matrix& flip,
-                   int patch_width, int patch_height) { notImpl(); }
+                   int patch_width, int patch_height);
 
-  static void LogisticCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv) { notImpl(); }
-  static void LogisticCorrect(Matrix& state, Matrix& gt, Matrix& output) { notImpl(); }
-  static void SoftmaxCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv) { notImpl(); }
-  static void SoftmaxCorrect(Matrix& state, Matrix& gt, Matrix& output) { notImpl(); }
-  static void SoftmaxCE(Matrix& state, Matrix& gt, Matrix& output) { notImpl(); }
+  static void LogisticCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
+  static void LogisticCorrect(Matrix& state, Matrix& gt, Matrix& output);
+  static void SoftmaxCEDeriv(Matrix& state, Matrix& gt, Matrix& deriv);
+  static void SoftmaxCorrect(Matrix& state, Matrix& gt, Matrix& output);
+  static void SoftmaxCE(Matrix& state, Matrix& gt, Matrix& output);
   static void SoftmaxDistCE(Matrix& state, Matrix& gt, Matrix& output);
   static void HingeLossDeriv(Matrix& state, Matrix& gt, Matrix& deriv,
-                             bool quadratic, float margin) { notImpl(); }
-  static void AdagradUpdate(Matrix& adagrad_history, Matrix& gradient, float delta) { notImpl(); }
-  static void RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor) { notImpl(); }
+                             bool quadratic, float margin);
+  static void AdagradUpdate(Matrix& adagrad_history, Matrix& gradient, float delta);
+  static void RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor);
   static void Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta);
   static void Dot(Matrix& a, Matrix& b, Matrix& c, float alpha, float beta,
                   bool transpose_a, bool transpose_b);
@@ -149,14 +125,14 @@ public:
                        ConvDesc &conv_desc, float scale_targets) { notImpl(); }
 
   static void ConvDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
-                       ConvDesc &conv_desc, float scale_targets) { notImpl(); }
+                       ConvDesc &conv_desc, float scale_targets);
 
   static void Conv3DDown(Matrix& deriv_output, Matrix& w, Matrix& deriv_input,
                          ConvDesc &conv_desc, float scale_targets) { notImpl(); }
 
   static void ConvOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
                        ConvDesc &conv_desc, int partial_sum_y, int partial_sum_x,
-                       float scale_targets, float scale_outputs) { notImpl(); }
+                       float scale_targets, float scale_outputs);
 
   static void Conv3DOutp(Matrix& input, Matrix& deriv_output, Matrix& dw,
                          ConvDesc &conv_desc, float scale_targets,
@@ -181,7 +157,7 @@ public:
   static void ConvAvgPool(Matrix& input, Matrix& output, ConvDesc &conv_desc);
 
   static void ConvAvgPoolUndo(Matrix& input, Matrix& deriv_output,
-                              ConvDesc &conv_desc, float scale_targets);
+                              ConvDesc &conv_desc, float scale_targets, float scaleOutputs = 1.0);
 
   static void ConvResponseNormCrossMap(
       Matrix& input, Matrix& output, int numFilters, int sizeF, float addScale,
@@ -193,25 +169,25 @@ public:
 
   static void ConvResponseNormCrossMapUndo(
     Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
-    int sizeF, float addScale, float powScale, bool blocked) { notImpl(); }
-  
+    int sizeF, float addScale, float powScale, bool blocked);
+
   static void ConvResponseNormCrossMapUndo3D(
     Matrix& outGrads, Matrix& inputs, Matrix& acts, Matrix& targets, int numFilters,
     int sizeF, float addScale, float powScale, bool blocked, int image_size_t) { notImpl(); }
 
   static void ConvUpSample(Matrix& input, Matrix& output, int factor,
-                           float scaleTargets) { notImpl(); }
+                           float scaleTargets);
   
-  static void ConvDownSample(Matrix& input, Matrix& output, int factor) { notImpl(); }
+  static void ConvDownSample(Matrix& input, Matrix& output, int factor);
 
-  static void ConvRGBToYUV(Matrix& input, Matrix& output) { notImpl(); }
+  static void ConvRGBToYUV(Matrix& input, Matrix& output);
 
   static void ExtractPatches(Matrix& source, Matrix& dest, Matrix& width_offset,
                              Matrix& height_offset, Matrix& flip_bit,
                              int image_size_y, int image_size_x, int patch_size_y,
                              int patch_size_x);
 
-  static void GetOnes(size_t rows, size_t cols, Matrix& ones) { notImpl(); }
+  static void GetOnes(size_t rows, size_t cols, Matrix& ones);
   static void RegisterTempMemory(size_t size) { /*Do nothing*/ }
   static void RegisterTempMemory(size_t size, const std::string& why) { /*Do nothing*/ }
   static void RegisterOnes(size_t size) { /*Do nothing*/ }
@@ -223,7 +199,7 @@ public:
   static void SyncAllDevices() { /*Do nothing*/ }
   static int GetDevice() { return 0; }
   static int GetNumBoards() { return 1; }
-  static void ShowMemoryUsage() { notImpl(); }
+  static void ShowMemoryUsage() {}
 
 protected:
   eigenmat* GetMat() { return mat_; }
@@ -236,6 +212,8 @@ private:
   Shape4D shape_;
 
   static Matrix temp_;
+  static Matrix ones_;
+  static Matrix rgb_to_yuv_mat_;
 };
 
 #endif

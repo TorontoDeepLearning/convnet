@@ -36,7 +36,7 @@ DEPS=deps
 LIBFLAGS = -L$(LIB) -L$(CURDIR)/eigenmat
 CPPFLAGS_COMMON = -I$(DEPS) -I$(INC) -I$(CURDIR)/eigenmat -I$(SRC)
 CPPFLAGS = $(CPPFLAGS_COMMON)
-CPPFLAGS_CPU = $(CPPFLAGS_COMMON)
+CPPFLAGS_CPU = $(CPPFLAGS_COMMON) -DUSE_GEMM
 LINKFLAGS = -lopencv_core -lopencv_imgcodecs -lopencv_imgproc -lopencv_videoio -lhdf5 -leigenmat -ljpeg -lX11 -lpthread -lprotobuf -ldl
 CXXFLAGS = -O2 -std=c++0x -mtune=native -Wall -Wno-unused-result -Wno-sign-compare
 
@@ -48,7 +48,7 @@ COMMONOBJS = $(COMMONOBJS_COMMON)
 COMMONOBJS_CPU = $(patsubst $(OBJ)/%.o, $(OBJ_CPU)/%.o, $(COMMONOBJS_COMMON))
 COMMONOBJS += $(OBJ)/matrix.o
 COMMONOBJS_CPU += $(OBJ_CPU)/CPUMatrix.o
-TARGETS := $(BIN)/image2hdf5 $(BIN)/video2hdf5 $(BIN)/extract_representation_cpu
+TARGETS := $(BIN)/image2hdf5 $(BIN)/video2hdf5 $(BIN)/extract_representation_cpu $(BIN)/train_convnet_cpu
 
 ifeq ($(USE_MPI), yes)
 	CPPFLAGS_COMMON += -DUSE_MPI
@@ -101,6 +101,9 @@ $(BIN)/extract_representation: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/multigpu_co
 
 $(BIN)/run_grad_check: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/grad_check.o $(OBJ)/run_grad_check.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS) $^ -o $@ $(LINKFLAGS)
+
+$(BIN)/train_convnet_cpu: $(COMMONOBJS_CPU) $(OBJ_CPU)/convnet.o $(OBJ_CPU)/train_convnet.o $(OBJ_CPU)/multigpu_convnet.o
+	$(CXX) $(LIBFLAGS) $(CPPFLAGS_CPU) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/image2hdf5: $(OBJ_CPU)/image_iterators.o $(OBJ_CPU)/image2hdf5.o $(OBJ_CPU)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS_CPU) $^ -o $@ $(LINKFLAGS)
