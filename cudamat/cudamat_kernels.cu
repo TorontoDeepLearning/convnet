@@ -1863,7 +1863,7 @@ __global__ void kLSTMFprop(float *s_in, float* s_out, float* w_diag, float* b, i
       a = use_relu ? relu(a + b_a[j]) : tanh(a + b_a[j]);
       c = c * f + i * a;
       o = sigmoid(o + c * w_o[j] + b_o[j]);
-      h = c * o;
+      h = c * use_relu ? o : tanh(o);
 
       i_out[p] = i;
       f_out[p] = f;
@@ -1903,7 +1903,7 @@ __global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out,
 
     float i, f, a, o, c,
           grad_i, grad_f, grad_a, grad_o, grad_c, grad_h,
-          c_old;
+          c_old, tanhc;
     for (unsigned int p = idx; p < numEls; p += numThreads) {
       int j = p / numcases;
       grad_h = d_h_out[p];
@@ -1915,8 +1915,9 @@ __global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out,
       c = s_c_out[p];
       c_old = init ? 0 : s_c_in[p];
 
-      grad_o = grad_h * c * deriv_of_sigmoid(o);
-      grad_c += grad_o * w_o[j] + grad_h * o;
+      tanhc = use_relu ? c : tanh(c);
+      grad_o = grad_h * tanhc * deriv_of_sigmoid(o);
+      grad_c += grad_o * w_o[j] + grad_h * o * (use_relu ? deriv_of_relu(tanhc) : deriv_of_tanh(tanhc));
       
       grad_a = grad_c * i * (use_relu ? deriv_of_relu(a) : deriv_of_tanh(a));
       grad_i = grad_c * a * deriv_of_sigmoid(i);

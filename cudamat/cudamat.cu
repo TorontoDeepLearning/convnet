@@ -3217,7 +3217,9 @@ int lstm_fprop(cudamat* s_in, cudamat* s_out, cudamat* w_dense, cudamat* w_diag,
     }
   }
 
-  kLSTMFprop<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+  int num_blocks = DIVUP(numcases * num_lstms, NUM_VECTOR_OP_THREADS_PER_BLOCK);
+  num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+  kLSTMFprop<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
       s_in->data_device, s_out->data_device, w_diag->data_device, b->data_device, numcases, num_lstms, init, use_relu);
 
   if (checkCUDAError()) {
@@ -3231,7 +3233,9 @@ int lstm_bprop(cudamat* s_in, cudamat* s_out, cudamat* d_in, cudamat* d_out, cud
   int numcases = s_in->size[0];
   int num_lstms = s_in->size[1] / 6;
 
-  kLSTMBprop<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
+  int num_blocks = DIVUP(numcases * num_lstms, NUM_VECTOR_OP_THREADS_PER_BLOCK);
+  num_blocks = MIN(NUM_VECTOR_OP_BLOCKS, num_blocks);
+  kLSTMBprop<<<num_blocks,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(
       s_in->data_device, s_out->data_device, d_in->data_device, d_out->data_device, w_diag->data_device, numcases, num_lstms, init, use_relu);
   if (checkCUDAError())
     return CUDA_ERROR;

@@ -1,6 +1,5 @@
 // Writes video files into an hdf5 dataset as unsigned chars.
-// Crops out central 256*256 patch after resizing the image
-// so that its shorter side is 256.
+// Resizes each frame to the specified width and height.
 
 #include "video_iterators.h"
 #include "hdf5.h"

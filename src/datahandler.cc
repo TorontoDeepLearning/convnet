@@ -23,6 +23,7 @@ DataHandler::DataHandler(const config::DatasetConfig& config) :
   randomize_gpu_(config.randomize_gpu()),
   multiplicity_(config.multiplicity()) {
 
+  generator_.seed(0);
   // Create data streams.
   for (const config::DataStreamConfig& dsc:config.data_config()) {
     const string& layer_name = dsc.layer_name();

@@ -104,6 +104,7 @@ RawImageFileIterator<T>::RawImageFileIterator(
     max_angle_(max_angle),
     min_scale_(min_scale) {
   dataset_size_ = filenames_.size();
+  generator_.seed(0);
   distribution_ = random_jitter_ ? new uniform_real_distribution<float>(0, 1) : NULL;
 }
 
@@ -424,6 +425,7 @@ BBoxImageFileIterator<T>::BBoxImageFileIterator(
     data_.push_back(b_list);
   }
   f.close();
+  generator_.seed(0);
   distribution_ = new uniform_real_distribution<float>(0, 1);
 }
 
