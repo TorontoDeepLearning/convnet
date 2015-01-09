@@ -1,7 +1,13 @@
 #ifndef OPTIMIZER_H_
 #define OPTIMIZER_H_
-#include "util.h"
+
+#ifdef USE_CUDA
 #include "matrix.h"
+#else
+#include "CPUMatrix.h"
+#endif
+
+#include "util.h"
 
 /** Base class for all optimizers.
  */

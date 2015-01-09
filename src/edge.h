@@ -1,7 +1,14 @@
 #ifndef EDGE_H_
 #define EDGE_H_
-#include "util.h"
+
+#ifdef USE_CUDA
 #include "matrix.h"
+#else
+#include "CPUMatrix.h"
+#endif
+
+#include "util.h"
+
 #include <iostream>
 
 class Layer;
