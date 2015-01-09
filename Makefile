@@ -105,10 +105,10 @@ $(BIN)/run_grad_check: $(COMMONOBJS) $(OBJ)/convnet.o $(OBJ)/grad_check.o $(OBJ)
 $(BIN)/train_convnet_cpu: $(COMMONOBJS_CPU) $(OBJ_CPU)/convnet.o $(OBJ_CPU)/train_convnet.o $(OBJ_CPU)/multigpu_convnet.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS_CPU) $^ -o $@ $(LINKFLAGS)
 
-$(BIN)/image2hdf5: $(OBJ_CPU)/image_iterators.o $(OBJ_CPU)/image2hdf5.o $(OBJ_CPU)/util.o
+$(BIN)/image2hdf5: $(COMMONOBJS_CPU) $(OBJ_CPU)/image_iterators.o $(OBJ_CPU)/image2hdf5.o $(OBJ_CPU)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS_CPU) $^ -o $@ $(LINKFLAGS)
 
-$(BIN)/video2hdf5: $(OBJ_CPU)/video_iterators.o $(OBJ_CPU)/video2hdf5.o $(OBJ_CPU)/util.o
+$(BIN)/video2hdf5: $(COMMONOBJS_CPU) $(OBJ_CPU)/video_iterators.o $(OBJ_CPU)/video2hdf5.o $(OBJ_CPU)/util.o
 	$(CXX) $(LIBFLAGS) $(CPPFLAGS_CPU) $^ -o $@ $(LINKFLAGS)
 
 $(BIN)/extract_representation_cpu: $(COMMONOBJS_CPU) $(OBJ_CPU)/convnet.o $(OBJ_CPU)/multigpu_convnet.o $(OBJ_CPU)/extract_representation.o
