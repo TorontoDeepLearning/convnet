@@ -1,5 +1,6 @@
 #include "conv_onetoone_edge.h"
 #include <iostream>
+using namespace std;
 
 ConvOneToOneEdge::ConvOneToOneEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config) {}

@@ -27,8 +27,8 @@ class Optimizer {
 
   // Load and Save gradient history so that optimization can be restarted if it
   // gets interrupted for some reason.
-  virtual void LoadParameters(hid_t file, const string& prefix);
-  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual void LoadParameters(hid_t file, const std::string& prefix);
+  virtual void SaveParameters(hid_t file, const std::string& prefix);
   
   // Shared hierarchical priors.
   void ApplySharedPriorGradient(Matrix& gradient, Matrix& parameter);
@@ -56,8 +56,8 @@ class SGDOptimizer : public Optimizer {
   SGDOptimizer(const config::Optimizer& optimizer_config);
   virtual void AllocateMemory(const int rows, const int cols);
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
-  virtual void LoadParameters(hid_t file, const string& prefix);
-  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual void LoadParameters(hid_t file, const std::string& prefix);
+  virtual void SaveParameters(hid_t file, const std::string& prefix);
   virtual bool IsAllocated() { return gradient_history_.GetNumEls() > 0; }
   virtual void NotifyStart(Matrix& parameter);
 
@@ -78,8 +78,8 @@ class AdagradSGDOptimizer : public SGDOptimizer {
   AdagradSGDOptimizer(const config::Optimizer& optimizer_config);
   virtual void AllocateMemory(const int rows, const int cols);
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
-  virtual void LoadParameters(hid_t file, const string& prefix);
-  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual void LoadParameters(hid_t file, const std::string& prefix);
+  virtual void SaveParameters(hid_t file, const std::string& prefix);
   virtual bool IsAllocated() { return adagrad_history_.GetNumEls() > 0; }
 
  protected:
@@ -92,8 +92,8 @@ class RMSPropSGDOptimizer : public SGDOptimizer {
   RMSPropSGDOptimizer(const config::Optimizer& optimizer_config);
   virtual void AllocateMemory(const int rows, const int cols);
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
-  virtual void LoadParameters(hid_t file, const string& prefix);
-  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual void LoadParameters(hid_t file, const std::string& prefix);
+  virtual void SaveParameters(hid_t file, const std::string& prefix);
   virtual bool IsAllocated() { return rms_history_.GetNumEls() > 0; }
 
  protected:
@@ -109,15 +109,15 @@ class LBFGSOptimizer : public Optimizer {
   LBFGSOptimizer(const config::Optimizer& optimizer_config);
   virtual void AllocateMemory(const int rows, const int cols);
   virtual void Optimize(Matrix& gradient, Matrix& parameter);
-  virtual void LoadParameters(hid_t file, const string& prefix);
-  virtual void SaveParameters(hid_t file, const string& prefix);
+  virtual void LoadParameters(hid_t file, const std::string& prefix);
+  virtual void SaveParameters(hid_t file, const std::string& prefix);
   virtual bool IsAllocated() { return q_.GetNumEls() > 0; }
 
  protected:
   Matrix q_, last_q_, last_w_;
   const int m_;
-  vector<float> rho_, alpha_, beta_;
-  vector<Matrix> s_, y_;
+  std::vector<float> rho_, alpha_, beta_;
+  std::vector<Matrix> s_, y_;
   int start_;
 
 };

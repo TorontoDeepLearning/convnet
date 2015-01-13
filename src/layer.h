@@ -69,11 +69,11 @@ class Layer {
 
   /** Returns a reference to the state of the layer.*/
   Matrix& GetState();
-  Matrix& GetState(const string& slice);
+  Matrix& GetState(const std::string& slice);
 
   /** Returns a reference to the deriv at this layer.*/
   Matrix& GetDeriv();
-  Matrix& GetDeriv(const string& slice);
+  Matrix& GetDeriv(const std::string& slice);
   
   /** Returns a reference to the data at this layer.*/
   Matrix& GetData() { return data_;}
@@ -87,9 +87,9 @@ class Layer {
   /** Add an outgoing edge from this layer.*/
   void AddOutgoing(Edge* e);
 
-  const string& GetName() const { return name_; }
+  const std::string& GetName() const { return name_; }
   int GetNumChannels() const { return num_channels_; }
-  int GetNumChannels(const string& slice) const;
+  int GetNumChannels(const std::string& slice) const;
   int GetSizeY() const { return image_size_y_; }
   int GetSizeX() const { return image_size_x_; }
   int GetSizeT() const { return image_size_t_; }
@@ -113,22 +113,22 @@ class Layer {
 
   static Layer* ChooseLayerClass(const config::Layer& layer_config);
 
-  vector<Edge*> incoming_edge_, outgoing_edge_;
+  std::vector<Edge*> incoming_edge_, outgoing_edge_;
   bool has_incoming_from_same_gpu_, has_outgoing_to_same_gpu_;
   bool has_incoming_from_other_gpus_, has_outgoing_to_other_gpus_;
 
-  bool AddOrOverwriteState(const string& slice);
-  bool AddOrOverwriteDeriv(const string& slice);
+  bool AddOrOverwriteState(const std::string& slice);
+  bool AddOrOverwriteDeriv(const std::string& slice);
   void ResetAddOrOverwrite();
   bool HasTiedData() const;
-  const string& GetTiedDataLayerName() const;
+  const std::string& GetTiedDataLayerName() const;
 
  protected:
   void ApplyDropoutAtTrainTime();
   void ApplyDropoutAtTestTime();
   void SetupSlices();
 
-  const string name_;
+  const std::string name_;
   int num_channels_;
   bool is_input_, is_output_;
   const float dropprob_;
@@ -144,22 +144,22 @@ class Layer {
   Matrix deriv_;  /** Deriv of the loss function w.r.t. the state. */
   Matrix data_;   /** Data (targets) associated with this layer. */
   Matrix dropout_noise_;  /** If we need to store random variates when doing dropout. */
-  map<int, Matrix> other_states_; /** Copies of this layer's state on other gpus.*/
-  map<int, Matrix> other_derivs_; /** Copies of this layer's deriv on other gpus.*/
-  map<int, bool> state_copied_;
-  map<int, bool> deriv_copied_;
+  std::map<int, Matrix> other_states_; /** Copies of this layer's state on other gpus.*/
+  std::map<int, Matrix> other_derivs_; /** Copies of this layer's deriv on other gpus.*/
+  std::map<int, bool> state_copied_;
+  std::map<int, bool> deriv_copied_;
   ImageDisplayer *img_display_;
   const int gpu_id_;
-  set<int> other_incoming_gpu_ids_, other_outgoing_gpu_ids_;
-  map<string, Matrix> state_slices_, deriv_slices_;
-  map<string, int> slice_channels_;
-  map<string, bool> add_or_overwrite_state_, add_or_overwrite_deriv_;
+  std::set<int> other_incoming_gpu_ids_, other_outgoing_gpu_ids_;
+  std::map<std::string, Matrix> state_slices_, deriv_slices_;
+  std::map<std::string, int> slice_channels_;
+  std::map<std::string, bool> add_or_overwrite_state_, add_or_overwrite_deriv_;
   bool store_dropout_noise_;
   LossFunction *loss_, *performance_;
   config::Layer::LossFunction loss_function_, performance_metric_;
   const float loss_function_weight_;
   const bool has_tied_data_;
-  const string tied_data_layer_name_;
+  const std::string tied_data_layer_name_;
 };
 
 /** Implements a layer with a linear activation function.*/

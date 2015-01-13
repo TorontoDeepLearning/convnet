@@ -1,4 +1,5 @@
 #include "rgb_to_yuv_edge.h"
+using namespace std;
 
 RGBToYUVEdge::RGBToYUVEdge(const config::Edge& edge_config) :
   Edge(edge_config) {}

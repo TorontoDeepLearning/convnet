@@ -17,7 +17,7 @@ class DataHandler {
   DataHandler(const config::DatasetConfig& config);
   virtual ~DataHandler();
 
-  void GetBatch(vector<Layer*>& data_layers);
+  void GetBatch(std::vector<Layer*>& data_layers);
   int GetBatchSize() const { return batch_size_; }
   int GetDataSetSize() const { return dataset_size_; }
   int GetMultiplicity() const { return multiplicity_; }
@@ -27,28 +27,28 @@ class DataHandler {
               const int pad2, const int patch_size, const int num_fov_x,
               const int num_fov_y);
   void AllocateMemory();
-  int GetDims(const string& layer_name) const;
-  int GetImageSizeY(const string& layer_name) const;
-  int GetImageSizeX(const string& layer_name) const;
+  int GetDims(const std::string& layer_name) const;
+  int GetImageSizeY(const std::string& layer_name) const;
+  int GetImageSizeX(const std::string& layer_name) const;
 
  protected:
   void SetupShuffler();
   void ShuffleIndices();
   void LoadChunk(DataIterator& it, Matrix& mat);
-  void LoadChunk(DataIterator& it, Matrix& mat, vector<int>& random_rows);
+  void LoadChunk(DataIterator& it, Matrix& mat, std::vector<int>& random_rows);
   void LoadChunkParallel(DataIterator& it, Matrix& mat);
-  void LoadChunkParallel(DataIterator& it, Matrix& mat, vector<int>& random_rows);
+  void LoadChunkParallel(DataIterator& it, Matrix& mat, std::vector<int>& random_rows);
 
   void PipelinedDiskAccess();
   void DiskAccess();
   void StartPreload();
   void WaitForPreload();
 
-  default_random_engine generator_;
-  map<string, DataIterator*> data_it_;
-  map<string, Matrix> data_;
-  vector<string> layer_names_;
-  thread* preload_thread_;
+  std::default_random_engine generator_;
+  std::map<std::string, DataIterator*> data_it_;
+  std::map<std::string, Matrix> data_;
+  std::vector<std::string> layer_names_;
+  std::thread* preload_thread_;
   Matrix rand_perm_indices_;
   int batch_size_, chunk_size_, max_reuse_count_, reuse_counter_,
       random_access_chunk_size_, dataset_size_, start_, multiplicity_counter_,
@@ -56,7 +56,7 @@ class DataHandler {
   bool restart_, nothing_on_gpu_, fits_on_gpu_;
   const bool pipeline_loads_, randomize_cpu_, randomize_gpu_;
   const int multiplicity_;
-  vector<int> random_indices_;
+  std::vector<int> random_indices_;
 };
 
 /** Base class for implementing data iterators.
@@ -91,7 +91,7 @@ class DataIterator {
   void SampleNoise(int batch_size, int dest_num_dims, int multiplicity_id);
   bool DoParallelDiskAccess() const { return parallel_disk_access_; }
   bool NeedsNoiseFromLayer() const { return !noise_layer_name_.empty(); }
-  const string& GetNoiseLayerName() const { return noise_layer_name_; }
+  const std::string& GetNoiseLayerName() const { return noise_layer_name_; }
   Matrix& GetWidthOffset() { return width_offset_;}
   Matrix& GetHeightOffset() { return height_offset_;}
   Matrix& GetFlipBit() { return flip_bit_;}
@@ -99,12 +99,12 @@ class DataIterator {
   static DataIterator* ChooseDataIterator(const config::DataStreamConfig& config);
 
  protected:
-  void LoadMeans(const string& data_file);
+  void LoadMeans(const std::string& data_file);
 
   int num_dims_, dataset_size_, row_, dest_num_dims_;
   Matrix mean_, std_, pca_noise1_, pca_noise2_, eig_values_, eig_vectors_,
          width_offset_, height_offset_, flip_bit_;
-  const string file_pattern_, noise_layer_name_;
+  const std::string file_pattern_, noise_layer_name_;
   const int image_size_y_, image_size_x_, gpu_image_size_y_, gpu_image_size_x_,
             num_colors_, gpu_id_;
   const bool translate_, flip_, normalize_, pixelwise_normalize_,
@@ -170,8 +170,8 @@ class CropDataIterator : public DataIterator {
 
  protected:
   CropIterator<unsigned char> *it_;
-  vector<string> file_names_;
-  vector<vector<box>> crops_;
+  std::vector<std::string> file_names_;
+  std::vector<std::vector<box>> crops_;
   unsigned char* buf_;
   const int image_size_;
   int file_id_;
@@ -191,7 +191,7 @@ class SlidingWindowDataIterator : public DataIterator {
  protected:
   SlidingWindowIterator<unsigned char> *it_;
   unsigned char* buf_;
-  vector<string> file_names_;
+  std::vector<std::string> file_names_;
   const int stride_, raw_image_size_, image_size_;
   int file_id_;
 };
@@ -229,11 +229,11 @@ class BoundingBoxIterator : public DataIterator {
   static float Area(const box& b);
 
  protected:
-  vector<vector<box>> data_;
-  vector<int> img_width_, img_height_;
+  std::vector<std::vector<box>> data_;
+  std::vector<int> img_width_, img_height_;
   int patch_size_;
   Matrix fovs_;
-  vector<box> fov_box_;
+  std::vector<box> fov_box_;
   ImageDataIterator* jitter_source_;
 };
 
@@ -250,11 +250,11 @@ class SequenceDataIterator : public DataIterator {
   virtual void Preprocess(Matrix& m);
 
  protected:
-  void SetupRowMapping(const vector<int>& num_frames);
+  void SetupRowMapping(const std::vector<int>& num_frames);
   
   DataIterator* it_;
   int seq_length_, frame_size_;
-  vector<int> row_mapping_;
+  std::vector<int> row_mapping_;
   const bool pick_first_;
 };
 

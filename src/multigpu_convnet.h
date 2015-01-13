@@ -4,12 +4,12 @@
 
 class MultiGPUConvNet : public ConvNet {
  public:
-  MultiGPUConvNet(const string& model_file);
+  MultiGPUConvNet(const std::string& model_file);
 
  protected:
   virtual void Fprop(bool train);
   virtual void ComputeDeriv();
-  virtual void GetLoss(vector<float>& error);
+  virtual void GetLoss(std::vector<float>& error);
   virtual void Bprop(bool update_weights);
 
   bool broadcast_;

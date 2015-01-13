@@ -1,4 +1,5 @@
 #include "response_norm_edge.h"
+using namespace std;
 
 ResponseNormEdge::ResponseNormEdge(const config::Edge& edge_config) :
   Edge(edge_config),

@@ -6,8 +6,6 @@
 #include <vector>
 #include <random>
 
-using namespace std;
-
 #include <opencv2/core/core.hpp>
 
 typedef struct {
@@ -21,7 +19,7 @@ typedef struct {
 template<typename T>
 class RawImageFileIterator {
 public:
-  RawImageFileIterator(const vector<string> &filelist, const int image_size_y,
+  RawImageFileIterator(const std::vector<std::string> &filelist, const int image_size_y,
                        const int image_size_x, const int raw_image_size_y,
                        const int raw_image_size_x, const bool flip,
                        const bool translate, const bool random_jitter,
@@ -56,11 +54,11 @@ private:
   void ExtractRGB(cv::Mat &image, T* data_ptr, int position) const;
   void GetCoordinates(int width, int height, int position, int* left, int* top, bool* flip) const;
 
-  default_random_engine generator_;
-  uniform_real_distribution<float> * distribution_;
-  vector<float> angles_, trans_y_, trans_x_, scale_;
+  std::default_random_engine generator_;
+  std::uniform_real_distribution<float> * distribution_;
+  std::vector<float> angles_, trans_y_, trans_x_, scale_;
   int dataset_size_, row_, image_id_, position_;
-  vector<string> filenames_;
+  std::vector<std::string> filenames_;
   cv::Mat image_;
   const int image_size_y_, image_size_x_, num_positions_, raw_image_size_y_,
             raw_image_size_x_;
@@ -74,7 +72,7 @@ template<typename T>
 class SlidingWindowIterator {
 public:
   SlidingWindowIterator(const int window_size, const int stride);
-  void SetImage(const string& filename);
+  void SetImage(const std::string& filename);
   int GetNumWindows() { return num_windows_;}
   void GetNext(T* data_ptr);
   void GetNext(T* data_ptr, int left, int top);
@@ -92,7 +90,7 @@ private:
 template<typename T>
 class BBoxImageFileIterator : public RawImageFileIterator<T> {
 public:
-  BBoxImageFileIterator(const vector<string>& filelist, const string& bbox_file,
+  BBoxImageFileIterator(const std::vector<std::string>& filelist, const std::string& bbox_file,
                         const int image_size_y, const int image_size_x,
                         const int raw_image_size_y, const int raw_image_size_x,
                         const bool flip, const bool translate,
@@ -109,10 +107,10 @@ protected:
 
 private:
   void GetCropCoordinates(int row, int width, int height, int* xmin, int* xmax, int* ymin, int* ymax) const;
-  default_random_engine generator_;
-  uniform_real_distribution<float> * distribution_;
-  vector<vector<box>> data_;
-  vector<float> box_rv_;
+  std::default_random_engine generator_;
+  std::uniform_real_distribution<float> * distribution_;
+  std::vector<std::vector<box>> data_;
+  std::vector<float> box_rv_;
   const float context_factor_;
   const bool center_on_bbox_;
 };
@@ -122,7 +120,7 @@ template<typename T>
 class CropIterator {
 public:
   CropIterator(const int image_size, const float context_factor, const bool warp_bbox);
-  void SetImage(const string& filename, const vector<box>& crops);
+  void SetImage(const std::string& filename, const std::vector<box>& crops);
   void GetNext(T* data_ptr);
   bool Done();
   void Reset();
@@ -130,7 +128,7 @@ public:
 private:
   const int image_size_;
   cv::Mat image_;
-  vector<box> crops_;
+  std::vector<box> crops_;
   bool done_;
   int index_;
   const float context_factor_;

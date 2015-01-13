@@ -1,5 +1,7 @@
 #include "avgpool_edge.h"
 
+using namespace std;
+
 AvgPoolEdge::AvgPoolEdge(const config::Edge& edge_config) :
   Edge(edge_config),
   conv_desc_(Edge::GetConvDesc(edge_config)) {}

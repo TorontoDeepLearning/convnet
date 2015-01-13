@@ -1,5 +1,6 @@
 #include "fc_edge.h"
 #include <iostream>
+using namespace std;
 
 FCEdge::FCEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config){}

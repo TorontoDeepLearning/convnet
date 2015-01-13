@@ -1,4 +1,5 @@
 #include "multigpu_convnet.h"
+using namespace std;
 
 MultiGPUConvNet::MultiGPUConvNet(const string& model_file):
   ConvNet(model_file) {

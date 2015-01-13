@@ -17,6 +17,7 @@
 #endif
 
 using namespace cv;
+using namespace std;
 
 inline void resizeOCV(Mat &img, unsigned int width, unsigned int height) {
   Mat out1, out2;

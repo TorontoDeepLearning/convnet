@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+using namespace std;
 
 vector<rnd_struct> Matrix::rnd_;
 vector<Matrix> Matrix::ones_, Matrix::temp_;

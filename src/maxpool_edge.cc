@@ -1,4 +1,5 @@
 #include "maxpool_edge.h"
+using namespace std;
 
 MaxPoolEdge::MaxPoolEdge(const config::Edge& edge_config) :
   Edge(edge_config),

@@ -8,6 +8,7 @@
 #include <limits>
 
 using namespace std;
+using namespace cimg_library;
 
 void readFileList(const string& list_name, vector<string>& filenames)
 {

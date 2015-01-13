@@ -1,4 +1,5 @@
 #include "upsample_edge.h"
+using namespace std;
 
 UpSampleEdge::UpSampleEdge(const config::Edge& edge_config) :
   Edge(edge_config),

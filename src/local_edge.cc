@@ -1,5 +1,6 @@
 #include "local_edge.h"
 #include <iostream>
+using namespace std;
 
 LocalEdge::LocalEdge(const config::Edge& edge_config) :
   EdgeWithWeight(edge_config),

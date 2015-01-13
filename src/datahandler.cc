@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+using namespace std;
 
 DataHandler::DataHandler(const config::DatasetConfig& config) :
   preload_thread_(NULL),

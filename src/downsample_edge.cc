@@ -1,4 +1,5 @@
 #include "downsample_edge.h"
+using namespace std;
 
 DownSampleEdge::DownSampleEdge(const config::Edge& edge_config) :
   Edge(edge_config),

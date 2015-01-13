@@ -4,15 +4,15 @@
 
 class GradChecker : public ConvNet {
  public:
-  GradChecker(const string& model_file);
-  void Run(const string& output_file);
+  GradChecker(const std::string& model_file);
+  void Run(const std::string& output_file);
   void ComputeNumericGrad(Matrix& w, float epsilon,
-                          vector<float>& numerical_grad, int max_params=0);
-  bool GradCheck(Matrix& w, vector<float>& eps_values, int num_params,
-                 const float* analytical_g, const string& output_dset,
+                          std::vector<float>& numerical_grad, int max_params=0);
+  bool GradCheck(Matrix& w, std::vector<float>& eps_values, int num_params,
+                 const float* analytical_g, const std::string& output_dset,
                  hid_t& output_file);
 
  protected:
-  virtual void GetLoss(vector<float>& error);
+  virtual void GetLoss(std::vector<float>& error);
 };
 #endif

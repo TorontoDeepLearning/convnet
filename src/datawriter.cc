@@ -1,4 +1,5 @@
 #include "datawriter.h"
+using namespace std;
 
 DataWriter::DataWriter(const config::FeatureExtractorConfig config) :
   dataset_size_(0) {

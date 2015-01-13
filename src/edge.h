@@ -23,8 +23,8 @@ class Edge {
   Edge(const config::Edge& edge_config);
   virtual ~Edge();
   
-  /** Returns a human-readable string describing the edge.*/
-  virtual string GetDescription();
+  /** Returns a human-readable std::string describing the edge.*/
+  virtual std::string GetDescription();
 
   /** Setup memory for parameters.
    * @param p The slice of memory given to this edge.
@@ -136,11 +136,11 @@ class Edge {
   void SetDest(Layer* dest);
   Layer* GetSource();
   Layer* GetDest();
-  const string& GetSourceName();
-  const string& GetDestName();
-  const string& GetName();
-  const string& GetSourceSliceName();
-  const string& GetDestSliceName();
+  const std::string& GetSourceName();
+  const std::string& GetDestName();
+  const std::string& GetName();
+  const std::string& GetSourceSliceName();
+  const std::string& GetDestSliceName();
 
   /** Set the number of input channels.*/
   void SetInputChannels(int a);
@@ -149,12 +149,12 @@ class Edge {
 
   void SetMark();
   bool HasMark();
-  string GetTiedEdgeName();
+  std::string GetTiedEdgeName();
   bool IsTied();
   int GetGPUId() const { return gpu_id_; }
   bool GradCheck() const { return grad_check_;}
   int GradCheckNumParams() const { return grad_check_num_params_;}
-  void GradCheckEpsilon(vector<float>& epsilon_values) const;
+  void GradCheckEpsilon(std::vector<float>& epsilon_values) const;
 
   /** Selects the appropriate derived class for the edge config.*/
   static Edge* ChooseEdgeClass(const config::Edge& edge_config);
@@ -163,14 +163,14 @@ class Edge {
   static void GetNumModules(
       const ConvDesc conv_desc, int image_size_y, int image_size_x, int image_size_t,
       int& num_modules_y, int& num_modules_x, int& num_modules_t);
-  static string GetDescription(const ConvDesc conv_desc);
+  static std::string GetDescription(const ConvDesc conv_desc);
  
  protected:
   Layer *source_;  /** The source layer for this edge.*/
   Layer *dest_;  /** The destination layer for this edge.*/
-  const string source_node_, dest_node_, source_node_slice_, dest_node_slice_,
+  const std::string source_node_, dest_node_, source_node_slice_, dest_node_slice_,
         tied_edge_name_;
-  string name_;
+  std::string name_;
   Edge* tied_edge_;  /* The edge to which this edge is tied.*/
   int num_input_channels_, num_output_channels_,
       image_size_y_, image_size_x_, image_size_t_,
@@ -186,6 +186,6 @@ class Edge {
   bool is_root_;  // The process that is root.
   const bool grad_check_;
   const int grad_check_num_params_;
-  vector<float> grad_check_epsilon_;
+  std::vector<float> grad_check_epsilon_;
 };
 #endif

@@ -1,6 +1,7 @@
 #include "edge_with_weight.h"
 #include <sstream>
 #include <iostream>
+using namespace std;
 
 EdgeWithWeight::EdgeWithWeight(const config::Edge& edge_config) :
   Edge(edge_config),

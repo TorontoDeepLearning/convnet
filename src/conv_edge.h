@@ -6,7 +6,7 @@
 class ConvEdge : public EdgeWithWeight {
  public:
   ConvEdge(const config::Edge& edge_config);
-  virtual string GetDescription();
+  virtual std::string GetDescription();
   virtual void SetMemory(Matrix& p);
   virtual void SetGradMemory(Matrix& p);
   virtual size_t GetParameterMemoryRequirement();

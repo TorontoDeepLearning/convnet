@@ -16,10 +16,10 @@ class ConvNet {
   /**
   * Instantiate a model using the config in model_file.
   */ 
-  ConvNet(const string& model_file);
+  ConvNet(const std::string& model_file);
   virtual ~ConvNet();
-  virtual void SetupDataset(const string& train_data_config_file);
-  virtual void SetupDataset(const string& train_data_config_file, const string& val_data_config_file);
+  virtual void SetupDataset(const std::string& train_data_config_file);
+  virtual void SetupDataset(const std::string& train_data_config_file, const std::string& val_data_config_file);
 
   /** Start training.*/
   virtual void Train();
@@ -28,24 +28,24 @@ class ConvNet {
    * @param dataset The dataset.
    * @param error A vector of errors (one element for each output layer).
    */ 
-  void Validate(DataHandler* dataset, vector<float>& error);
+  void Validate(DataHandler* dataset, std::vector<float>& error);
   
   /** Validate the model on the validation dataset and return the error.
    * @param error A vector of errors (one element for each output layer).
    */ 
-  void Validate(vector<float>& error);
+  void Validate(std::vector<float>& error);
 
   /** Write the model to disk.*/
   void Save();
 
   /** Write the model to disk in the file specified. */
-  void Save(const string& output_file);
+  void Save(const std::string& output_file);
 
   /** Load the model.*/
   void Load();
 
   /** Load the model from the file specified.*/
-  void Load(const string& input_file);
+  void Load(const std::string& input_file);
 
   /** Display the state of the model.
    * Shows the layers and edges for which display is enabled.
@@ -58,7 +58,7 @@ class ConvNet {
    * @param config Feature extractor configuartion.
    */ 
   void ExtractFeatures(const config::FeatureExtractorConfig& config);
-  void ExtractFeatures(const string& config_file);
+  void ExtractFeatures(const std::string& config_file);
 
   /** Allocate memory for the model.
    * @param fprop_only If true, does not allocate memory needed for optimization.
@@ -67,7 +67,7 @@ class ConvNet {
 
   void SetBatchsize(const int batch_size);
   
-  Layer* GetLayerByName(const string& name);
+  Layer* GetLayerByName(const std::string& name);
 
   /** Forward propagate through the network.
    * @param train If true, this forward prop is being done during training,
@@ -94,7 +94,7 @@ class ConvNet {
    */ 
   void AllocateEdgeMemory(bool fprop_only);
   
-  string GetCheckpointFilename();
+  std::string GetCheckpointFilename();
   void TimestampModel();
 
   /** Sets up fields of view as seen by each location at the output layer.*/
@@ -130,28 +130,28 @@ class ConvNet {
   virtual void ComputeDeriv();
 
   /** Computes the loss function (to be displayed).*/ 
-  virtual void GetLoss(vector<float>& error);
+  virtual void GetLoss(std::vector<float>& error);
   
   virtual void UpdateWeights();
 
   /** Takes one optimization step.*/ 
-  virtual void TrainOneBatch(vector<float>& error);
+  virtual void TrainOneBatch(std::vector<float>& error);
   virtual void DisplayLayers();
   void DisplayEdges();
   void InsertPolyak();
   void LoadPolyakWeights();
   void LoadCurrentWeights();
   void WriteLog(int current_iter, float time, float training_error);
-  void WriteLog(int current_iter, float time, const vector<float>& training_error);
-  void WriteValLog(int current_iter, const vector<float>& error);
+  void WriteLog(int current_iter, float time, const std::vector<float>& training_error);
+  void WriteValLog(int current_iter, const std::vector<float>& error);
   
   // Data parallel synchronization.
   void Accumulate(Matrix& mat, int tag);
-  void Accumulate(vector<float>& v, int tag);
+  void Accumulate(std::vector<float>& v, int tag);
   void Broadcast(Matrix& mat);
 
   /** Decides if learning rate should be reduced.*/
-  bool CheckReduceLearningRate(const vector<float>& val_error);
+  bool CheckReduceLearningRate(const std::vector<float>& val_error);
 
   /** Multiply learning rate by factor.*/
   void ReduceLearningRate(const float factor);
@@ -160,16 +160,16 @@ class ConvNet {
   void DisplayLocalization();
 
   config::Model model_;  /** The model protobuf config.*/
-  vector<Layer*> layers_;  /** The layers in the network.*/
-  vector<Layer*> data_layers_;  /** Layers which have data associated with them.*/
-  vector<Layer*> input_layers_;  /** Input layers.*/
-  vector<Layer*> output_layers_;  /** Output layers.*/
-  vector<Edge*> edges_;  /** The edges in the network.*/
+  std::vector<Layer*> layers_;  /** The layers in the network.*/
+  std::vector<Layer*> data_layers_;  /** Layers which have data associated with them.*/
+  std::vector<Layer*> input_layers_;  /** Input layers.*/
+  std::vector<Layer*> output_layers_;  /** Output layers.*/
+  std::vector<Edge*> edges_;  /** The edges in the network.*/
   int max_iter_, batch_size_, current_iter_, lr_reduce_counter_;
   DataHandler *train_dataset_, *val_dataset_;
-  string checkpoint_dir_, output_file_, model_name_;
+  std::string checkpoint_dir_, output_file_, model_name_;
   ImageDisplayer displayer_;
-  string model_filename_, timestamp_, log_file_, val_log_file_;
+  std::string model_filename_, timestamp_, log_file_, val_log_file_;
 
   // Field of view.
   int fov_size_, fov_stride_, fov_pad1_, fov_pad2_;
@@ -185,13 +185,13 @@ class ConvNet {
   ImageDisplayer* localization_display_;
 
   // Polyak averaging.
-  vector<Matrix> polyak_parameters_;
+  std::vector<Matrix> polyak_parameters_;
   Matrix parameters_backup_;
   int polyak_queue_size_, polyak_index_;
   bool polyak_queue_full_;
 
   // Data tying.
-  map<Layer*, Layer*> input_tied_data_layers_, output_tied_data_layers_;
+  std::map<Layer*, Layer*> input_tied_data_layers_, output_tied_data_layers_;
 };
 
 #endif
