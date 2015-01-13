@@ -29,6 +29,9 @@ class Optimizer {
   // gets interrupted for some reason.
   virtual void LoadParameters(hid_t file, const string& prefix);
   virtual void SaveParameters(hid_t file, const string& prefix);
+  
+  // Shared hierarchical priors.
+  void ApplySharedPriorGradient(Matrix& gradient, Matrix& parameter);
 
   static Optimizer* ChooseOptimizer(const config::Optimizer& config);
 
@@ -40,6 +43,8 @@ class Optimizer {
   float epsilon_, minimum_epsilon_, decay_factor_;
   const int epsilon_decay_timescale_, start_optimization_after_;
   const float l2_decay_, weight_norm_limit_, weight_norm_constraint_;
+  const bool shared_prior_;
+  Matrix shared_prior_gradient_matrix_;
   int step_;
 };
 

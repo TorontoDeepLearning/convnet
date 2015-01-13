@@ -112,56 +112,6 @@ void WritePbtxt(const string& pbtxt_file, const T& model) {
 }
 template void WritePbtxt<config::Model>(const string&, const config::Model&);
 
-
-/*
-void ReadModelText(const string& model_file, config::Model& model) {
-  stringstream ss;
-  ifstream file(model_file.c_str());
-  ss << file.rdbuf();
-  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &model)) {
-    cerr << "Could not read text proto buffer : " << model_file << endl;
-    exit(1);
-  }
-}
-void ReadFeatureExtractorConfig(const string& config_file, config::FeatureExtractorConfig& config) {
-  stringstream ss;
-  ifstream file(config_file.c_str());
-  ss << file.rdbuf();
-  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &config)) {
-    cerr << "Could not read text proto buffer : " << config_file << endl;
-    exit(1);
-  }
-}
-void ReadDataConfig(const string& data_config_file, config::DatasetConfig& data_config) {
-  stringstream ss;
-  ifstream file(data_config_file.c_str());
-  ss << file.rdbuf();
-  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &data_config)) {
-    cerr << "Could not read text proto buffer : " << data_config_file << endl;
-    exit(1);
-  }
-}
-
-void ReadDataStreamConfig(const string& data_config_file, config::DataStreamConfig& data_config) {
-  stringstream ss;
-  ifstream file(data_config_file.c_str());
-  ss << file.rdbuf();
-  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &data_config)) {
-    cerr << "Could not read text proto buffer : " << data_config_file << endl;
-    exit(1);
-  }
-}
-
-void ReadLayerConfig(const string& layer_config_file, config::Layer& layer_config) {
-  stringstream ss;
-  ifstream file(layer_config_file.c_str());
-  ss << file.rdbuf();
-  if (!google::protobuf::TextFormat::ParseFromString(ss.str(), &layer_config)) {
-    cerr << "Could not read text proto buffer : " << layer_config_file << endl;
-    exit(1);
-  }
-}
-*/
 void WriteModelBinary(const string& output_file, const config::Model& model) {
   ofstream out(output_file.c_str());
   model.SerializeToOstream(&out);
@@ -173,7 +123,6 @@ void ReadModelBinary(const string& input_file, config::Model& model) {
   model.ParseFromIstream(&in);
   in.close();
 }
-
 
 void WriteHDF5CPU(hid_t file, float* mat, int rows, int cols, const string& name) {
   hid_t dataset, dataspace;

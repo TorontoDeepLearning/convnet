@@ -36,13 +36,38 @@ Optimizer::Optimizer(const config::Optimizer& optimizer_config) :
   l2_decay_(optimizer_config.l2_decay()),
   weight_norm_limit_(optimizer_config.weight_norm_limit()),  // impose upper limit.
   weight_norm_constraint_(optimizer_config.weight_norm_constraint()),  // impose equality.
-  step_(0) 
-{}
+  shared_prior_(optimizer_config.shared_prior()),
+  step_(0) {
+  if (shared_prior_) {
+    vector<string> lines;
+    if (!ReadLines(optimizer_config.shared_prior_file(), lines)) {
+      cerr << "Could not read file: " << optimizer_config.shared_prior_file() << endl;
+      exit(1);
+    }
+    int num_classes = lines.size();
+    vector<int> superclass;
+    map<int, int> child_count;
+    for (const string& line : lines) {
+      int superclass_id = stoi(line);
+      superclass.push_back(superclass_id);
+      child_count[superclass_id]++;
+    }
+    shared_prior_gradient_matrix_.AllocateGPUMemory(num_classes, num_classes);
+    float* d = shared_prior_gradient_matrix_.GetHostData();
+    float lambda_1 = optimizer_config.l2_decay();
+    float lambda_2 = optimizer_config.shared_prior_cost();
+    for (int i = 0; i < num_classes; i++) {
+      int sup_class_i = superclass[i];
+      float val = 1.0f / (child_count[sup_class_i] + lambda_2 / lambda_1);
+      for (int j = 0; j < num_classes; j++) {
+        d[i * num_classes + j] = lambda_1 * (((i==j) ? 1: 0) - ((sup_class_i == superclass[j]) ? val: 0));
+      }
+    }
+    shared_prior_gradient_matrix_.CopyToDevice();
+  }
+}
 
 Optimizer::~Optimizer() {}
-void Optimizer::AllocateMemory(const int rows, const int cols) {}
-void Optimizer::LoadParameters(hid_t file, const string& prefix) {}
-void Optimizer::SaveParameters(hid_t file, const string& prefix) {}
 void Optimizer::ReduceLearningRate(float factor) {
   epsilon_ *= factor;
 }
@@ -81,6 +106,21 @@ float Optimizer::GetDecayedEpsilon() const {
 void Optimizer::NotifyStart(Matrix& parameter) {
 }
 
+void Optimizer::AllocateMemory(const int rows, const int cols) {}
+void Optimizer::LoadParameters(hid_t file, const string& prefix) {}
+void Optimizer::SaveParameters(hid_t file, const string& prefix) {}
+
+void Optimizer::ApplySharedPriorGradient(Matrix& gradient, Matrix& parameter) {
+  if (parameter.GetRows() == shared_prior_gradient_matrix_.GetRows()) {
+    Matrix::Dot(shared_prior_gradient_matrix_, parameter, gradient, 1, 1);
+  } else if (parameter.GetCols() == shared_prior_gradient_matrix_.GetRows()) {
+    Matrix::Dot(parameter, shared_prior_gradient_matrix_, gradient, 1, 1);
+  } else {
+    cerr << "Incompatible dimensions in ApplySharedPriorGradient." << endl;
+    exit(1);
+  }
+}
+
 SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
   Optimizer(optimizer_config),
   gradient_clip_(optimizer_config.gradient_clip()),
@@ -91,10 +131,12 @@ SGDOptimizer::SGDOptimizer(const config::Optimizer& optimizer_config) :
   nesterov_momentum_(optimizer_config.nesterov_momentum()) {}
 
 void SGDOptimizer::AllocateMemory(const int rows, const int cols) {
+  Optimizer::AllocateMemory(rows, cols);
   gradient_history_.AllocateGPUMemory(rows, cols, "optimizer");
 }
 
 void SGDOptimizer::LoadParameters(hid_t file, const string& prefix) {
+  Optimizer::LoadParameters(file, prefix);
   stringstream ss;
   ss << prefix << "_" << "gradient_history";
   gradient_history_.ReadHDF5(file, ss.str());
@@ -104,6 +146,7 @@ void SGDOptimizer::LoadParameters(hid_t file, const string& prefix) {
 }
 
 void SGDOptimizer::SaveParameters(hid_t file, const string& prefix) {
+  Optimizer::SaveParameters(file, prefix);
   stringstream ss;
   ss << prefix << "_" << "gradient_history";
   gradient_history_.WriteHDF5(file, ss.str());
@@ -134,6 +177,7 @@ void SGDOptimizer::Optimize(Matrix& gradient, Matrix& parameter) {
 
     // L2 decay.
     if (l2_decay_ > 0) gradient.Add(parameter, l2_decay_);
+    if (shared_prior_) ApplySharedPriorGradient(gradient, parameter);
    
     // Clip gradients to prevent explosions.
     if (gradient_clip_ > 0) {

@@ -46,6 +46,7 @@ class Matrix {
   void CopyFromMainMemory(Matrix& mat);
   void Reshape(const size_t rows, const size_t cols);
   void Print();
+  void PrintToFile(const std::string& filename);
   bool CheckNaN();
   void WriteHDF5(hid_t file, const std::string& name);
   void ReadHDF5(hid_t file, const std::string& name);
@@ -207,7 +208,6 @@ protected:
   cudamat* GetMat() { return &mat_; }
   cudamat* GetMatTranspose() { return &mat_t_; }
 
-  void PrintToFile(const std::string& filename);
   void WriteToFile(FILE* file);
   void ReadFromFile(FILE* file);
   float Norm(); // duplicated

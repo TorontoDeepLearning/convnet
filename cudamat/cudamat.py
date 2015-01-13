@@ -1488,7 +1488,7 @@ class CUDAMatrix(object):
 
         return target
 
-    def mult(self, val, target = None, scale_targets=0):
+    def mult(self, val, target = None, scale_targets=0.0):
         """Multiply self by val, where val can be a scalar or a CUDAMatrix with
         the same dimensions as self. """
 
@@ -1496,9 +1496,9 @@ class CUDAMatrix(object):
             target = self
 
         if isinstance(val, CUDAMatrix):
-            err_code = _cudamat.mult_elementwise(self.p_mat, val.p_mat, target.p_mat, scale_targets)
+            err_code = _cudamat.mult_elementwise(self.p_mat, val.p_mat, target.p_mat, ct.c_float(scale_targets))
         elif isinstance(val, (int, float)):
-            err_code = _cudamat.mult_by_scalar(self.p_mat, ct.c_float(val), target.p_mat, scale_targets)
+            err_code = _cudamat.mult_by_scalar(self.p_mat, ct.c_float(val), target.p_mat, ct.c_float(scale_targets))
         else:
             raise ValueError, "Value must be of type CUDAMatrix, int, or float."
 

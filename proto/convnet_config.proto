@@ -99,6 +99,10 @@ message Optimizer {
 
   // Use Nesterov momentum.
   optional bool nesterov_momentum = 18 [default=false];
+
+  optional bool shared_prior = 19 [default=false];
+  optional float shared_prior_cost = 20 [default=0.0];
+  optional string shared_prior_file = 21;
 }
 
 message Edge {

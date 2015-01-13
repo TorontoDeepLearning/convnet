@@ -270,6 +270,10 @@ void Matrix::AllocateAndReadHDF5(hid_t file, const string& name)
     ReadHDF5(file, name);
 }
 
+void Matrix::PrintToFile(const string& filename) {
+  //TODO: Implement this.
+}
+
 void Matrix::Print()
 {
     int rows = mat_->size[0];
