@@ -1863,7 +1863,9 @@ __global__ void kLSTMFprop(float *s_in, float* s_out, float* w_diag, float* b, i
       a = use_relu ? relu(a + b_a[j]) : tanh(a + b_a[j]);
       c = c * f + i * a;
       o = sigmoid(o + c * w_o[j] + b_o[j]);
-      h = c * use_relu ? o : tanh(o);
+      h = o * (use_relu ? c : tanh(c));  // relu(c) = c, because c is always +ve here.
+      
+      __syncthreads();
 
       i_out[p] = i;
       f_out[p] = f;
@@ -1924,6 +1926,7 @@ __global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out,
       grad_f = grad_c * c_old * deriv_of_sigmoid(f);
       grad_c = grad_c * f + grad_f * w_f[j] + grad_i * w_i[j]; 
 
+      __syncthreads();
       d_i_out[p] = grad_i;
       d_f_out[p] = grad_f;
       d_o_out[p] = grad_o;

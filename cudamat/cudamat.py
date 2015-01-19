@@ -568,6 +568,24 @@ class CUDAMatrix(object):
 
         _cudamat.set_transpose(self.p_mat, ct.c_int(1 * is_trans))
 
+    def col_slice(self, first_col, last_col):
+        mat = cudamat()
+
+        err_code = _cudamat.get_slice(self.p_mat, ct.pointer(mat), ct.c_int(first_col), ct.c_int(last_col))
+
+        if err_code:
+            raise generate_exception(err_code)
+
+        new_mat = CUDAMatrix(mat)
+
+        try:
+            new_mat.sliceof = self.sliceof
+        except:
+            new_mat.sliceof = self
+
+        return new_mat
+
+
     def slice(self, first_col, last_col):
         mat = cudamat()
 
