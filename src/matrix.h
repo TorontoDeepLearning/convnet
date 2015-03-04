@@ -38,6 +38,7 @@ class Matrix {
   void CopyP2PAsync(Matrix& val);
   void GetSlice(Matrix& slice, size_t start, size_t end);
   void FillWithRand();
+  void SampleBernoulli(float val);
   void FillWithRandn();
   void CopyToHost();
   void CopyToDevice();
@@ -74,8 +75,9 @@ class Matrix {
   void AddColVec(Matrix& v, float alpha);
   void MultByRowVec(Matrix& v);
   void DivideByColVec(Matrix& v);
+  void DivideByRowVec(Matrix& v);
   float Sum();
-  void SumRows(Matrix& target, float alpha, float beta);
+  void SumRows(Matrix& target, float alpha, float beta);  // target = alpha*target + beta*...
   void SumCols(Matrix& target, float alpha, float beta);
   void Mult(float val);
   void Mult(Matrix& val);
@@ -184,6 +186,12 @@ class Matrix {
                              Matrix& height_offset, Matrix& flip_bit,
                              int image_size_y, int image_size_x, int patch_size_y,
                              int patch_size_x);
+
+  static void BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
+                      Matrix& sigma, Matrix& target, float scale_targets);
+
+  static void BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
+                     Matrix& dgamma, Matrix& dbeta);
 
   static void GetOnes(size_t rows, size_t cols, Matrix& ones);
   static void RegisterTempMemory(size_t size);

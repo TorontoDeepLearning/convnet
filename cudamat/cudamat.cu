@@ -3279,6 +3279,57 @@ int lstm_outp(cudamat* s_in, cudamat* s_out, cudamat* d_out, cudamat* dw_dense, 
     return CUDA_ERROR;
   return 0;
 }
+
+int bn_bprop(cudamat* deriv, cudamat* input, cudamat* gamma, cudamat* mu,
+             cudamat* sigma, cudamat* target, float scale_targets) {
+  int height = deriv->size[0];
+  int width  = deriv->size[1];
+  if (input->size[0] != height || input->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (target->size[0] != height || target->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (gamma->size[0] != 1 || gamma->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (mu->size[0] != 1 || mu->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (sigma->size[0] != 1 || sigma->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  int shared_mem_size = 32 * sizeof(float);
+  kBNBprop<<<width, 32, shared_mem_size>>> (
+           deriv->data_device, input->data_device, gamma->data_device,
+           mu->data_device, sigma->data_device, target->data_device, width,
+           height, scale_targets);
+  if (checkCUDAError())
+    return CUDA_ERROR;
+  return 0;
+}
+
+int bn_grad(cudamat* deriv, cudamat* input, cudamat* mu, cudamat* sigma,
+            cudamat* dgamma, cudamat* dbeta) {
+  int height = deriv->size[0];
+  int width  = deriv->size[1];
+  int shared_mem_size = 32 * sizeof(float);
+  if (input->size[0] != height || input->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (mu->size[0] != 1 || mu->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (sigma->size[0] != 1 || sigma->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (dgamma->size[0] != 1 || dgamma->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (dbeta->size[0] != 1 || dbeta->size[1] != width)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  kBNGrad<<<width, 32, shared_mem_size>>> (
+           deriv->data_device, input->data_device,
+           mu->data_device, sigma->data_device,
+           dgamma->data_device, dbeta->data_device,
+           width, height);
+  if (checkCUDAError())
+    return CUDA_ERROR;
+  return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif

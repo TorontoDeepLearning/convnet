@@ -108,7 +108,7 @@ void LocalEdge::SetGradMemory(Matrix& p) {
 }
 
 
-void LocalEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void LocalEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
   Matrix::LocalUp(input, w, output, conv_desc_, scale_targets);

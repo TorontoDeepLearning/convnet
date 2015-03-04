@@ -274,6 +274,14 @@ int get_logistic_correct_normalized(cudamat* mat1, cudamat* mat2, cudamat* out);
 int lstm_fprop(cudamat* s_in, cudamat* s_out, cudamat* w_dense, cudamat* w_diag, cudamat* b, bool init, bool use_relu);
 int lstm_bprop(cudamat* s_in, cudamat* s_out, cudamat* d_in, cudamat* d_out, cudamat* w_dense, cudamat* w_diag, bool init, bool use_relu);
 int lstm_outp(cudamat* s_in, cudamat* s_out, cudamat* d_out, cudamat* dw_dense, cudamat* dw_diag, cudamat* db, bool init);
+
+// Batch Normalization
+
+int bn_bprop(cudamat* deriv, cudamat* input, cudamat* gamma, cudamat* mu,
+             cudamat* sigma, cudamat* target, float scale_targets);
+
+int bn_grad(cudamat* deriv, cudamat* input, cudamat* mu, cudamat* sigma,
+            cudamat* dgamma, cudamat* dbeta);
 #ifdef __cplusplus
 }
 #endif

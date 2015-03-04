@@ -29,6 +29,12 @@ inline void resizeOCV(Mat &img, unsigned int width, unsigned int height) {
   img = out2;
 }
 
+inline void mirrorOCV(Mat &img) {
+  Mat out;
+  flip(img, out, 1); // 0 - x, 1 - y, -1 - both
+  img = out;
+}
+
 inline unsigned int spectrumOCV(Mat &img) {
   return 1 + (img.type() >> CV_CN_SHIFT);
 }
@@ -73,7 +79,8 @@ RawVideoFileIterator<T>::RawVideoFileIterator(
   filenames_(filelist),
   image_size_y_(image_size_y),
   image_size_x_(image_size_x),
-  num_videos_(filelist.size()) {
+  num_videos_(filelist.size()),
+  flip_(true) {
 
   cout << "Num videos " << num_videos_ << endl;
   bool read_videos = false;
@@ -151,6 +158,7 @@ void RawVideoFileIterator<T>::GetNext(T* data_ptr) {
   bool success = video_.read(image);
   if (success && !image.empty() && image.rows > 0 && image.cols > 0) {
     resizeOCV(image, image_size_x_, image_size_y_);
+    if (flip_) mirrorOCV(image);
     image.copyTo(image_);
   } else {
     cerr << "Could not read frame_id " << image_id_

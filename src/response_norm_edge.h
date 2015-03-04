@@ -9,7 +9,7 @@ class ResponseNormEdge : public Edge {
   ResponseNormEdge(const config::Edge& edge_config);
   virtual std::string GetDescription();
   virtual void SetTiedTo(Edge* e);
-  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
+  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
   virtual void SetImageSize(int image_size_y, int image_size_x, int image_size_t);

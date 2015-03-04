@@ -8,7 +8,7 @@ class AvgPoolEdge : public Edge {
   AvgPoolEdge(const config::Edge& edge_config);
   virtual std::string GetDescription();
   virtual void SetTiedTo(Edge* e);
-  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
+  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
 

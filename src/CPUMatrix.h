@@ -42,6 +42,7 @@ public:
   void GetSlice(Matrix& slice, size_t start, size_t end);
   void FillWithRand();
   void FillWithRandn();
+  void SampleBernoulli(float val);
   void CopyToHost() { /*Do nothing*/ }
   void CopyToDevice() { /*Do nothing*/ }
   void CopyToDeviceSlice(const size_t start, const size_t end) { /*Do nothing*/ }
@@ -77,6 +78,7 @@ public:
   void AddColVec(Matrix& v, float alpha);
   void MultByRowVec(Matrix& v);
   void DivideByColVec(Matrix& v);
+  void DivideByRowVec(Matrix& v);
   float Sum();
   void SumRows(Matrix& target, float alpha, float beta);
   void SumCols(Matrix& target, float alpha, float beta);
@@ -188,6 +190,11 @@ public:
                              int image_size_y, int image_size_x, int patch_size_y,
                              int patch_size_x);
 
+  static void BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
+                      Matrix& sigma, Matrix& target, float scale_targets);
+
+  static void BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
+                     Matrix& dgamma, Matrix& dbeta);
   static void GetOnes(size_t rows, size_t cols, Matrix& ones);
   static void RegisterTempMemory(size_t size) { /*Do nothing*/ }
   static void RegisterTempMemory(size_t size, const std::string& why) { /*Do nothing*/ }

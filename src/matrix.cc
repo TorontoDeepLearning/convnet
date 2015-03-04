@@ -241,6 +241,15 @@ void Matrix::FillWithRand() {
   }
 }
 
+void Matrix::SampleBernoulli(float val) {
+  int err_code = assign_scalar(&mat_, val);
+  err_code = sample_bernoulli(&rnd_[current_gpu_id_], &mat_, &mat_);
+  if (err_code != 0) {
+    cerr << "Error: Could not fill with rand : " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
 float Matrix::Sum() {
   Matrix ones;
   size_t rows = mat_.size[0];
@@ -510,7 +519,7 @@ void Matrix::SetupCUDADevices(const vector<int>& boards) {
   temp_.resize(num_boards_);
 
   for (int i = 0; i < num_boards_; i++) {
-    temp_size_[i] = 0;
+    temp_size_[i] = 10000;
     ones_size_[i] = 1024 * 512;
   }
   SetDevice(0);
@@ -636,6 +645,10 @@ void Matrix::AddColVec(Matrix& v, float alpha) {
 
 void Matrix::DivideByColVec(Matrix& v) {
   div_by_col_vec(&mat_, v.GetMat(), &mat_);
+}
+
+void Matrix::DivideByRowVec(Matrix& v) {
+  div_by_row_vec(&mat_, v.GetMat(), &mat_);
 }
 
 // self *= val
@@ -1064,6 +1077,27 @@ void Matrix::RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor) 
   int err_code = rms_prop(rms_history.GetMat(), gradient.GetMat(), factor);
   if (err_code != 0) {
     cerr << "Error in rms update " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+void Matrix::BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
+                     Matrix& sigma, Matrix& target, float scale_targets) {
+  int err_code = bn_bprop(deriv.GetMat(), input.GetMat(), gamma.GetMat(),
+                          mu.GetMat(), sigma.GetMat(), target.GetMat(), scale_targets);
+  if (err_code != 0) {
+    cerr << "Error in BNBprop " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+
+void Matrix::BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
+                    Matrix& dgamma, Matrix& dbeta) {
+  int err_code = bn_grad(deriv.GetMat(), input.GetMat(), mu.GetMat(),
+                         sigma.GetMat(), dgamma.GetMat(), dbeta.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in BNGrad " << GetStringError(err_code) << endl;
     exit(1);
   }
 }

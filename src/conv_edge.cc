@@ -135,7 +135,7 @@ void ConvEdge::SetGradMemory(Matrix& p) {
   }
 }
 
-void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void ConvEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   float scale_targets = overwrite ? 0 : 1;
   if (image_size_t_ == 1) {

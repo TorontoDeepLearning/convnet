@@ -10,7 +10,7 @@ string RGBToYUVEdge::GetDescription() {
   return ss.str();
 }
 
-void RGBToYUVEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void RGBToYUVEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   Matrix::ConvRGBToYUV(input, output);
 }
 

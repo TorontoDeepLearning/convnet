@@ -47,7 +47,7 @@ void MaxPoolEdge::FOV(int* size, int* sep, int* pad1, int* pad2) const {
   */
 }
 
-void MaxPoolEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void MaxPoolEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   if (!overwrite) {
     cerr << " In MaxPoolEdge::ComputeUp() : Looks like some other layer is"
          << " writing to this maxpool layer's output as well."

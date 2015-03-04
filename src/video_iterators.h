@@ -28,5 +28,6 @@ private:
   const int image_size_y_, image_size_x_, num_videos_;
   cv::VideoCapture video_;
   cv::Mat image_;
+  bool flip_;
 };
 #endif

@@ -95,7 +95,7 @@ class Edge {
   /** Computes the output layer state given the input.
    * Applies the weights and adds bias.
    */
-  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite) = 0;
+  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) = 0;
   
   /** Computes the derivative w.r.t the inputs of this edge given the derivative
    * w.r.t the outputs of this edge.

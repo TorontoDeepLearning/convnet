@@ -22,7 +22,7 @@ void DownSampleEdge::SetImageSize(int image_size_y, int image_size_x, int image_
   num_modules_t_ = image_size_t;
 }
 
-void DownSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void DownSampleEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   Matrix::ConvDownSample(input, output, sample_factor_);
 }
 

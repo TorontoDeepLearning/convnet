@@ -7,7 +7,7 @@ class RGBToYUVEdge : public Edge {
  public:
   RGBToYUVEdge(const config::Edge& edge_config);
   virtual std::string GetDescription();
-  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite);
+  virtual void ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train);
   virtual void ComputeDown(Matrix& deriv_output, Matrix& input,
                            Matrix& output, Matrix& deriv_input, bool overwrite);
 };

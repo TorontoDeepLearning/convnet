@@ -112,7 +112,7 @@ class ConvNet {
    * @param output the output layer.
    * @param edge the edge connecting the input to the output.
    */ 
-  void Fprop(Layer& input, Layer& output, Edge& edge);
+  void Fprop(Layer& input, Layer& output, Edge& edge, bool train);
   
   /** Back propagate through one layer.
    * Passes down the gradients from the output layer to the input layer.
@@ -120,6 +120,7 @@ class ConvNet {
    * @param output the output layer (gradients w.r.t this have been computed).
    * @param input the input layer (gradients w.r.t this will be computed here).
    * @param edge the edge connecting the input to the output.
+   * @param train True if this Fprop is done at training time, false otherwise.
    */ 
   virtual void Bprop(Layer& output, Layer& input, Edge& edge);
 

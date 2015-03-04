@@ -38,7 +38,7 @@ void ResponseNormEdge::SetImageSize(int image_size_y, int image_size_x, int imag
                                      * num_input_channels_);
 }
 
-void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite){
+void ResponseNormEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train){
   if (image_size_t_ == 1) {
     Matrix::ConvResponseNormCrossMap(
       input, output, num_input_channels_, num_filters_response_norm_,

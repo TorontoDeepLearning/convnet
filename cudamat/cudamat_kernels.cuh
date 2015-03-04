@@ -186,4 +186,8 @@ __global__ void kLogisticCorrectNormalized(float* mat, float* targets, float* ou
 __global__ void kLSTMFprop(float *s_in, float* s_out, float* w_diag, float* b, int numcases, int num_lstms, bool init, bool use_relu);
 __global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out, float* w_diag, int numcases, int num_lstms, bool init, bool use_relu);
 __global__ void kLSTMOutp(float* s_in, float* s_out, float* d_out, float* dw_diag, float* db, int numcases, int num_lstms, bool init);
+__global__ void kBNBprop(float* d, float* x, float* gamma, float* mu, float* sigma,
+                         float* target, unsigned int width, unsigned int height, float scale_targets);
+__global__ void kBNGrad(float* d, float* x, float* mu, float* sigma,
+                        float* dgamma, float* dbeta, unsigned int width, unsigned int height);
 #endif

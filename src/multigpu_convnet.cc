@@ -39,7 +39,7 @@ void MultiGPUConvNet::Fprop(bool train) {
         src = &(src_layer->GetState());
       }
 
-      e->ComputeUp(*src, *dst, overwrite[edge_gpu_id]);
+      e->ComputeUp(*src, *dst, overwrite[edge_gpu_id], train);
       dst->SetReady();  // l->AccumulateState will wait for this.
       overwrite[edge_gpu_id] = false;
     }

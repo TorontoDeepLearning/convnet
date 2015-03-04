@@ -2482,3 +2482,57 @@ int lstm_outp(eigenmat* s_in, eigenmat* s_out, eigenmat* d_out, eigenmat* dw_den
     return 0;
 }
 
+int bn_bprop(eigenmat* deriv, eigenmat* input, eigenmat* gamma, eigenmat* mu,
+             eigenmat* sigma, eigenmat* target, float scale_targets) {
+  int height = deriv->size[0];
+  int width  = deriv->size[1];
+
+  for (unsigned int column = 0; column < width; ++column) {
+    float mu_val = mu->data[column];
+    float sigma_val = sigma->data[column];
+    float gamma_val = gamma->data[column];
+    float *cur_x = input->data + column * height; 
+    float *cur_d = deriv->data + column * height; 
+    float *cur_target = target->data + column * height; 
+    float cur_sum = 0, cur_sum2 = 0, val;
+    for (unsigned int i = 0; i < height; ++i) {
+      cur_sum += (cur_x[i] - mu_val) * cur_d[i];
+    }
+    cur_sum /= ((height - 1) * sigma_val * sigma_val);
+    for (unsigned int i = 0; i < height; ++i) {
+      val = gamma_val * (cur_d[i] - (cur_x[i] - mu_val) * cur_sum) / sigma_val;
+      cur_sum2 += val;
+      cur_target[i] = scale_targets * cur_target[i] + val;
+    }
+    cur_sum2 /= height;
+    for (unsigned int i = 0; i < height; ++i) {
+      cur_target[i] -= cur_sum2;
+    }
+  }
+  return 0;
+}
+
+
+int bn_grad(eigenmat* deriv, eigenmat* input, eigenmat* mu, eigenmat* sigma,
+            eigenmat* dgamma, eigenmat* dbeta) {
+  int height = deriv->size[0];
+  int width  = deriv->size[1];
+  for (unsigned int column = 0; column < width; ++column) {
+    float mu_val = mu->data[column];
+    float sigma_val = sigma->data[column];
+    float *cur_x = input->data + column * height; 
+    float *cur_d = deriv->data + column * height; 
+    float z, d, sum_gamma = 0, sum_beta = 0;
+    for (unsigned int i = 0; i < height; ++i) {
+      z = (cur_x[i] - mu_val) / sigma_val;
+      d = cur_d[i];
+      sum_gamma += z * d;
+      sum_beta  += d;
+    }
+    dgamma->data[column] = sum_gamma;
+    dbeta->data[column]  = sum_beta;
+  }
+  return 0;
+}
+
+

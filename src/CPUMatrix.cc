@@ -228,6 +228,16 @@ void Matrix::FillWithRandn()
     }
 }
 
+void Matrix::SampleBernoulli(float val) {
+    Set(val);
+    int err_code = sample_bernoulli(&rnde_, mat_, mat_);
+    if (err_code != 0)
+    {
+        cerr << "Error: Could not fill with randn : " << GetStringError(err_code) << endl;
+        exit(1);
+    }
+}
+
 void Matrix::Reshape(const size_t rows, const size_t cols)
 {
     reshape(mat_, rows, cols);
@@ -372,6 +382,11 @@ void Matrix::MultByRowVec(Matrix& val)
 void Matrix::DivideByColVec(Matrix& v)
 {
     div_by_col_vec(mat_, v.GetMat(), mat_);
+}
+
+void Matrix::DivideByRowVec(Matrix& v)
+{
+    div_by_row_vec(mat_, v.GetMat(), mat_);
 }
 
 float Matrix::Sum()
@@ -1014,3 +1029,23 @@ void Matrix::RMSPropUpdate(Matrix& rms_history, Matrix& gradient, float factor)
     }
 }
 
+void Matrix::BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
+                     Matrix& sigma, Matrix& target, float scale_targets) {
+  int err_code = bn_bprop(deriv.GetMat(), input.GetMat(), gamma.GetMat(),
+                          mu.GetMat(), sigma.GetMat(), target.GetMat(), scale_targets);
+  if (err_code != 0) {
+    cerr << "Error in BNBprop " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+
+void Matrix::BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
+                    Matrix& dgamma, Matrix& dbeta) {
+  int err_code = bn_grad(deriv.GetMat(), input.GetMat(), mu.GetMat(),
+                         sigma.GetMat(), dgamma.GetMat(), dbeta.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in BNGrad " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}

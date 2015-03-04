@@ -333,11 +333,11 @@ void ConvNet::Sort() {
   for (int i = 0; i < layers_.size(); i++) layers_[i] = L[i];
 }
 
-void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge) {
+void ConvNet::Fprop(Layer& input, Layer& output, Edge& edge, bool train) {
   Matrix& input_state = input.GetState(edge.GetSourceSliceName());
   Matrix& output_state = output.GetState(edge.GetDestSliceName());
   bool overwrite = output.AddOrOverwriteState(edge.GetDestSliceName());
-  edge.ComputeUp(input_state, output_state, overwrite);
+  edge.ComputeUp(input_state, output_state, overwrite, train);
 }
 
 void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge) {
@@ -358,7 +358,7 @@ void ConvNet::Bprop(Layer& output, Layer& input, Edge& edge) {
 void ConvNet::Fprop(bool train) {
   for(Layer* l : layers_) {
     for (Edge* e : l->incoming_edge_) {
-      Fprop(*(e->GetSource()), *l, *e);
+      Fprop(*(e->GetSource()), *l, *e, train);
     }
     if (!l->IsInput()) l->ApplyActivation();
     l->ApplyDropout(train);

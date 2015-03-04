@@ -358,7 +358,7 @@ void Layer::ApplyDropoutAtTrainTime() {
       float scale = dropout_scale_up_at_train_time_ ?
                     (1.0 / (1 - dropprob_)) : 1.0;
       if (store_dropout_noise_) {
-        dropout_noise_.FillWithRand();
+        dropout_noise_.SampleBernoulli(1- dropprob_);
         dropout_noise_.Mult(scale);
         state_.Mult(dropout_noise_);
       } else {

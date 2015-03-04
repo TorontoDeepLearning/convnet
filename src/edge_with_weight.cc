@@ -43,7 +43,6 @@ void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
   Matrix::SetDevice(gpu_id_);
   stringstream ss;
   ss << edge_name << ":" << "weight";
-  cout << "Loading " << ss.str() << endl;
   weights_.ReadHDF5(file, ss.str());
   if (weight_optimizer_->IsAllocated()) {
     weight_optimizer_->LoadParameters(file, ss.str());
@@ -51,7 +50,6 @@ void EdgeWithWeight::LoadParameters(hid_t file, const string& edge_name) {
   if (!has_no_bias_) {
     ss.str("");
     ss << edge_name << ":" << "bias";
-    cout << "Loading " << ss.str() << endl;
     bias_.ReadHDF5(file, ss.str());
     if (bias_optimizer_->IsAllocated()) {
       bias_optimizer_->LoadParameters(file, ss.str());

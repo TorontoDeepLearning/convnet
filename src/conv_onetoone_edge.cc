@@ -53,7 +53,7 @@ void ConvOneToOneEdge::SetGradMemory(Matrix& p) {
   }
 }
 
-void ConvOneToOneEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void ConvOneToOneEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   int batch_size = input.GetRows();
   input.Reshape(-1, num_input_channels_);
   output.Reshape(-1, num_output_channels_);

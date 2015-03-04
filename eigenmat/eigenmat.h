@@ -167,5 +167,9 @@ int lstm_fprop(eigenmat* s_in, eigenmat* s_out, eigenmat* w_dense, eigenmat* w_d
 int lstm_bprop(eigenmat* s_in, eigenmat* s_out, eigenmat* d_in, eigenmat* d_out, eigenmat* w_dense, eigenmat* w_diag, bool init, bool use_relu);
 int lstm_outp(eigenmat* s_in, eigenmat* s_out, eigenmat* d_out, eigenmat* dw_dense, eigenmat* dw_diag, eigenmat* db, bool init);
 
+int bn_bprop(eigenmat* deriv, eigenmat* input, eigenmat* gamma, eigenmat* mu,
+             eigenmat* sigma, eigenmat* target, float scale_targets);
+int bn_grad(eigenmat* deriv, eigenmat* input, eigenmat* mu, eigenmat* sigma,
+            eigenmat* dgamma, eigenmat* dbeta);
 #endif
 

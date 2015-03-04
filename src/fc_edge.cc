@@ -48,7 +48,7 @@ void FCEdge::SetGradMemory(Matrix& p) {
   }
 }
 
-void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite) {
+void FCEdge::ComputeUp(Matrix& input, Matrix& output, bool overwrite, bool train) {
   Matrix& w = is_tied_? tied_edge_->GetWeight() : weights_;
   int scale_targets = overwrite ? 0 : 1;
   Matrix::Dot(input, w, output, scale_targets, 1, false, true);
