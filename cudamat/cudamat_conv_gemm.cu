@@ -115,6 +115,40 @@ __global__ void kExpand(float *images, float* targets,
   }
 }
 
+
+__global__ void kOutpTraceMultiplyImages(float *expanded_images, float *expanded_derivs, 
+                                         int num_images, int num_channels,
+                                         int num_modules_batch, int kernel_size){
+  int color = blockIdx.y;
+  int module_id = blockIdx.x;
+
+  expanded_images += num_images * num_modules_batch * kernel_size * color;
+  expanded_images += num_images * module_id;
+  expanded_derivs += num_images * num_modules_batch * color;
+  expanded_derivs += num_images * module_id;
+
+  for (int kpos = 0; kpos < kernel_size; kpos++) {
+    for (int im = threadIdx.x; im < num_images; im += blockDim.x) {
+      int image_idx = im + num_images * num_modules_batch * kpos;
+      int deriv_idx = im;
+      expanded_images[image_idx] *= expanded_derivs[deriv_idx];
+    }
+    __syncthreads();
+  }
+
+}
+
+
+__global__ void kSetOnes(float *dest, int count){
+  for (int i = threadIdx.x; i < count; i += blockDim.x) {
+    dest[i] = 1;
+  }
+}
+
+                                
+
+
+
 template <class Pooler>
 __global__ void kPool(float* images, float* targets,
                       int num_images, int num_input_channels,
@@ -214,6 +248,7 @@ __global__ void kAvgPoolUndo(float *derivs, float* targets,
   }
 }
 
+
 __global__ void kMaxPoolUndo(float * images, float *derivs, float* maxes, float* targets,
                         int num_images, int num_input_channels,
                         int image_size_y, int image_size_x, int image_size_t,
@@ -263,6 +298,57 @@ __global__ void kMaxPoolUndo(float * images, float *derivs, float* maxes, float*
     }
   }
 }
+
+__global__ void kMaxPoolRprop(float * images, float *R_images, float* maxes, float* targets,
+                              int num_images, int num_input_channels,
+                              int image_size_y, int image_size_x,
+                              int num_modules_y, int num_modules_x,
+                              int kernel_size_y, int kernel_size_x,
+                              int padding_y, int padding_x,
+                              int stride_y, int stride_x, float scaleOutput) {
+  int color = blockIdx.y;
+  int num_modules = num_modules_y * num_modules_x;
+
+  long input_id, output_id;
+  R_images  += num_images * image_size_x * image_size_y * color;
+  maxes  += num_images * num_modules * color;
+  targets += num_images * num_modules * color;
+  images += num_images * image_size_x * image_size_y * color;
+  for (int module_id = blockIdx.x; module_id < num_modules; module_id += gridDim.x) {
+    int module_id_x = module_id % num_modules_x;
+    int module_id_y = module_id / num_modules_x;
+    int startX = module_id_x * stride_x + padding_x;
+    int startY = module_id_y * stride_y + padding_y;
+    //output_id = num_images * module_id;
+    int endY = startY + kernel_size_y;
+    int endX = startX + kernel_size_x;
+    startY = MAX(startY, 0);
+    startX = MAX(startX, 0);
+    endY   = MIN(endY  , image_size_y);
+    endX   = MIN(endX  , image_size_x);
+    for (int im = threadIdx.x; im < num_images; im += blockDim.x) {
+      //float val = scaleOutput * derivs[source_id + im];
+      for (int Y = startY; Y < endY; Y++) {
+        for (int X = startX; X < endX; X++) {
+          //target_id = num_images * (X + image_size_x * Y) + im;
+          input_id = num_images * (X + image_size_x * Y) + im;
+          output_id = num_images * module_id + im;
+          if (images[input_id] == maxes[output_id]) {
+            atomicAdd(&targets[output_id], R_images[input_id]);
+          }
+          __syncthreads();
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
 
 __global__ void kContract(float *expanded_data, float* targets,
                           int num_images, int num_input_channels,
@@ -398,6 +484,31 @@ __global__ void kCrossMapRNorm(float* data, float* target,
       target[j * num_locs] = data[j * num_locs] * __powf(1 + addScale * sum, -powScale);
       prev_start = start;
       prev_end = end;
+    }
+  }
+}
+
+__global__ void kCrossMapRNormRprop(float* data, float* R_data, float* target,
+                                    int num_locs, float addScale, float powScale,
+                                    int num_filters, int k, bool blocked) {
+  long loc_id = threadIdx.x + blockDim.x * (blockIdx.x + gridDim.x * blockIdx.y);
+  data   += loc_id;
+  R_data += loc_id;
+  target += loc_id;
+  if (loc_id < num_locs) {
+    for (int j = 0; j < num_filters; j++) {
+      float sum_x2 = 0;
+      float sum_xdx = 0;
+      int start = blocked ? (j / k) * k : -k/2 + j;
+      int end = MIN(num_filters, start + k);
+      start = MAX(0, start);
+      for (int i = start; i < end; i++) {
+        sum_x2 += data[i * num_locs] * data[i * num_locs];
+        sum_xdx += data[i * num_locs] * R_data[i * num_locs];
+      }
+      float denom = 1 + addScale * sum_x2;
+      target[j * num_locs] = R_data[j * num_locs] * __powf(denom, -powScale)
+        - 2 * addScale * powScale * data[j * num_locs] * __powf(denom, -powScale-1) * sum_xdx;
     }
   }
 }
@@ -848,6 +959,172 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
     getLastCudaError("convOutpGemm: kernel execution failed");
 }
 
+
+void _convInnerpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+                        Shape4D images_shape, Shape4D derivs_shape, Shape4D targets_shape,
+                        ConvDesc conv_desc, float scaleTargets, float scaleOutput, bool conv) {
+
+    int num_input_channels   = conv_desc.num_input_channels;
+    int num_output_channels  = conv_desc.num_output_channels;
+    int kernel_size_y        = conv_desc.kernel_size_y;
+    int kernel_size_x        = conv_desc.kernel_size_x;
+    int stride_y             = conv_desc.stride_y;
+    int stride_x             = conv_desc.stride_x;
+    int padding_y            = conv_desc.padding_y;
+    int padding_x            = conv_desc.padding_x;
+    int input_channel_begin  = conv_desc.input_channel_begin;
+    int input_channel_end    = conv_desc.input_channel_end;
+    int output_channel_begin = conv_desc.output_channel_begin;
+    int output_channel_end   = conv_desc.output_channel_end;
+    int num_groups           = conv_desc.num_groups;
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
+
+    int num_output_channels2 = derivs_shape.shape[3];
+    int num_modules_y        = derivs_shape.shape[2];
+    int num_modules_x        = derivs_shape.shape[1];
+    int num_images           = derivs_shape.shape[0];
+
+    int num_input_channels2  = images_shape.shape[3];
+    int image_size_y         = images_shape.shape[2];
+    int image_size_x         = images_shape.shape[1];
+    int num_images2          = images_shape.shape[0];
+
+    assert (targets_shape.shape[3] == 1);
+    int kernel_size_y2       = targets_shape.shape[2];
+    int kernel_size_x2       = targets_shape.shape[1];
+    assert (targets_shape.shape[0] == 1);
+
+    int num_modules          = num_modules_y * num_modules_x;
+    int filterModuleMult     = conv ? 1 : num_modules;
+  
+    // Consistency checks. 
+    assert (num_images == num_images2);
+    assert (num_output_channels == num_output_channels2);
+    //assert (output_channel_end - output_channel_begin == num_output_channels3);
+    assert (num_input_channels == num_input_channels2);
+    //assert (input_channel_end - input_channel_begin == num_input_channels3Mult / filterModuleMult);
+    assert (num_images2 == images->size[0]);
+    assert (num_images == derivs->size[0]);
+    //assert (num_output_channels3 == targets->size[0]);
+    assert (image_size_y * image_size_x * num_input_channels2 == images->size[1]);
+    assert (num_modules_y * num_modules_x * num_output_channels2 == derivs->size[1]);
+    //assert (kernel_size_y2 * kernel_size_x2 * num_input_channels3Mult == targets->size[1]);
+    assert (kernel_size_y == kernel_size_y2);
+    assert (kernel_size_x == kernel_size_x2);
+    assert (num_input_channels % num_groups == 0);
+    assert (num_groups == 1);
+    assert (input_channel_begin  >= 0);
+    assert (output_channel_begin >= 0);
+    assert (input_channel_end    <= num_input_channels);
+    assert (output_channel_end   <= num_output_channels);
+    assert (input_channel_begin  <= input_channel_end);
+    assert (output_channel_begin <= output_channel_end);
+    if (output_channel_end == 0) output_channel_end = num_output_channels;
+    if (input_channel_end == 0) input_channel_end = num_input_channels;
+    num_input_channels = input_channel_end - input_channel_begin;
+    num_output_channels = output_channel_end - output_channel_begin;
+    assert(num_input_channels  > 0);
+    assert(num_output_channels > 0);
+    float* dw = targets->data_device;
+    float* images_data = images->data_device + input_channel_begin * image_size_y * image_size_x * num_images;
+    float* derivs_data = derivs->data_device + output_channel_begin * num_modules * num_images;
+
+    // RBG
+    assert (num_input_channels == num_output_channels);
+
+    int input_size = kernel_size_y * kernel_size_x * num_input_channels;
+    int num_threads_x = MIN(num_images, NUM_THREADS_PER_BLOCK);
+    
+    float *expanded_images = NULL, *expanded_derivs = NULL, *expanded_images_sum = NULL, *ones = NULL;
+    int num_modules_batch;
+
+    int input_memory_size  = num_images * input_size * sizeof(float);
+    int output_memory_size = num_images * num_output_channels * sizeof(float);
+    if (free_space_ == 0) EstimateFreeSpace();
+    int max_batch_size = free_space_ / (input_memory_size + output_memory_size);
+    max_batch_size = MIN(max_batch_size, num_modules / filterModuleMult);
+    max_batch_size = MIN(max_batch_size, MAX_BLOCKS_X);
+    max_batch_size = MAX(max_batch_size, 1);
+
+    int expanded_images_sum_size = kernel_size_x * kernel_size_y * num_input_channels * sizeof(float);
+    int num_ones = max(num_images * max_batch_size, num_input_channels);
+    int ones_size = num_ones * sizeof(float);
+
+    cudaError_t err1, err2, err3, err4;
+    err1 = cudaMalloc((void**)&expanded_images,  max_batch_size * input_memory_size);
+    err2 = cudaMalloc((void**)&expanded_derivs, max_batch_size * output_memory_size);
+    err3 = cudaMalloc((void**)&expanded_images_sum, expanded_images_sum_size);
+    err4 = cudaMalloc((void**)&ones, ones_size);
+    if (cudaSuccess != err1 || cudaSuccess != err2 || cudaSuccess != err3 || cudaSuccess != err4) {
+      printf("Out of memory.\n");
+      num_modules_batch = 1;
+    } else {
+      num_modules_batch = max_batch_size;
+    }
+
+    kSetOnes<<<1, 512>>>(ones, num_ones);
+
+    int num_iter = DIVUP(num_modules, num_modules_batch);
+
+    _Scale(targets, scaleTargets);
+
+    int module_id_start = 0;
+    dim3 threads(num_threads_x);
+    for (int i = 0; i < num_iter; i++) {
+      int this_num_modules_batch = MIN(num_modules_batch, num_modules - module_id_start);
+      //printf("Step %d num_modules %d\n", i, this_num_modules_batch);
+
+      dim3 blocks = dim3(this_num_modules_batch, num_output_channels);
+      kReadRows<<<blocks, threads>>>(derivs_data, expanded_derivs,
+                                     num_images, num_modules,
+                                     this_num_modules_batch, module_id_start);
+      dim3 blocks2 = dim3(this_num_modules_batch, num_input_channels);
+      
+      kExpand<<<blocks2, threads>>>(images_data, expanded_images,
+                                    num_images, num_input_channels,
+                                    image_size_y, image_size_x,
+                                    num_modules_y, num_modules_x,
+                                    kernel_size_y, kernel_size_x,
+                                    padding_y, padding_x,
+                                    stride_y, stride_x,
+                                    this_num_modules_batch, module_id_start);
+      
+      if (!conv) dw += num_output_channels * input_size;
+
+      kOutpTraceMultiplyImages<<<blocks2, threads>>>(expanded_images, expanded_derivs,
+                                                     num_images, num_input_channels,
+                                                     this_num_modules_batch, kernel_size_x * kernel_size_y);
+
+      // sum over images and modules by summing columns
+      int num_rows = num_images * this_num_modules_batch;
+      int num_cols = kernel_size_x * kernel_size_y * num_input_channels;
+      cublasSgemv('t', num_rows, num_cols, 1,
+                  expanded_images, num_rows,
+                  ones, 1,
+                  0, expanded_images_sum, 1);
+
+      // sum over channels by summing rows
+      num_rows = kernel_size_x * kernel_size_y;
+      num_cols = num_input_channels;
+      cublasSgemv('n', num_rows, num_cols, scaleOutput,
+                  expanded_images_sum, num_rows,
+                  ones, 1,
+                  1, dw, 1);
+
+      
+      if (check_cublas_error()) {
+        printf("Error in dot or before it.\n");
+      }
+      module_id_start += this_num_modules_batch;
+    }
+    cudaFree(expanded_derivs);
+    cudaFree(expanded_images);
+    cudaFree(expanded_images_sum);
+    cudaFree(ones);
+    getLastCudaError("convOutpGemm: kernel execution failed");
+}
+
 template <class Pooler>
 void _convPoolGemm(cudamat* images, cudamat* targets,
                 Shape4D images_shape, Shape4D targets_shape,
@@ -1021,6 +1298,62 @@ void _maxPoolUndoGemm(cudamat* images, cudamat* derivs, cudamat* maxes,
     getLastCudaError("maxPoolUndo: kernel execution failed");
 }
 
+void _maxPoolRpropGemm(cudamat* images, cudamat* R_images, cudamat* maxes, cudamat* targets,
+                Shape4D images_shape, Shape4D maxes_shape, 
+                ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
+    
+    int num_input_channels   = conv_desc.num_input_channels;
+    int num_output_channels  = conv_desc.num_output_channels;
+    int kernel_size_y        = conv_desc.kernel_size_y;
+    int kernel_size_x        = conv_desc.kernel_size_x;
+    int stride_y             = conv_desc.stride_y;
+    int stride_x             = conv_desc.stride_x;
+    int padding_y            = conv_desc.padding_y;
+    int padding_x            = conv_desc.padding_x;
+
+    int num_output_channels2 = maxes_shape.shape[3];
+    int num_modules_y        = maxes_shape.shape[2];
+    int num_modules_x        = maxes_shape.shape[1];
+    int num_images           = maxes_shape.shape[0];
+
+    int num_input_channels2  = images_shape.shape[3];
+    int image_size_y         = images_shape.shape[2];
+    int image_size_x         = images_shape.shape[1];
+    int num_images2          = images_shape.shape[0];
+
+    int num_modules          = num_modules_y * num_modules_x;
+  
+    // Consistency checks. 
+    assert (num_images == num_images2);
+    assert (num_output_channels == num_output_channels2);
+    assert (num_input_channels == num_input_channels2);
+    assert (num_images == R_images->size[0]);
+    assert (num_images == targets->size[0]);
+    assert (num_modules_y * num_modules_x * num_input_channels == targets->size[1]);
+    assert (image_size_y * image_size_x * num_output_channels == R_images->size[1]);
+
+    if (scaleTargets == 0) {
+      cudaMemset(targets->data_device, 0, sizeof(float) * targets->size[0] * targets->size[1]);
+    } else if (scaleTargets != 1) {
+      cublasSscal(sizeof(float) * targets->size[0] * targets->size[1], scaleTargets, targets->data_device, 1);
+    }
+
+    dim3 threads(128);
+    int num_blocks_x = MIN(4096, num_modules);
+    dim3 blocks = dim3(num_blocks_x, num_input_channels);
+    kMaxPoolRprop<<<blocks, threads>>>(images->data_device, R_images->data_device,
+                               maxes->data_device, targets->data_device,
+                               num_images, num_input_channels,
+                               image_size_y, image_size_x,
+                               num_modules_y, num_modules_x,
+                               kernel_size_y, kernel_size_x,
+                               padding_y, padding_x,
+                               stride_y, stride_x, scaleOutput);
+    getLastCudaError("avgPoolUndo: kernel execution failed");
+}
+
+
+
 void _CrossMapRNorm(cudamat* images, cudamat* targets, int num_filters, int sizeF, float addScale, float powScale, bool blocked) {
   int num_locs = (images->size[0] * images->size[1]) / num_filters;
   int num_blocks = DIVUP(num_locs, NUM_THREADS_PER_BLOCK);
@@ -1062,6 +1395,15 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
   getLastCudaError("_CrossMapRNormUndo: kernel execution failed");
 }
 
+void _CrossMapRNormRprop(cudamat* images, cudamat* R_images, cudamat* targets, int num_filters, int sizeF, float addScale, float powScale, bool blocked) {
+  int num_locs = (images->size[0] * images->size[1]) / num_filters;
+  int threads = 512;
+  int num_blocks = DIVUP(num_locs, threads);
+  kCrossMapRNormRprop<<<num_blocks, threads>>>(images->data_device, R_images->data_device, targets->data_device,
+                                               num_locs, addScale, powScale, num_filters, sizeF, blocked);
+  getLastCudaError("_CrossMapRNormRprop: kernel execution failed");
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1081,6 +1423,7 @@ void convUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
   _convUpGemm(images, filters, targets, *images_shape, *filters_shape,
               *targets_shape, conv_desc, scaleTargets, 1.0, true);
 }
+ 
 void convDownGemm(cudamat* derivs, cudamat* filters, cudamat* targets,
               Shape4D* derivs_shape, Shape4D* filters_shape,
               Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets) {
@@ -1093,6 +1436,13 @@ void convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
               ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
   _convOutpGemm(images, derivs, targets, *images_shape, *derivs_shape,
               *targets_shape, conv_desc, scaleTargets, scaleOutput, true);
+}
+
+void convInnerpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+                    Shape4D* images_shape, Shape4D* derivs_shape, Shape4D* targets_shape,
+                    ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
+  _convInnerpGemm(images, derivs, targets, *images_shape, *derivs_shape,
+                  *targets_shape, conv_desc, scaleTargets, scaleOutput, true);
 }
 
 void localUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
@@ -1135,6 +1485,13 @@ void MaxPoolUndoGemm(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
                  ConvDesc conv_desc, float scaleTargets) {
   _maxPoolUndoGemm(images, maxGrads, maxActs, targets, *images_shape,
                    *maxGrads_shape, conv_desc, scaleTargets, 1);
+}
+
+void MaxPoolRpropGemm(cudamat* images, cudamat* R_images, cudamat* maxActs,
+                      cudamat* targets, Shape4D* images_shape, Shape4D* maxGrads_shape,
+                      ConvDesc conv_desc, float scaleTargets) {
+  _maxPoolRpropGemm(images, R_images, maxActs, targets, *images_shape,
+                    *maxGrads_shape, conv_desc, scaleTargets, 1);
 }
 
 void AvgPoolUndoGemm(cudamat* avgGrads, cudamat* targets, Shape4D* avgGrads_shape,
@@ -1195,9 +1552,17 @@ void ResponseNormCrossMapUndoGemm(
   _CrossMapRNormUndo(outGrads, inputs, targets, num_filters, sizeF, addScale,
                      powScale, blocked);
 }
+
+void ResponseNormCrossMapRpropGemm(
+  cudamat* images, cudamat* R_images, cudamat* targets, int num_filters, int sizeF, float addScale,
+  float powScale, bool blocked) {
+  _CrossMapRNormRprop(images, R_images, targets, num_filters, sizeF, addScale, powScale, blocked);
+}
+  
 void Scale(cudamat* mat, float scale) {
   _Scale(mat, scale);
 }
+
 #ifdef __cplusplus
 }
 #endif

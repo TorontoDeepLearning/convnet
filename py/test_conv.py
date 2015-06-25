@@ -133,6 +133,32 @@ def TestMaxPoolUndo(images_shape, conv_desc):
   targets_gpu.free_device_memory()
   return diff
 
+def TestMaxPoolRprop(images_shape, conv_desc):
+  maxes_shape = cm.GetOutputShape4D(images_shape, conv_desc)
+  images = np.random.rand(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  R_images = np.random.rand(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  maxes  = conv_cpu.MaxPool(images, images_shape, cm.GetConvDescTuple2(conv_desc))
+
+  images_gpu = cm.CUDAMatrix(images)
+  R_images_gpu = cm.CUDAMatrix(R_images)
+  maxes_gpu = cm.CUDAMatrix(maxes)
+  targets_gpu = cm.empty(maxes.shape)
+
+  images_gpu.set_shape4d(images_shape)
+  R_images_gpu.set_shape4d(images_shape)
+  maxes_gpu.set_shape4d(maxes_shape)
+  targets_gpu.set_shape4d(maxes_shape)
+  assert test_gemm
+  cc_gemm.MaxPoolRprop(images_gpu, R_images_gpu, maxes_gpu, targets_gpu, conv_desc)
+  output_cpu = conv_cpu.MaxPoolRprop(images, R_images, maxes, images_shape, cm.GetConvDescTuple2(conv_desc))
+
+  diff = Diff(output_cpu, targets_gpu.asarray())
+  images_gpu.free_device_memory()
+  R_images_gpu.free_device_memory()
+  maxes_gpu.free_device_memory()
+  targets_gpu.free_device_memory()
+  return diff
+
 def TestAvgPool(images_shape, conv_desc):
   output_shape = cm.GetOutputShape4D(images_shape, conv_desc)
   images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
@@ -198,6 +224,27 @@ def TestResponseNormCrossMapUndo(images_shape, numF, add_scale, pow_scale, block
   output_cpu = conv_cpu.ResponseNormCrossMapUndo(derivs, images, images_shape, numF, add_scale, pow_scale, blocked)
   diff = Diff(output_cpu, targets_gpu.asarray())
   images_gpu.free_device_memory()
+  targets_gpu.free_device_memory()
+  return diff
+
+
+def TestResponseNormCrossMapRprop(images_shape, numF, add_scale, pow_scale, blocked):
+  images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  R_images = np.random.randn(images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]).astype(np.float32)
+  images_gpu = cm.CUDAMatrix(images)
+  R_images_gpu = cm.CUDAMatrix(R_images)
+  targets_gpu = cm.empty((images_shape[0], images_shape[1] * images_shape[2] * images_shape[3]))
+  images_gpu.set_shape4d(images_shape)
+  R_images_gpu.set_shape4d(images_shape)
+  targets_gpu.set_shape4d(images_shape)
+  if test_gemm:
+    cc_gemm.ResponseNormCrossMapRprop(images_gpu, R_images_gpu, targets_gpu, numF, add_scale, pow_scale, blocked)
+  else:
+    raise RuntimeError('Not implemented')
+  output_cpu = conv_cpu.ResponseNormCrossMapRprop(images, R_images, images_shape, numF, add_scale, pow_scale, blocked)
+  diff = Diff(output_cpu, targets_gpu.asarray())
+  images_gpu.free_device_memory()
+  R_images_gpu.free_device_memory()
   targets_gpu.free_device_memory()
   return diff
 
@@ -384,10 +431,14 @@ def Test2D():
   Check(TestMaxPoolUndo(images_shape, pool_desc))
   print 'AvgPoolUndo'
   Check(TestAvgPoolUndo(images_shape, pool_desc))
+  print 'MaxPoolRprop'
+  Check(TestMaxPoolRprop(images_shape, pool_desc))
   print 'ResponseNormCrossMap'
   Check(TestResponseNormCrossMap(images_shape, sizeF, add_scale, pow_scale, blocked))
   print 'ResponseNormCrossMapUndo'
   Check(TestResponseNormCrossMapUndo(images_shape, sizeF, add_scale, pow_scale, blocked))
+  print 'ResponseNormCrossMapRprop'
+  Check(TestResponseNormCrossMapRprop(images_shape, sizeF, add_scale, pow_scale, blocked))
 
 def Test3D():
   batch_size = 128
