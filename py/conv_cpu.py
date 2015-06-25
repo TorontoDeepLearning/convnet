@@ -297,7 +297,7 @@ def MaxPoolUndo(images, maxes, derivs, image_shape, deriv_shape, conv_spec):
 
   return output
 
-def MaxPoolFprop(images, R_images, maxes, image_shape, conv_spec):
+def MaxPoolRprop(images, R_images, maxes, image_shape, conv_spec):
   num_images, image_size_x, image_size_y, num_input_channels = image_shape
   num_output_channels, kernel_size_y, kernel_size_x, stride_y, stride_x, padding_y, padding_x = conv_spec
   assert (num_output_channels == num_input_channels)
@@ -495,8 +495,7 @@ def ResponseNormCrossMapUndo(derivs, images, image_shape, numF, add_scale, pow_s
             * np.power(denoms[:, startPos:endPos], -pow_scale-1)).sum(axis=1)
   return output
 
-<<<<<<< HEAD
-def ResponseNormCrossMapFprop(images, derivs, image_shape, numF, add_scale, pow_scale, blocked):
+def ResponseNormCrossMapRprop(images, derivs, image_shape, numF, add_scale, pow_scale, blocked):
   num_images, image_size_x, image_size_y, num_input_channels = image_shape
   output = np.zeros((num_images, image_size_x * image_size_y * num_input_channels), dtype=np.float32)
   for y_pos in xrange(image_size_y):
@@ -521,7 +520,6 @@ def ResponseNormCrossMapFprop(images, derivs, image_shape, numF, add_scale, pow_
 
 
 
-=======
 def ConvUp3D(images, filters, image_shape, conv_spec):
   num_images, image_size_x, image_size_y, num_input_channels, image_size_t = image_shape
   num_output_channels, kernel_size_y, kernel_size_x, kernel_size_t, stride_y, stride_x, stride_t, padding_y, padding_x, padding_t = conv_spec
@@ -647,4 +645,3 @@ def ConvOutp3D(images, derivs, image_shape, conv_spec):
         output += np.dot(deriv.T, input_data)
 
   return output
->>>>>>> master

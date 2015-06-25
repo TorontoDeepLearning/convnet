@@ -299,7 +299,7 @@ __global__ void kMaxPoolUndo(float * images, float *derivs, float* maxes, float*
   }
 }
 
-__global__ void kMaxPoolFprop(float * images, float *R_images, float* maxes, float* targets,
+__global__ void kMaxPoolRprop(float * images, float *R_images, float* maxes, float* targets,
                               int num_images, int num_input_channels,
                               int image_size_y, int image_size_x,
                               int num_modules_y, int num_modules_x,
@@ -488,7 +488,7 @@ __global__ void kCrossMapRNorm(float* data, float* target,
   }
 }
 
-__global__ void kCrossMapRNormFprop(float* data, float* R_data, float* target,
+__global__ void kCrossMapRNormRprop(float* data, float* R_data, float* target,
                                     int num_locs, float addScale, float powScale,
                                     int num_filters, int k, bool blocked) {
   long loc_id = threadIdx.x + blockDim.x * (blockIdx.x + gridDim.x * blockIdx.y);
@@ -960,7 +960,7 @@ void _convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
 }
 
 
-void _convOutpTraceGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+void _convInnerpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
                         Shape4D images_shape, Shape4D derivs_shape, Shape4D targets_shape,
                         ConvDesc conv_desc, float scaleTargets, float scaleOutput, bool conv) {
 
@@ -1090,16 +1090,6 @@ void _convOutpTraceGemm(cudamat* images, cudamat* derivs, cudamat* targets,
                                     stride_y, stride_x,
                                     this_num_modules_batch, module_id_start);
       
-      /*
-      kExpand2<<<blocks2, threads>>>(images_data, expanded_images,
-                                    num_images, num_input_channels,
-                                    image_size_y, image_size_x,
-                                    num_modules_y, num_modules_x,
-                                    kernel_size_y, kernel_size_x,
-                                    padding_y, padding_x,
-                                    stride_y, stride_x,
-                                    this_num_modules_batch, module_id_start);
-      */
       if (!conv) dw += num_output_channels * input_size;
 
       kOutpTraceMultiplyImages<<<blocks2, threads>>>(expanded_images, expanded_derivs,
@@ -1122,64 +1112,6 @@ void _convOutpTraceGemm(cudamat* images, cudamat* derivs, cudamat* targets,
                   ones, 1,
                   1, dw, 1);
 
-
-
-      /*
-      // copied from sum_by_axis
-      int shared_mem_size = 32 * sizeof(float);
-      int w = kernel_size_x * kernel_size_y * num_input_channels;
-      int h = num_images * this_num_modules_batch;
-      int w1 = floor(sqrt(w));
-      int w2 = (w + w1 - 1) / w1;
-      dim3 gridDim(w1, w2, 1);
-      kSumColumnwise<<<gridDim, 32, shared_mem_size>>>(expanded_images, expanded_images_sum, w, h,
-                                                       1,    // multiplier for result
-                                                       0);   // multiplier for target
-                                                       
-      // copied from sum_by_axis
-      w = num_input_channels;
-      h = kernel_size_x * kernel_size_y;
-      int num_blocks = DIVUP(h, NUM_VECTOR_OP_THREADS_PER_BLOCK);
-      int h1 = floor(sqrt(num_blocks));
-      int h2 = DIVUP(num_blocks, h1);
-      dim3 gridDim2(h1, h2, 1);
-      kSumRowwise<<<gridDim2, NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(expanded_images_sum, dw, w, h,
-                                                                 1,     // multiplier for result
-                                                                 1);    // multiplier for target
-      */
-      
-      /*
-      cublasSgemm('t', 'n', 
-                  num_output_channels,
-                  input_size,
-                  num_images * this_num_modules_batch,
-                  scaleOutput, expanded_derivs, num_images * this_num_modules_batch,
-                  expanded_images, num_images * this_num_modules_batch,
-                  1, dw, num_output_channels);
-      */
-
-      // There's got to be a way to parallelize over output channels!
-      /*
-      for (int c = 0; c < num_output_channels; c++){
-        float *dw_curr = dw + c * kernel_size_x * kernel_size_y;
-        float *expanded_images_curr = expanded_images + c * num_images * this_num_modules_batch * kernel_size_x * kernel_size_y;
-        float *expanded_derivs_curr = expanded_derivs + c * num_images * this_num_modules_batch;
-
-        cublasSgemv('t',
-                    num_images * this_num_modules_batch,
-                    input_size,
-                    scaleOutput, expanded_images_curr, num_images * this_num_modules_batch,
-                    expanded_images_curr, 1, 1, dw_curr, 1);
-      }
-      */
-
-      /*
-      cublasSgemv('n',
-                  kernel_size_x * kernel_size_y,
-                  num_images * this_num_modules_batch * num_output_channels,
-                  scaleOutput, expanded_images, kernel_size_x * kernel_size_y,
-                  expanded_derivs, 1, 1, dw, 1);
-      */
       
       if (check_cublas_error()) {
         printf("Error in dot or before it.\n");
@@ -1366,7 +1298,7 @@ void _maxPoolUndoGemm(cudamat* images, cudamat* derivs, cudamat* maxes,
     getLastCudaError("maxPoolUndo: kernel execution failed");
 }
 
-void _maxPoolFpropGemm(cudamat* images, cudamat* R_images, cudamat* maxes, cudamat* targets,
+void _maxPoolRpropGemm(cudamat* images, cudamat* R_images, cudamat* maxes, cudamat* targets,
                 Shape4D images_shape, Shape4D maxes_shape, 
                 ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
     
@@ -1409,7 +1341,7 @@ void _maxPoolFpropGemm(cudamat* images, cudamat* R_images, cudamat* maxes, cudam
     dim3 threads(128);
     int num_blocks_x = MIN(4096, num_modules);
     dim3 blocks = dim3(num_blocks_x, num_input_channels);
-    kMaxPoolFprop<<<blocks, threads>>>(images->data_device, R_images->data_device,
+    kMaxPoolRprop<<<blocks, threads>>>(images->data_device, R_images->data_device,
                                maxes->data_device, targets->data_device,
                                num_images, num_input_channels,
                                image_size_y, image_size_x,
@@ -1463,13 +1395,13 @@ void _CrossMapRNormUndo(cudamat* outGrads, cudamat* images, cudamat* targets,
   getLastCudaError("_CrossMapRNormUndo: kernel execution failed");
 }
 
-void _CrossMapRNormFprop(cudamat* images, cudamat* R_images, cudamat* targets, int num_filters, int sizeF, float addScale, float powScale, bool blocked) {
+void _CrossMapRNormRprop(cudamat* images, cudamat* R_images, cudamat* targets, int num_filters, int sizeF, float addScale, float powScale, bool blocked) {
   int num_locs = (images->size[0] * images->size[1]) / num_filters;
   int threads = 512;
   int num_blocks = DIVUP(num_locs, threads);
-  kCrossMapRNormFprop<<<num_blocks, threads>>>(images->data_device, R_images->data_device, targets->data_device,
+  kCrossMapRNormRprop<<<num_blocks, threads>>>(images->data_device, R_images->data_device, targets->data_device,
                                                num_locs, addScale, powScale, num_filters, sizeF, blocked);
-  getLastCudaError("_CrossMapRNormFprop: kernel execution failed");
+  getLastCudaError("_CrossMapRNormRprop: kernel execution failed");
 }
 
 #ifdef __cplusplus
@@ -1506,11 +1438,11 @@ void convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
               *targets_shape, conv_desc, scaleTargets, scaleOutput, true);
 }
 
-void convOutpTraceGemm(cudamat* images, cudamat* derivs, cudamat* targets,
-                      Shape4D* images_shape, Shape4D* derivs_shape, Shape4D* targets_shape,
-                      ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
-  _convOutpTraceGemm(images, derivs, targets, *images_shape, *derivs_shape,
-                     *targets_shape, conv_desc, scaleTargets, scaleOutput, true);
+void convInnerpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+                    Shape4D* images_shape, Shape4D* derivs_shape, Shape4D* targets_shape,
+                    ConvDesc conv_desc, float scaleTargets, float scaleOutput) {
+  _convInnerpGemm(images, derivs, targets, *images_shape, *derivs_shape,
+                  *targets_shape, conv_desc, scaleTargets, scaleOutput, true);
 }
 
 void localUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
@@ -1555,10 +1487,10 @@ void MaxPoolUndoGemm(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
                    *maxGrads_shape, conv_desc, scaleTargets, 1);
 }
 
-void MaxPoolFpropGemm(cudamat* images, cudamat* R_images, cudamat* maxActs,
+void MaxPoolRpropGemm(cudamat* images, cudamat* R_images, cudamat* maxActs,
                       cudamat* targets, Shape4D* images_shape, Shape4D* maxGrads_shape,
                       ConvDesc conv_desc, float scaleTargets) {
-  _maxPoolFpropGemm(images, R_images, maxActs, targets, *images_shape,
+  _maxPoolRpropGemm(images, R_images, maxActs, targets, *images_shape,
                     *maxGrads_shape, conv_desc, scaleTargets, 1);
 }
 
@@ -1621,10 +1553,10 @@ void ResponseNormCrossMapUndoGemm(
                      powScale, blocked);
 }
 
-void ResponseNormCrossMapFpropGemm(
+void ResponseNormCrossMapRpropGemm(
   cudamat* images, cudamat* R_images, cudamat* targets, int num_filters, int sizeF, float addScale,
   float powScale, bool blocked) {
-  _CrossMapRNormFprop(images, R_images, targets, num_filters, sizeF, addScale, powScale, blocked);
+  _CrossMapRNormRprop(images, R_images, targets, num_filters, sizeF, addScale, powScale, blocked);
 }
   
 void Scale(cudamat* mat, float scale) {
