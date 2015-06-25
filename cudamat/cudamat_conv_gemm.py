@@ -68,11 +68,17 @@ def convDown(hidSums, filters, targets, conv_desc, scaleTargets=0):
                     hidSums.p_shape4d, filters.p_shape4d, targets.p_shape4d,
                     conv_desc, ct.c_float(scaleTargets))
 
-def convOutp(images, hidSums, targets, conv_desc, scaleTargets=0):
+def convOutp(images, hidSums, targets, conv_desc, scaleTargets=0, scaleGradients=1):
   _ConvNet.convOutpGemm(
     images.p_mat, hidSums.p_mat, targets.p_mat,
     images.p_shape4d, hidSums.p_shape4d, targets.p_shape4d,
-    conv_desc, ct.c_float(scaleTargets), ct.c_float(1))
+    conv_desc, ct.c_float(scaleTargets), ct.c_float(scaleGradients))
+
+def convOutpTrace(images, hidSums, targets, conv_desc, scaleTargets=0, scaleGradients=1):
+  _ConvNet.convOutpTraceGemm(
+    images.p_mat, hidSums.p_mat, targets.p_mat,
+    images.p_shape4d, hidSums.p_shape4d, targets.p_shape4d,
+    conv_desc, ct.c_float(scaleTargets), ct.c_float(scaleGradients))
 
 def MaxPool(images, targets, conv_desc):
   _ConvNet.MaxPoolGemm(images.p_mat, targets.p_mat, images.p_shape4d,
@@ -83,6 +89,11 @@ def MaxPoolUndo(images, grad, maxes, targets, conv_desc, scaleTargets=0):
   _ConvNet.MaxPoolUndoGemm(images.p_mat, grad.p_mat, maxes.p_mat, targets.p_mat,
                        images.p_shape4d, grad.p_shape4d, conv_desc,
                        ct.c_float(scaleTargets))
+
+def MaxPoolFprop(images, R_images, maxes, targets, conv_desc, scaleTargets=0):
+  _ConvNet.MaxPoolFpropGemm(images.p_mat, R_images.p_mat, maxes.p_mat, targets.p_mat,
+                            images.p_shape4d, maxes.p_shape4d, conv_desc,
+                            ct.c_float(scaleTargets))
 
 def AvgPool(images, targets, conv_desc):
   _ConvNet.AvgPoolGemm(images.p_mat, targets.p_mat, images.p_shape4d,
@@ -103,6 +114,12 @@ def ResponseNormCrossMapUndo(derivs, images, targets, sizeF, addScale, powScale,
   _, _, _, num_filters = images.shape4d
   _ConvNet.ResponseNormCrossMapUndoGemm(
     derivs.p_mat, images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
+    ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
+
+def ResponseNormCrossMapFprop(images, R_images, targets, sizeF, addScale, powScale, blocked):
+  _, _, _, num_filters = images.shape4d
+  _ConvNet.ResponseNormCrossMapFpropGemm(
+    images.p_mat, R_images.p_mat, targets.p_mat, ct.c_int(num_filters), ct.c_int(sizeF),
     ct.c_float(addScale), ct.c_float(powScale), ct.c_int(blocked))
 
 def convUp3D(images, filters, targets, conv_desc, scaleTargets=0, bias=None):
