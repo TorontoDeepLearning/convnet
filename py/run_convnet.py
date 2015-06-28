@@ -1,7 +1,7 @@
 import sys
 import convnet as cn
 import numpy as np
-import Image
+from PIL import Image
 
 def LoadImage(file_name, resize=256, crop=224):
   image = Image.open(file_name)

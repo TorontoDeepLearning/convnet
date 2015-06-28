@@ -16,8 +16,8 @@ def ChooseEdge(edge_proto):
   else:
     raise Exception('Edge type not implemented.')
 
-def CreateConvDesc(edge_proto):
-  return cm.GetConvDesc(1, 1,
+def CreateConvDesc(num_input_channels, num_output_channels, edge_proto):
+  return cm.GetConvDesc(num_input_channels, num_output_channels,
     edge_proto.kernel_size, edge_proto.kernel_size,
     edge_proto.stride, edge_proto.stride,
     edge_proto.padding, edge_proto.padding)
@@ -87,12 +87,13 @@ class EdgeWithWeight(Edge):
 class ConvEdge(EdgeWithWeight):
   def __init__(self, edge_proto):
     super(ConvEdge, self).__init__(edge_proto)
-    self.conv_desc_ = CreateConvDesc(edge_proto)
     self.shared_bias_ = edge_proto.shared_bias
+    self.edge_proto_ = edge_proto
 
   def SetImageSize(self, image_size_y, image_size_x):
-    self.conv_desc_.num_input_channels = self.num_input_channels_
-    self.conv_desc_.num_output_channels = self.num_output_channels_
+    self.conv_desc_ = CreateConvDesc(self.num_input_channels_,
+                                     self.num_output_channels_,
+                                     self.edge_proto_)
     self.image_size_y_ = image_size_y
     self.image_size_x_ = image_size_x
     self.num_modules_y_, self.num_modules_x_ = cm.GetOutputShape(image_size_y, image_size_x, self.conv_desc_)
@@ -130,11 +131,12 @@ class ConvEdge(EdgeWithWeight):
 class MaxPoolEdge(Edge):
   def __init__(self, edge_proto):
     super(MaxPoolEdge, self).__init__(edge_proto)
-    self.conv_desc_ = CreateConvDesc(edge_proto)
+    self.edge_proto_ = edge_proto
 
   def SetImageSize(self, image_size_y, image_size_x):
-    self.conv_desc_.num_input_channels = self.num_input_channels_
-    self.conv_desc_.num_output_channels = self.num_output_channels_
+    self.conv_desc_ = CreateConvDesc(self.num_input_channels_,
+                                     self.num_output_channels_,
+                                     self.edge_proto_)
     self.image_size_y_ = image_size_y
     self.image_size_x_ = image_size_x
     self.num_modules_y_, self.num_modules_x_ = cm.GetOutputShape(image_size_y, image_size_x, self.conv_desc_)
