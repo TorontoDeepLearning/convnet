@@ -48,6 +48,11 @@ void convOutpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
                   Shape4D* targets_shape, ConvDesc conv_desc,
                   float scaleTargets, float scaleOutput);
 
+void convInnerpGemm(cudamat* images, cudamat* derivs, cudamat* targets,
+                    Shape4D* images_shape, Shape4D* derivs_shape,
+                    Shape4D* targets_shape, ConvDesc conv_desc,
+                    float scaleTargets, float scaleOutput);
+
 void localUpGemm(cudamat* images, cudamat* filters, cudamat* targets,
                 Shape4D* images_shape, Shape4D* filters_shape,
                 Shape4D* targets_shape, ConvDesc conv_desc,
@@ -73,6 +78,11 @@ void MaxPoolUndoGemm(cudamat* images, cudamat* maxGrads, cudamat* maxActs,
                      Shape4D* maxGrads_shape, ConvDesc conv_desc,
                      float scaleTargets);
 
+void MaxPoolRpropGemm(cudamat* images, cudamat* R_images, cudamat* maxActs,
+                      cudamat* targets, Shape4D* images_shape,
+                      Shape4D* maxGrads_shape, ConvDesc conv_desc,
+                      float scaleTargets);
+
 void AvgPoolGemm(cudamat* images, cudamat* targets, Shape4D* images_shape,
                  Shape4D* targets_shape, ConvDesc conv_desc, float scaleTargets,
                  float scaleOutput);
@@ -94,6 +104,11 @@ void ResponseNormCrossMapGemm(
 void ResponseNormCrossMapUndoGemm(
   cudamat* outGrads, cudamat* inputs, cudamat* targets,
   int numFilters, int sizeF, float addScale, float powScale, bool blocked);
+
+
+void ResponseNormCrossMapRpropGemm(
+  cudamat* images, cudamat* R_images, cudamat* targets, int numFilters, int sizeF, float addScale,
+  float powScale, bool blocked);
 
 void Scale(cudamat* mat, float scale);
 
