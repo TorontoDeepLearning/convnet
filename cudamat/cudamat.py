@@ -298,24 +298,29 @@ class CUDAMatrix(object):
     numbers on a GPU.
     """
 
-    def overwrite(self, array, copy_to_device=True):
+    def overwrite(self, array, copy_to_device=True, transpose=False):
         """Overwrites self with array.
-        
-        'array' should have a size smaller than that of the array used to
-        initialize the CUDAMatrix. The method will not throw an Exception just
-        yet if this is not true. It will throw exceptions or behave in strange
-        ways later on.
+        'array' should have a size smaller than or equal to that of the array
+        used to initialize the CUDAMatrix object.
         """
         assert type(array) == np.ndarray, 'array must be a np.ndarray.'
-        array = reformat(array)
+        assert array.size <= self.shape[0] * self.shape[1]
+
+        if transpose:
+            cols = array.shape[0]
+            rows = array.shape[1]
+        else:
+            array = reformat(array)
+            cols = array.shape[1]
+            rows = array.shape[0]
         self.numpy_array = array
-        _cudamat.init_from_array(self.p_mat, array.ctypes.data_as(ct.POINTER(ct.c_float)), ct.c_int(array.shape[0]), ct.c_int(array.shape[1]))
+        _cudamat.init_from_array(self.p_mat, array.ctypes.data_as(ct.POINTER(ct.c_float)),
+                                 ct.c_int(rows), ct.c_int(cols))
         _cudamat.set_on_device(self.p_mat)
         if copy_to_device:
             err_code = _cudamat.copy_to_device(self.p_mat)
             if err_code:
                 raise generate_exception(err_code)
-
 
     def __init__(self, array, copy_to_device = True, transpose = False, shape=None):
         """
@@ -746,6 +751,21 @@ class CUDAMatrix(object):
 
         return self
 
+    def sample_vmf(self, num_dims, target=None, tiny=1e-10):
+        """
+        See Wood(1994) Simulation of the von mises fisher distribution.
+        This method does rejection sampling using the envelope distribution given in this paper.
+        self : the concentration parameter.
+        """
+        if not target:
+          target = self
+        err_code = _cudamat.sample_vmf(CUDAMatrix.rnd_state_p, self.p_mat, target.p_mat, ct.c_int(num_dims), ct.c_float(tiny))
+        if err_code:
+            raise generate_exception(err_code)
+
+        return self
+
+
     def perturb_energy_for_softmax_sampling(self, target=None):
         """
         Add by -log(-log(rand)).
@@ -893,7 +913,7 @@ class CUDAMatrix(object):
 
         return target
         
-    def mult_by_row(self, vec, target = None):
+    def mult_by_row(self, vec, target = None, scale_targets=0):
         """
         Multiply vector vec into every row of the matrix. If a target is
         provided, it is used to store the result instead of self.
@@ -902,7 +922,7 @@ class CUDAMatrix(object):
         if not target:
             target = self
 
-        err_code = _cudamat.mult_by_row_vec(self.p_mat, vec.p_mat, target.p_mat)
+        err_code = _cudamat.mult_by_row_vec(self.p_mat, vec.p_mat, target.p_mat, ct.c_float(scale_targets))
         if err_code:
             raise generate_exception(err_code)
 
@@ -953,7 +973,11 @@ class CUDAMatrix(object):
               raise generate_exception(err_code)
           return res
           """
-          return vdot(self, CUDAMatrix.ones.slice(0, self.shape[0]*self.shape[1])) * mult
+          num_ones = self.shape[0]*self.shape[1]
+          if num_ones > MAX_ONES:
+            CUDAMatrix.ones.free_device_memory()
+            CUDAMatrix.ones = CUDAMatrix(np.ones((1, num_ones), dtype=np.float32, order = 'F'))
+          return vdot(self, CUDAMatrix.ones.slice(0, num_ones)) * mult
         else:
           return sum(self, axis, target, mult)
 
@@ -1226,7 +1250,7 @@ class CUDAMatrix(object):
 
         return target
 
-    def add_sqsums(self, mat, axis, mult = 1.):
+    def add_sqsums(self, mat, axis, mult = 1., p=1.0):
         """
         Add the sum of squares of mat along the given dimension to self. 0 represents the
         leading dimension and 1 represents the non-leading dimension.
@@ -1239,7 +1263,7 @@ class CUDAMatrix(object):
 
         err_code =  _cudamat.sqsum_by_axis(mat.p_mat, self.p_mat,
                                            ct.c_int(axis), ct.c_float(mult),
-                                           ct.c_float(1.0))
+                                           ct.c_float(p))
         if err_code:
             raise generate_exception(err_code)
 
@@ -1284,6 +1308,22 @@ class CUDAMatrix(object):
 
         return target
 
+    def normalize_backprop(self, val, target = None):
+        """
+        Backprop the derivatives (self) through the normalization operation.
+        val is the input activations (before normalization).
+        If a target is not provided, self is used as target.
+        """
+        m, n = self.shape
+
+        if not target:
+            target = self
+ 
+        err_code =  _cudamat.norm_bprop_rowwise(self.p_mat, val.p_mat, target.p_mat)
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
 
     def apply_softmax(self, target = None):
         """
@@ -1291,16 +1331,18 @@ class CUDAMatrix(object):
         """
         return softmax(self, target)
 
-    def apply_softmax_row_major(self, num_slices = None):
+    def apply_softmax_row_major(self, target=None, num_slices=None):
         """
         Apply the softmax activation function.
         """
         if num_slices is None:
           num_slices = self.shape[1]
-        err_code = _cudamat.softmax_row_major_multi(self.p_mat, ct.c_int(num_slices))
+        if target is None:
+          target = self
+        err_code = _cudamat.softmax_row_major_multi(self.p_mat, ct.c_int(num_slices), target.p_mat)
         if err_code:
             raise generate_exception(err_code)
-        return self
+        return target
 
     def sign(self, target = None):
         """
@@ -1351,6 +1393,61 @@ class CUDAMatrix(object):
 
         return target
 
+    def apply_bessel_ratio_activation(self, target = None):
+        """
+        target = I_1 (self) / I_0 (self).
+        """
+
+        if not target:
+            target = self
+
+        err_code = _cudamat.bessel_ratio_activation(self.p_mat, target.p_mat)
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
+
+    def apply_bessel_ratio_activation_continued_fraction(self, v, num_steps, target = None):
+        """
+        target = I_{v+1} (self) / I_{v} (self).
+        Uses the continued fraction method
+        I_{v+1}/I_{v} = 1/ (2*(v + 1) / k + 1 / (2 * (v+2)/k + 1/ ...))
+        num_steps is the number of steps to which the continued fraction will be unrolled.
+        """
+        if not target:
+            target = self
+
+        err_code = _cudamat.bessel_ratio_activation_continued_fraction(self.p_mat, target.p_mat, ct.c_float(v), ct.c_int(num_steps))
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
+
+    def apply_capsule_activation(self, length, bessel_ratio, target=None):
+        """
+        Apply the capsule activation function. length and bessel_ratio are both outputs.
+        """
+        if not target:
+            target = self
+        err_code = _cudamat.capsule_activation(self.p_mat, target.p_mat, length.p_mat, bessel_ratio.p_mat);
+        if err_code:
+            raise generate_exception(err_code)
+        return self
+
+    def apply_capsule_derivative_of_activation(self, h_out, length, bessel_ratio, sparsity_cost=0.0, sparsity_scale=1.0, target=None):
+        """
+        Apply the derivative of the capsule activation function. length and bessel_ratio are both inputs.
+        h_out is the activation of the capsules.
+        """
+        if not target:
+            target = self
+        err_code = _cudamat.capsule_derivative_of_activation(self.p_mat, h_out.p_mat, length.p_mat, bessel_ratio.p_mat,
+                                                             target.p_mat, ct.c_float(sparsity_cost), ct.c_float(sparsity_scale));
+        if err_code:
+            raise generate_exception(err_code)
+        return self
+
+
     def apply_relu_squash(self, target = None, lambdaa=2.0):
         """
         target = 2 / (1 + exp(-self * lambda)) - 1
@@ -1393,6 +1490,18 @@ class CUDAMatrix(object):
             raise generate_exception(err_code)
 
         return self
+
+    def rms_prop(self, gradient, factor):
+        """
+        self = sqrt(self**2 * factor + gradient**2 * (1-factor))
+        """
+
+        err_code = _cudamat.rms_prop(self.p_mat, gradient.p_mat, ct.c_float(factor))
+        if err_code:
+            raise generate_exception(err_code)
+
+        return self
+
 
     def add_mult_sign(self, mat2, mult = 1.):
         """
@@ -1624,7 +1733,21 @@ class CUDAMatrix(object):
 
         return target
 
+    def get_softmax_cross_entropy_row_major(self, labels, target, tiny=1e-10):
+        """
+        target[i] = -log(self[label[i]] + tiny).
+        """
+        assert labels.shape == (self.shape[0], 1)
+        assert target.shape == labels.shape
+        if isinstance(labels, CUDAMatrix):
+            err_code = _cudamat.get_softmax_cross_entropy_row_major(self.p_mat, labels.p_mat, target.p_mat, ct.c_float(tiny))
+        else:
+            raise ValueError, "labels must be of type CUDAMatrix."
 
+        if err_code:
+            raise generate_exception(err_code)
+
+        return target
 
     def apply_softmax_grad(self, labels, target = None):
         """
@@ -1935,7 +2058,6 @@ def sparse_dot(sparse_mat, dense_mat, mult=1.0, target = None):
         n = dense_mat.size[1]
         target = empty((m, n))
 
-    print target.shape
     err_code = _cudamat.sparse_dot(sparse_mat.p_mat, dense_mat.p_mat, target.p_mat, ct.c_float(0.), ct.c_float(mult))
     if err_code:
         raise generate_exception(err_code)
@@ -1974,7 +2096,7 @@ def vdot(m1, m2):
 
 def softmax(mat, target = None):
     """
-    Apply cos to each element of the matrix mat.
+    Apply softmax to each column.
     """
 
     if target:
@@ -2229,6 +2351,17 @@ def extract_patches(images, patches, width_offset, height_offset, flip, img_widt
   if err_code:
     raise generate_exception(err_code)
 
+def extract_patches_col(images, patches, width_offset, height_offset, flip,
+                        img_width, img_height, patch_width, patch_height):
+  err_code = _cudamat.extract_patches_3(images.p_mat, patches.p_mat, width_offset.p_mat, height_offset.p_mat, flip.p_mat, ct.c_int(img_width), ct.c_int(img_height), ct.c_int(patch_width), ct.c_int(patch_height))
+  if err_code:
+    raise generate_exception(err_code)
+
+def capsulify(images, output, image_size, crop_size):
+  err_code = _cudamat.capsulify(images.p_mat, output.p_mat, ct.c_int(image_size), ct.c_int(crop_size))
+  if err_code:
+    raise generate_exception(err_code)
+
 def lstm_fprop(s_in, s_out, w_dense, w_diag, b, use_relu=False, init=False):
   numcases, num_lstms_mult = s_in.shape
   num_lstms = num_lstms_mult / 6
@@ -2267,6 +2400,60 @@ def lstm_outp(s_in, s_out, d_out, dw_dense, dw_diag, db, init=False):
   if err_code:
     raise generate_exception(err_code)
 
+def lstm_fprop2(gates, cell_prev, cell, output, w):
+  num_lstms, num_cases = cell.shape
+  assert gates.shape[1] == num_cases
+  assert gates.shape[0] == 4 * num_lstms
+  assert cell_prev.shape == cell.shape
+  assert output.shape == cell.shape
+  assert w.shape == (num_lstms, 3)
+ 
+  err_code = _cudamat.lstm_fprop2(gates.p_mat, cell_prev.p_mat, cell.p_mat, output.p_mat, w.p_mat)
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_fprop2_init(gates, cell, output, w):
+  num_lstms, num_cases = cell.shape
+  assert gates.shape[1] == num_cases
+  assert gates.shape[0] == 4 * num_lstms
+  assert output.shape == cell.shape
+  assert w.shape == (num_lstms, 3)
+ 
+  err_code = _cudamat.lstm_fprop2_init(gates.p_mat, cell.p_mat, output.p_mat, w.p_mat)
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_bprop2(gates, gates_deriv, cell_prev, cell_prev_deriv, cell, cell_deriv, output_deriv, w):
+  num_lstms, num_cases = cell.shape
+  assert gates.shape[1] == num_cases
+  assert gates.shape[0] == 4 * num_lstms
+  assert gates_deriv.shape == gates.shape
+  assert cell_prev.shape == cell.shape
+  assert cell_prev_deriv.shape == cell.shape
+  assert cell_deriv.shape == cell.shape
+  assert output_deriv.shape == cell.shape
+  assert w.shape == (num_lstms, 3)
+ 
+  err_code = _cudamat.lstm_bprop2(gates.p_mat, gates_deriv.p_mat, cell_prev.p_mat, cell_prev_deriv.p_mat,
+                                  cell.p_mat, cell_deriv.p_mat, output_deriv.p_mat, w.p_mat)
+  if err_code:
+    raise generate_exception(err_code)
+
+def lstm_bprop2_init(gates, gates_deriv, cell, cell_deriv, output_deriv, w):
+  num_lstms, num_cases = cell.shape
+  assert gates.shape[1] == num_cases
+  assert gates.shape[0] == 4 * num_lstms
+  assert gates_deriv.shape == gates.shape
+  assert cell_deriv.shape == cell.shape
+  assert output_deriv.shape == cell.shape
+  assert w.shape == (num_lstms, 3)
+ 
+  err_code = _cudamat.lstm_bprop2_init(gates.p_mat, gates_deriv.p_mat,
+                                       cell.p_mat, cell_deriv.p_mat, output_deriv.p_mat, w.p_mat)
+  if err_code:
+    raise generate_exception(err_code)
+
+
 def cuda_sync_threads():
     _cudamat.cuda_sync_threads()
 
@@ -2274,7 +2461,6 @@ def reformat(array):
     """
     Returns array as a float32 array in FORTRAN order.
     """
-
     return np.array(array, dtype=np.float32, order='F')
 
 def cuda_set_device(dev_id):

@@ -47,6 +47,7 @@ __global__ void kSampleBernoulli(unsigned int* randMults, unsigned long long* ra
 __global__ void kSampleBernoulliTanh(unsigned int* randMults, unsigned long long* randWords, float* gData, float* target, unsigned int numElements);
 __global__ void kSamplePoisson(unsigned int* randMults, unsigned long long* randWords, float* gData, float* target, unsigned int numElements);
 __global__ void kSampleGaussian(unsigned int* randMults, unsigned long long* randWords, float* gData, float* target, unsigned int numElements, float mult);
+__global__ void kSampleVMF(unsigned int* rndMults, unsigned long long* rndWords, float* kappa, float* target, int n, unsigned int len, float tiny);
 __global__ void kPerturbProb(unsigned int* randMults, unsigned long long* randWords, float* gData, float* target, unsigned int numElements);
 __global__ void kPerturbEnergy(unsigned int* randMults, unsigned long long* randWords, float* gData, float* target, unsigned int numElements);
 
@@ -78,6 +79,7 @@ __global__ void kSqSumRowwise(float* mat, float* target, unsigned int width, uns
 __global__ void kNormLimitColumnwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint);
 __global__ void kNormalizeColumnwise(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigned int width, unsigned int height, int constraint);
+__global__ void kNormalizeRowwiseBprop(float* deriv, float* input, float* target, unsigned int width, unsigned int height);
 __global__ void kSumAll(float* mat, unsigned int len);
 __global__ void kSparseDot(int m, int n, int k, float *data, int* indptr, int* indices, float *dense_data, float* target, float beta, float alpha);
 __global__ void kSign(float* mat, float* target, unsigned int len);
@@ -100,6 +102,8 @@ __global__ void kCrossEntropy(float* mat, float* p, float* target, unsigned int 
 __global__ void kCrossEntropyBernoulli(float* mat, float* p, float* target, unsigned int len, float tiny);
 __global__ void kCorrectPreds(float* mat, float* p, float* target, unsigned int len, float cutoff);
 __global__ void kReciprocal(float* mat, float* target, unsigned int len);
+__global__ void kBesselRatioActivation(float* mat, float* target, unsigned int len);
+__global__ void kBesselRatioActivationContinuedFraction(float* mat, float* target, float order, int num_terms, unsigned int len);
 __global__ void kAddDiagonal(float* mat, float* vec, float* tgtMat, unsigned int width);
 __global__ void kAddDiagonalScalar(float* mat, float val, float* tgtMat, unsigned int width);
 __global__ void kMultDiagonal(float* mat, float* vec, float* tgtMat, unsigned int width);
@@ -111,6 +115,7 @@ __global__ void kAddRowMult(float* mat, float* vec, float* tgtMat, float mult, u
 __global__ void kAddToEachPixel(float* mat1, float* mat2, float* tgtMat, float mult, unsigned int width, unsigned int height, unsigned int num_pix);
 __global__ void kMultByColVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height);
 __global__ void kMultByRowVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height);
+__global__ void kMultByRowVectorScale(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height, float scale_targets);
 __global__ void kDivByColVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height);
 __global__ void kDivByRowVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height);
 __global__ void kAddMultSign(float* a, float* b, unsigned int numEls, float mult);
@@ -142,7 +147,7 @@ __global__ void kChooseMaxAndAccumulate(float* mat, float* acc, unsigned int wid
 
 __global__ void kSoftMax(float* mat, float* target, unsigned int width, unsigned int height);
 __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int height);
-__global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int height);
+__global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int height, float* target);
 __global__ void kSoftMaxGrad(float* mat, float* labels, float* target, unsigned int width, unsigned int height);
 __global__ void kSoftMaxGradCLS(float* mat, int* labels, float* indices, float* target, unsigned int width, unsigned int height);
 __global__ void kSoftMaxGradRowMajor(float* mat, float* labels, float* target, unsigned int width, unsigned int height);
@@ -159,6 +164,8 @@ __global__ void kAccumulateColumns(float* mat, float* indices, float* target, in
 __global__ void kExtractPatches(float* images, float* patches, float* indices, float* width_offset, float* height_offset, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors);
 __global__ void kRectifyBoundingBox(float* boxes, float* width_offset, float* height_offset, float* flip, int num_images, int patch_width, int patch_height, int num_locs);
 __global__ void kExtractPatches2(float* images, float* patches, float* width_offset, float* height_offset, float* flip, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors);
+__global__ void kExtractPatches3(float* images, float* patches, float* width_offset, float* height_offset, float* flip, int num_images, int img_width, int img_height, int patch_width, int patch_height, int num_colors);
+__global__ void kCapsulify(float* images, float* output, int image_size, int crop_size, int num_images);
 __global__ void kAdagrad(float *history, float *grad, float delta, int len);
 __global__ void kRMSProp(float *history, float *grad, float factor, int len);
 __global__ void kBoundingBoxLogisticGrad(
@@ -188,6 +195,17 @@ __global__ void kLSTMBprop(float *s_in, float* s_out, float* d_in, float* d_out,
 __global__ void kLSTMOutp(float* s_in, float* s_out, float* d_out, float* dw_diag, float* db, int numcases, int num_lstms, bool init);
 __global__ void kBNBprop(float* d, float* x, float* gamma, float* mu, float* sigma,
                          float* target, unsigned int width, unsigned int height, float scale_targets);
+__global__ void kBNBpropInplace(float* d, float* y, float* dgamma, unsigned int width, unsigned int height);
 __global__ void kBNGrad(float* d, float* x, float* mu, float* sigma,
                         float* dgamma, float* dbeta, unsigned int width, unsigned int height);
+
+
+__global__ void kLSTMFprop2Init(float *gates, float* cell, float* output, float* w, int num_lstms, int num_cases);
+__global__ void kLSTMFprop2(float *gates, float* cell_prev, float* cell, float* output, float* w, int num_lstms, int num_cases);
+__global__ void kLSTMBprop2Init(float *gates, float* gates_deriv, float* cell, float* cell_deriv,
+    float* output_deriv, float* w, int num_lstms, int num_cases);
+__global__ void kLSTMBprop2(float *gates, float* gates_deriv, float* cell_prev, float* cell_prev_deriv,
+    float* cell, float* cell_deriv, float* output_deriv, float* w, int num_lstms, int num_cases);
+__global__ void kCapsuleActivation(float* h, float* l, float* s, float* output, unsigned int width, unsigned int height);
+__global__ void kBpropCapsuleActivation(float* d, float* y, float* l, float* s, float* output_d, float sparsity_cost, float sparsity_scale, unsigned int width, unsigned int height);
 #endif

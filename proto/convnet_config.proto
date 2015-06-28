@@ -52,6 +52,13 @@ message Layer {
   optional string tied_data = 19;
   
   optional int32 image_size_t = 20 [default=1];
+
+  // Batch Normalization.
+  optional bool batch_normalize = 21 [default=false];
+  optional float bn_f = 22 [default=0.98];  // Running avg.
+  optional float bn_epsilon = 23 [default=1e-5];  // For stabilizing sigma.
+  optional Optimizer gamma_optimizer = 24;
+  optional Optimizer beta_optimizer = 25;
 }
 
 message Optimizer {
@@ -122,7 +129,7 @@ message Edge {
     RGBTOYUV = 7;
     AVERAGE_POOL = 8;
     CONV_ONETOONE = 9;
-    BATCH_NORMALIZATION = 10;
+    // BATCH_NORMALIZATION = 10; REMOVED : Use inplace batch normalization in layer.
   }
   optional EdgeType edge_type = 3 [default=FC];
 
@@ -212,10 +219,6 @@ message Edge {
   optional int32 padding_y = 39 [default=0];
   optional int32 padding_x = 40 [default=0];
   optional int32 padding_t = 41 [default=0];
-
-  // Batch Normalization.
-  optional float bn_f = 42 [default=0.98];  // Running avg.
-  optional float bn_epsilon = 43 [default=1e-5];  // For stabilizing sigma.
 }
 
 message Subnet {

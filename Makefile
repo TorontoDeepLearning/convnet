@@ -7,7 +7,7 @@ LIB=$(HOME)/local/lib
 LOCAL_BIN=$(HOME)/local/bin
 
 # CUDA.
-CUDA_ROOT=/pkgs_local/cuda-5.5
+CUDA_ROOT=$(HOME)/local/cuda-6.5
 
 USE_MPI=no
 USE_CUDA=yes

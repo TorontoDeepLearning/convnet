@@ -192,6 +192,7 @@ public:
 
   static void BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
                       Matrix& sigma, Matrix& target, float scale_targets);
+  static void BNBpropInplace(Matrix& deriv, Matrix& act, Matrix& dgamma);
 
   static void BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
                      Matrix& dgamma, Matrix& dbeta);

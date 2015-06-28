@@ -659,7 +659,7 @@ void Matrix::Mult(Matrix& val) {
   mult_elementwise(&mat_, val.GetMat(), &mat_, 0);
 }
 void Matrix::MultByRowVec(Matrix& val) {
-  mult_by_row_vec(&mat_, val.GetMat(), &mat_);
+  mult_by_row_vec(&mat_, val.GetMat(), &mat_, 0);
 }
 void Matrix::Divide(float val) {
   divide_by_scalar(&mat_, val, &mat_);
@@ -705,7 +705,7 @@ void Matrix::ApplyDerivativeOfReLU(Matrix& state) {
 }
 
 void Matrix::ApplySoftmax() {
-  softmax_row_major_multi(&mat_, GetCols());
+  softmax_row_major_multi(&mat_, GetCols(), &mat_);
 }
 
 void Matrix::ApplyLogistic() {
@@ -755,17 +755,10 @@ void Matrix::HingeLossDeriv(Matrix& state, Matrix& gt, Matrix& deriv, bool quadr
 // target = alpha * target + beta * sum_rows(self)
 void Matrix::SumRows(Matrix& target, float alpha, float beta) {
   sum_by_axis(&mat_, target.GetMat(), 0, beta, alpha);
-  //Matrix ones;
-  //Matrix::GetOnes(1, GetRows(), ones);
-  //dot(ones.GetMat(), &mat_, target.GetMat(), alpha, beta);
 }
 
-// target = alpha * target + beta * sum_cols(self)
 void Matrix::SumCols(Matrix& target, float alpha, float beta) {
-  sum_by_axis(&mat_, target.GetMat(), 1, beta, alpha);  // Optimized for large number of rows.
-  //Matrix ones;
-  //Matrix::GetOnes(GetCols(), 1, ones);
-  //dot(&mat_, ones.GetMat(), target.GetMat(), alpha, beta);
+  sum_by_axis(&mat_, target.GetMat(), 1, beta, alpha);
 }
 
 // target = alpha * target + beta * sum_cols(self**2)
@@ -1091,6 +1084,13 @@ void Matrix::BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
   }
 }
 
+void Matrix::BNBpropInplace(Matrix& deriv, Matrix& acts, Matrix& dgamma) {
+  int err_code = bn_bprop_inplace(deriv.GetMat(), acts.GetMat(), dgamma.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in BNBpropInplace " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
 
 void Matrix::BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
                     Matrix& dgamma, Matrix& dbeta) {

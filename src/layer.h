@@ -2,6 +2,7 @@
 #define LAYER_H_
 #include "edge.h"
 #include "loss_functions.h"
+#include "optimizer.h"
 #include <set>
 
 /** The base class for all layers.
@@ -58,6 +59,22 @@ class Layer {
    */ 
   virtual void ApplyDerivativeofDropout();
 
+  /** Applies batch normalization.
+   * Subtracts batch mean and divides by batch stddev.
+   * Then scales and shifts by learned parameters.
+   */
+  virtual void ApplyBatchNormalization(bool train);
+
+  /** Apply derivative of batch normaliztion.
+   * Backprops the derivatives through batch normalization.
+   * Also computes derivatives for the parameters involved
+   * in batch normalization and applies them.
+   */
+  virtual void ApplyDerivativeofBatchNormalization();
+
+  /** Used for Nesterov momentum. */
+  void NotifyStart();
+
   // Methods for preventing race conditions when using multiple GPUs.
   void AccessStateBegin();
   void AccessStateEnd();
@@ -95,6 +112,7 @@ class Layer {
   int GetSizeT() const { return image_size_t_; }
   bool IsInput() const { return is_input_; }
   bool IsOutput() const { return is_output_; }
+  bool UseBatchNormalization() const { return batch_normalize_;}
 
   void SetSize(int image_size_x, int image_size_y, int image_size_t);
   int GetGPUId() const { return gpu_id_; }
@@ -160,6 +178,14 @@ class Layer {
   const float loss_function_weight_;
   const bool has_tied_data_;
   const std::string tied_data_layer_name_;
+
+  // Batch normalization.
+  const bool batch_normalize_;
+  Optimizer * const gamma_optimizer_;
+  Optimizer * const beta_optimizer_;
+  Matrix mu_, sigma_, batch_mu_, batch_sigma_,
+         gamma_, beta_, grad_gamma_, grad_beta_;
+  const float bn_f_, bn_epsilon_;
 };
 
 /** Implements a layer with a linear activation function.*/

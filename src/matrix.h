@@ -78,7 +78,7 @@ class Matrix {
   void DivideByRowVec(Matrix& v);
   float Sum();
   void SumRows(Matrix& target, float alpha, float beta);  // target = alpha*target + beta*...
-  void SumCols(Matrix& target, float alpha, float beta);
+  void SumCols(Matrix& target, float alpha, float beta);  // target = alpha*target + beta*...
   void Mult(float val);
   void Mult(Matrix& val);
   void Divide(float val);
@@ -189,6 +189,7 @@ class Matrix {
 
   static void BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
                       Matrix& sigma, Matrix& target, float scale_targets);
+  static void BNBpropInplace(Matrix& deriv, Matrix& act, Matrix& dgamma);
 
   static void BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
                      Matrix& dgamma, Matrix& dbeta);

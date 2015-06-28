@@ -2512,6 +2512,30 @@ int bn_bprop(eigenmat* deriv, eigenmat* input, eigenmat* gamma, eigenmat* mu,
   return 0;
 }
 
+int bn_bprop_inplace(eigenmat* deriv, eigenmat* acts, eigenmat* dgamma) {
+  int height = deriv->size[0];
+  int width  = deriv->size[1];
+  for (unsigned int column = 0; column < width; ++column) {
+    float cur_sum = 0;
+    float *cur_data1 = deriv->data + column * height;
+    float *cur_data2 = acts->data  + column * height;
+    for (unsigned int i = 0; i < height; ++i) {
+      cur_sum += cur_data1[i] * cur_data2[i];
+    }
+    float stat = cur_sum / height;
+    dgamma->data[column] = stat;
+    cur_sum = 0;
+    for (unsigned int i = 0; i < height; ++i) {
+      cur_data1[i] -= stat * cur_data2[i];
+      cur_sum += cur_data1[i];
+    }
+    stat = cur_sum / height;
+    for (unsigned int i = 0; i < height; ++i){
+      cur_data1[i] -= stat;
+    }
+  }
+}
+
 
 int bn_grad(eigenmat* deriv, eigenmat* input, eigenmat* mu, eigenmat* sigma,
             eigenmat* dgamma, eigenmat* dbeta) {

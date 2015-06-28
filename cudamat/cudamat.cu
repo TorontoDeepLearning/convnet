@@ -799,6 +799,22 @@ int sample_gaussian(rnd_struct* rnd_state, cudamat* mat, cudamat* target, float 
         return 0;
 }
 
+int sample_vmf(rnd_struct* rnd_state, cudamat* kappa, cudamat* target, int num_dims, float tiny) {
+    int len = kappa->size[0] * kappa->size[1];
+    if (kappa->size[0] != target->size[0] || kappa->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (!kappa->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    kSampleVMF<<<NUM_RND_BLOCKS,NUM_RND_THREADS_PER_BLOCK>>>(rnd_state->dev_mults, rnd_state->dev_words, kappa->data_device, target->data_device, num_dims, len, tiny);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+    else
+        return 0;
+}
+
 int perturb_energy(rnd_struct* rnd_state, cudamat* mat, cudamat* target) {
     int len = mat->size[0] * mat->size[1];
     if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
@@ -1091,7 +1107,7 @@ int mult_by_col_vec(cudamat* mat, cudamat* vec, cudamat* target) {
     return 0;
 }
 
-int mult_by_row_vec(cudamat* mat, cudamat* vec, cudamat* target) {
+int mult_by_row_vec(cudamat* mat, cudamat* vec, cudamat* target, float scale_targets) {
     unsigned int h = mat->size[0],
                  w = mat->size[1];
 
@@ -1105,7 +1121,11 @@ int mult_by_row_vec(cudamat* mat, cudamat* vec, cudamat* target) {
         mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
         return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    kMultByRowVector<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
+    if (scale_targets == 0.0) {
+      kMultByRowVector<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h);
+    } else {
+      kMultByRowVectorScale<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, vec->data_device, target->data_device, w, h, scale_targets);
+    }
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -1628,6 +1648,32 @@ int sum_by_axis(cudamat* mat, cudamat* target, int axis, float mult, float p) {
     return 0;
 }
 
+int bn_bprop_inplace(cudamat* deriv, cudamat* act, cudamat* dgamma) {
+    unsigned int h = deriv->size[0],
+                 w = deriv->size[1];
+
+    if (!deriv->on_device || !act->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (deriv->is_trans || act->is_trans)
+        return ERROR_TRANSPOSED;
+
+    if (act->size[0] != h || act->size[1] != w)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    if (dgamma->size[0] != 1 || dgamma->size[1] != w)
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    int shared_mem_size = 32 * sizeof(float) ;
+    kBNBpropInplace<<<w, 32, shared_mem_size>>>(deriv->data_device, act->data_device, dgamma->data_device, w, h);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
+
 int normalize_by_axis(cudamat* mat, cudamat* target, int axis) {
     unsigned int h = mat->size[0],
                  w = mat->size[1];
@@ -1686,6 +1732,29 @@ int normlimit_by_axis(cudamat* mat, cudamat* target, int axis,
     return 0;
 }
 
+int norm_bprop_rowwise(cudamat* deriv, cudamat* input, cudamat* target) {
+    unsigned int h = input->size[0],
+                 w = input->size[1];
+
+    if (!input->on_device || !target->on_device || !deriv->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (input->is_trans || deriv->is_trans || target->is_trans)
+        return ERROR_TRANSPOSED;
+
+    if (target->size[0] != input->size[0] || target->size[1] != input->size[1] ||
+        deriv->size[0] != input->size[0] || deriv->size[1] != input->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    int shared_mem_size = 32 * sizeof(float) ;
+    int h1 = floor(sqrt(h));
+    int h2 = DIVUP(h, h1);
+    dim3 gridDim(h1, h2, 1);
+    kNormalizeRowwiseBprop<<<gridDim,32, shared_mem_size>>>(deriv->data_device, input->data_device, target->data_device, w, h);
+    if (checkCUDAError())
+        return CUDA_ERROR;
+    return 0;
+}
 
 int sign(cudamat* mat, cudamat* target) {
     int len = mat->size[0]*mat->size[1];
@@ -2021,6 +2090,41 @@ int reciprocal(cudamat* mat, cudamat* target) {
 
     return 0;
 }
+
+int bessel_ratio_activation(cudamat* mat, cudamat* target) {
+    unsigned int len = mat->size[0] * mat->size[1];
+
+    if (!mat->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kBesselRatioActivation<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, target->data_device, len);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
+int bessel_ratio_activation_continued_fraction(cudamat* mat, cudamat* target, float order, int num_steps) {
+    unsigned int len = mat->size[0] * mat->size[1];
+
+    if (!mat->on_device || !target->on_device)
+        return ERROR_NOT_ON_DEVICE;
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+        return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    kBesselRatioActivationContinuedFraction<<<NUM_VECTOR_OP_BLOCKS,NUM_VECTOR_OP_THREADS_PER_BLOCK>>>(mat->data_device, target->data_device, order, num_steps, len);
+
+    if (checkCUDAError())
+        return CUDA_ERROR;
+
+    return 0;
+}
+
 
 // target = beta * target + alpha * mat1 * mat2
 int dot(cudamat* mat1, cudamat* mat2, cudamat* target, float beta, float alpha) {
@@ -2637,6 +2741,70 @@ int extract_patches(cudamat* images, cudamat* patches, cudamat* width_offset, cu
   return 0;
 }
 
+int extract_patches_3(cudamat* images, cudamat* patches, cudamat* width_offset,
+    cudamat* height_offset, cudamat* flip, int img_width, int img_height,
+    int patch_width, int patch_height) {
+
+  int num_images = images->size[1];
+  int num_colors = images->size[0] / (img_width * img_height);
+
+  if (patches->size[0] != num_colors * patch_width * patch_height || patches->size[1] != num_images)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  if (width_offset->size[0] * width_offset->size[1] != num_images)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  if (height_offset->size[0] * height_offset->size[1] != num_images)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  if (flip->size[0] * flip->size[1] != num_images)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+    unsigned int threads_y = (patch_height < COPY_BLOCK_SIZE) ? patch_height : COPY_BLOCK_SIZE;
+    unsigned int threads_x = (patch_width  < COPY_BLOCK_SIZE) ? patch_width  : COPY_BLOCK_SIZE;
+    unsigned int grid_y = (patch_height + threads_y - 1) / threads_y;
+    unsigned int grid_x = (patch_width  + threads_x - 1) / threads_x;
+    unsigned int grid_z = num_images * num_colors;
+    if (grid_z > 65535) grid_z = 65535;
+    dim3 grid(grid_x, grid_y, grid_z);
+    dim3 threads(threads_x, threads_y);
+
+  kExtractPatches3<<<grid, threads>>>(
+      images->data_device, patches->data_device, width_offset->data_device,
+      height_offset->data_device, flip->data_device, num_images, img_width, img_height,
+      patch_width, patch_height, num_colors);
+
+  if (checkCUDAError())
+    return CUDA_ERROR;
+  return 0;
+}
+
+int capsulify(cudamat* images, cudamat* output, int image_size, int crop_size) {
+  int num_images = images->size[1];
+  if (output->size[0] != images->size[0] || output->size[1] != images->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (images->size[0] != image_size * image_size)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (image_size % crop_size != 0)
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  unsigned int threads_y = (image_size < COPY_BLOCK_SIZE) ? image_size : COPY_BLOCK_SIZE;
+  unsigned int threads_x = (image_size < COPY_BLOCK_SIZE) ? image_size : COPY_BLOCK_SIZE;
+  unsigned int grid_y = (image_size + threads_y - 1) / threads_y;
+  unsigned int grid_x = (image_size + threads_x - 1) / threads_x;
+  unsigned int grid_z = num_images;
+  dim3 grid(grid_x, grid_y, grid_z);
+  dim3 threads(threads_x, threads_y);
+
+  kCapsulify<<<grid, threads>>>(images->data_device, output->data_device,
+                                image_size, crop_size, num_images);
+
+  if (checkCUDAError())
+    return CUDA_ERROR;
+  return 0;
+}
+
+
 int rectify_bounding_boxes(cudamat* boxes, cudamat* width_offset, cudamat* height_offset, cudamat* flip, int patch_width, int patch_height) {
     int num_images = boxes->size[0];
 
@@ -2722,28 +2890,31 @@ int softmax_overwrite(cudamat* mat) {
     return 0;
 }
 
-int softmax_row_major(cudamat* mat) {
-    return softmax_row_major_multi(mat, mat->size[1]);
+int softmax_row_major(cudamat* mat, cudamat* target) {
+    return softmax_row_major_multi(mat, mat->size[1], target);
 }
 
-int softmax_row_major_multi(cudamat* mat, int numslices) {
+int softmax_row_major_multi(cudamat* mat, int numslices, cudamat* target) {
     unsigned int len = mat->size[0] * mat->size[1];
     unsigned int h = len / numslices;
+
+    if (mat->size[0] != target->size[0] || mat->size[1] != target->size[1])
+      return ERROR_INCOMPATIBLE_DIMENSIONS;
 
     if (len % numslices != 0)
       return ERROR_INCOMPATIBLE_DIMENSIONS;
 
-    if (!mat->on_device)
+    if (!mat->on_device || !target->on_device)
         return ERROR_NOT_ON_DEVICE;
 
-    if (mat->is_trans)
+    if (mat->is_trans || target->is_trans)
         return ERROR_TRANSPOSED;
 
     int shared_mem_size = 32 * sizeof(float) ; 
     int h1 = floor(sqrt(h));
     int h2 = h / h1 + (h % h1 == 0 ? 0 : 1);
     dim3 gridDim(h1, h2, 1);
-    kSoftMaxRowMajor<<<gridDim, 32, shared_mem_size>>>(mat->data_device, numslices, h);
+    kSoftMaxRowMajor<<<gridDim, 32, shared_mem_size>>>(mat->data_device, numslices, h, target->data_device);
 
     if (checkCUDAError())
         return CUDA_ERROR;
@@ -3329,6 +3500,147 @@ int bn_grad(cudamat* deriv, cudamat* input, cudamat* mu, cudamat* sigma,
     return CUDA_ERROR;
   return 0;
 }
+
+// New LSTM kernels with data layout: cols = lstms, rows = batchsize, then timesteps.
+int lstm_fprop2(cudamat* gates, cudamat* cell_prev, cudamat* cell, cudamat* output, cudamat* w) {
+  int num_cases = cell->size[1];
+  int num_lstms = cell->size[0];
+
+  dim3 num_blocks(DIVUP(num_lstms, 32), num_cases);
+  dim3 num_threads(32, 1);
+  kLSTMFprop2<<<num_blocks, num_threads>>>(
+      gates->data_device,
+      cell_prev->data_device,
+      cell->data_device,
+      output->data_device,
+      w->data_device,
+      num_lstms,
+      num_cases);
+
+  if (checkCUDAError()) {
+      printf("Error in lstm_fprop2.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+int lstm_fprop2_init(cudamat* gates, cudamat* cell, cudamat* output, cudamat* w) {
+  int num_cases = cell->size[1];
+  int num_lstms = cell->size[0];
+
+  dim3 num_blocks(DIVUP(num_lstms, 32), num_cases);
+  dim3 num_threads(32, 1);
+  kLSTMFprop2Init<<<num_blocks, num_threads>>>(
+      gates->data_device,
+      cell->data_device,
+      output->data_device,
+      w->data_device,
+      num_lstms,
+      num_cases);
+
+  if (checkCUDAError()) {
+      printf("Error in lstm_fprop2_init.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+
+int lstm_bprop2(cudamat* gates, cudamat* gates_deriv, cudamat* cell_prev, cudamat* cell_prev_deriv,
+                cudamat* cell, cudamat* cell_deriv, cudamat* output_deriv, cudamat* w) {
+  int num_cases = cell->size[1];
+  int num_lstms = cell->size[0];
+
+  dim3 num_blocks(DIVUP(num_lstms, 32), num_cases);
+  dim3 num_threads(32, 1);
+  kLSTMBprop2<<<num_blocks, num_threads>>>(
+      gates->data_device, gates_deriv->data_device,
+      cell_prev->data_device, cell_prev_deriv->data_device,
+      cell->data_device, cell_deriv->data_device,
+      output_deriv->data_device,
+      w->data_device,
+      num_lstms,
+      num_cases);
+
+  if (checkCUDAError()) {
+      printf("Error in lstm_bprop2.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+int lstm_bprop2_init(cudamat* gates, cudamat* gates_deriv,
+                     cudamat* cell, cudamat* cell_deriv, cudamat* output_deriv, cudamat* w) {
+  int num_cases = cell->size[1];
+  int num_lstms = cell->size[0];
+
+  dim3 num_blocks(DIVUP(num_lstms, 32), num_cases);
+  dim3 num_threads(32, 1);
+  kLSTMBprop2Init<<<num_blocks, num_threads>>>(
+      gates->data_device, gates_deriv->data_device,
+      cell->data_device, cell_deriv->data_device,
+      output_deriv->data_device,
+      w->data_device,
+      num_lstms,
+      num_cases);
+
+  if (checkCUDAError()) {
+      printf("Error in lstm_bprop2_init.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+int capsule_activation(cudamat* h_in, cudamat* h_out, cudamat* length, cudamat* bessel_ratio) {
+  int capsule_size = h_in->size[0];
+  int num_capsules = h_in->size[1];
+
+  if (num_capsules != h_out->size[1] || capsule_size != h_out->size[0])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (num_capsules != length->size[0] * length->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (num_capsules != bessel_ratio->size[0] * bessel_ratio->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  int shared_mem_size = 32 * sizeof(float) ;
+  kCapsuleActivation<<<num_capsules, 32, shared_mem_size>>>(
+      h_in->data_device, length->data_device, bessel_ratio->data_device,
+      h_out->data_device, num_capsules, capsule_size);
+
+  if (checkCUDAError()) {
+      printf("Error capsule activation.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+int capsule_derivative_of_activation(cudamat* d_out, cudamat* h_out, cudamat* length, cudamat* bessel_ratio, cudamat* d_in, float sparsity_cost, float sparsity_scale) {
+  int capsule_size = d_out->size[0];
+  int num_capsules = d_out->size[1];
+
+  if (num_capsules != length->size[0] * length->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (num_capsules != bessel_ratio->size[0] * bessel_ratio->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (capsule_size != h_out->size[0] || num_capsules != h_out->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+  if (capsule_size != d_in->size[0] || num_capsules != d_in->size[1])
+    return ERROR_INCOMPATIBLE_DIMENSIONS;
+
+  int shared_mem_size = 32 * sizeof(float) ;
+  kBpropCapsuleActivation<<<num_capsules, 32, shared_mem_size>>>(
+      d_out->data_device, h_out->data_device, length->data_device,
+      bessel_ratio->data_device, d_in->data_device, sparsity_cost,
+      sparsity_scale, num_capsules, capsule_size);
+
+  if (checkCUDAError()) {
+      printf("Error capsule derivative of activation.\n");
+      return CUDA_ERROR;
+  }
+  return 0;
+}
+
+
 
 #ifdef __cplusplus
 }

@@ -56,7 +56,12 @@ Layer::Layer(const config::Layer& config) :
   performance_metric_(config.performance_metric()),
   loss_function_weight_(config.loss_function_weight()),
   has_tied_data_(!config.tied_data().empty()),
-  tied_data_layer_name_(config.tied_data()) {
+  tied_data_layer_name_(config.tied_data()),
+  batch_normalize_(config.batch_normalize()),
+  gamma_optimizer_(Optimizer::ChooseOptimizer(config.gamma_optimizer())),
+  beta_optimizer_(Optimizer::ChooseOptimizer(config.beta_optimizer())),
+  bn_f_(config.bn_f()),
+  bn_epsilon_(config.bn_epsilon()) {
 
   add_or_overwrite_state_[""] = true;
   add_or_overwrite_deriv_[""] = true;
@@ -256,6 +261,22 @@ void Layer::AllocateMemory(int batch_size) {
   if (store_dropout_noise_) {
     dropout_noise_.AllocateGPUMemory(batch_size, num_pixels * num_channels_, GetName() + " dropout");
   }
+  if (batch_normalize_) {
+    gamma_.AllocateGPUMemory(1, num_channels_, GetName() + " bn");
+    beta_.AllocateGPUMemory(1, num_channels_, GetName() + " bn");
+    grad_gamma_.AllocateGPUMemory(1, num_channels_, GetName() + " bn");
+    grad_beta_.AllocateGPUMemory(1, num_channels_, GetName() + " bn");
+    gamma_optimizer_->AllocateMemory(1, num_channels_);
+    beta_optimizer_->AllocateMemory(1, num_channels_);
+    gamma_.Set(1);
+    beta_.Set(0);
+    batch_mu_.AllocateGPUMemory(1, num_channels_);
+    batch_sigma_.AllocateGPUMemory(1, num_channels_);
+    mu_.AllocateGPUMemory(1, num_channels_);
+    sigma_.AllocateGPUMemory(1, num_channels_);
+    mu_.Set(0);
+    sigma_.Set(1);
+  }
   SetupSlices();
 
   AllocateMemoryOnOtherGPUs();
@@ -428,11 +449,78 @@ void Layer::Display(int image_id) {
   }
 }
 
+void Layer::ApplyBatchNormalization(bool train) {
+  int batch_size = state_.GetRows();
+  state_.Reshape(-1, num_channels_);
+  int n = state_.GetRows();
+  if (train) {
+    // Subtract mean.
+    state_.SumRows(batch_mu_, 0, 1.0f / n);
+    state_.AddRowVec(batch_mu_, -1);
+
+    // Divide by std dev.
+    state_.SqSumAxis(batch_sigma_, 0, 1.0f / n, 0);
+    batch_sigma_.Add(bn_epsilon_);
+    batch_sigma_.Sqrt();
+    state_.DivideByRowVec(batch_sigma_);
+
+    // Update the running averages.
+    mu_.Mult(bn_f_);
+    mu_.Add(batch_mu_, 1-bn_f_);
+    sigma_.Mult(bn_f_);
+    sigma_.Add(batch_sigma_, 1-bn_f_);
+  } else {
+    state_.AddRowVec(mu_, -1);
+    state_.DivideByRowVec(sigma_);
+  }
+  state_.MultByRowVec(gamma_);
+  state_.AddRowVec(beta_, 1);
+  state_.Reshape(batch_size, -1);
+}
+
+void Layer::ApplyDerivativeofBatchNormalization() {
+  // Reshape.
+  int batch_size = state_.GetRows();
+  deriv_.Reshape(-1, num_channels_);
+  state_.Reshape(-1, num_channels_);
+  int n = state_.GetRows();
+  
+  // Recover the state before multiplying by gamma and adding beta.
+  state_.AddRowVec(beta_, -1);
+  state_.DivideByRowVec(gamma_);
+
+  // Compute derivative for beta.
+  deriv_.SumRows(grad_beta_, 0, 1.0f / n);
+
+  // Back prop through normalization and compute derivative for gamma.
+  Matrix::BNBpropInplace(deriv_, state_, grad_gamma_);
+  deriv_.MultByRowVec(gamma_);
+  deriv_.DivideByRowVec(batch_sigma_);
+
+  // Restore state.
+  state_.MultByRowVec(gamma_);
+  state_.AddRowVec(beta_, 1);
+
+  // Reshape back.
+  state_.Reshape(batch_size, -1);
+  deriv_.Reshape(batch_size, -1);
+
+  gamma_optimizer_->Optimize(grad_gamma_, gamma_);
+  beta_optimizer_->Optimize(grad_beta_, beta_);
+}
+
 void Layer::ApplyDropout(bool train) {
   if (train) {
     ApplyDropoutAtTrainTime();
   } else {
     ApplyDropoutAtTestTime();
+  }
+}
+
+void Layer::NotifyStart() {
+  if (batch_normalize_) {
+    gamma_optimizer_->NotifyStart(gamma_);
+    beta_optimizer_->NotifyStart(beta_);
   }
 }
 

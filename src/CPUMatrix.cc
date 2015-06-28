@@ -1039,6 +1039,16 @@ void Matrix::BNBprop(Matrix& deriv, Matrix& input, Matrix& gamma, Matrix& mu,
   }
 }
 
+void Matrix::BNBpropInplace(Matrix& deriv, Matrix& act, Matrix& dgamma) {
+  int err_code = bn_bprop_inplace(deriv.GetMat(), act.GetMat(), dgamma.GetMat());
+  if (err_code != 0) {
+    cerr << "Error in BNBpropInplace " << GetStringError(err_code) << endl;
+    exit(1);
+  }
+}
+
+
+
 
 void Matrix::BNGrad(Matrix& deriv, Matrix& input, Matrix& mu, Matrix& sigma,
                     Matrix& dgamma, Matrix& dbeta) {

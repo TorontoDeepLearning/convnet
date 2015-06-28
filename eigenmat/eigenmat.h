@@ -169,6 +169,7 @@ int lstm_outp(eigenmat* s_in, eigenmat* s_out, eigenmat* d_out, eigenmat* dw_den
 
 int bn_bprop(eigenmat* deriv, eigenmat* input, eigenmat* gamma, eigenmat* mu,
              eigenmat* sigma, eigenmat* target, float scale_targets);
+int bn_bprop_inplace(eigenmat* deriv, eigenmat* acts, eigenmat* dgamma);
 int bn_grad(eigenmat* deriv, eigenmat* input, eigenmat* mu, eigenmat* sigma,
             eigenmat* dgamma, eigenmat* dbeta);
 #endif

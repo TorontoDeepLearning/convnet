@@ -11,7 +11,7 @@
 #include "response_norm_edge.h"
 #include "rgb_to_yuv_edge.h"
 #include "conv_onetoone_edge.h"
-#include "bn_edge.h"
+//#include "bn_edge.h"
 using namespace std;
 
 Edge* Edge::ChooseEdgeClass(const config::Edge& edge_config) {
@@ -47,9 +47,11 @@ Edge* Edge::ChooseEdgeClass(const config::Edge& edge_config) {
     case config::Edge::CONV_ONETOONE :
       e = new ConvOneToOneEdge(edge_config);
       break;
+    /*
     case config::Edge::BATCH_NORMALIZATION :
       e = new BNEdge(edge_config);
       break;
+    */
     default:
       cerr << "Error: Undefined edge type." << endl;
       exit(1);
@@ -64,7 +66,7 @@ bool Edge::HasParameters(const config::Edge& edge_config) {
     case config::Edge::CONVOLUTIONAL :
     case config::Edge::LOCAL :
     case config::Edge::CONV_ONETOONE :
-    case config::Edge::BATCH_NORMALIZATION :
+    //case config::Edge::BATCH_NORMALIZATION :
       has_p = true;
       break;
     case config::Edge::MAXPOOL :

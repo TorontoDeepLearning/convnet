@@ -53,6 +53,16 @@ ConvNet::ConvNet(const string& model_file):
       }
     }
   }
+  for (config::Layer& l : *(model_.mutable_layer())) {
+    if (l.batch_normalize()) {
+      config::Optimizer w_opt(default_w_opt);
+      w_opt.MergeFrom(l.gamma_optimizer());
+      l.mutable_gamma_optimizer()->CopyFrom(w_opt);
+      config::Optimizer b_opt(default_b_opt);
+      w_opt.MergeFrom(l.beta_optimizer());
+      l.mutable_beta_optimizer()->CopyFrom(b_opt);
+    }
+  }
   
   Matrix::InitRandom(model_.seed() + process_id_);
   srand(model_.seed() + process_id_);
@@ -200,6 +210,15 @@ void ConvNet::BuildNet() {
         data_layers_.push_back(l);
       }
     }
+  }
+
+  cout << "Input Layer(s):" << endl;
+  for (Layer* l : input_layers_) {
+    cout << "\t" << l->GetName() << endl;
+  }
+  cout << "Output Layer(s):" << endl;
+  for (Layer* l : output_layers_) {
+    cout << "\t" << l->GetName() << endl;
   }
 
   int image_size_y, image_size_x, image_size_t;
@@ -360,6 +379,9 @@ void ConvNet::Fprop(bool train) {
     for (Edge* e : l->incoming_edge_) {
       Fprop(*(e->GetSource()), *l, *e, train);
     }
+    if (l->UseBatchNormalization()) {
+      l->ApplyBatchNormalization(train);
+    }
     if (!l->IsInput()) l->ApplyActivation();
     l->ApplyDropout(train);
   }
@@ -376,6 +398,9 @@ void ConvNet::Bprop() {
     if (!l->IsInput() && !l->IsOutput()) {
       l->ApplyDerivativeOfActivation();
     }
+    if (l->UseBatchNormalization()) {
+      l->ApplyDerivativeofBatchNormalization();
+  }
   }
 }
 
@@ -450,6 +475,7 @@ void ConvNet::GetBatch(DataHandler& dataset) {
 void ConvNet::TrainOneBatch(vector<float>& error) {
   for (Layer* l : layers_) l->ResetAddOrOverwrite();
   for (Edge* e : edges_) e->NotifyStart();
+  for (Layer* l : layers_) l->NotifyStart();
   GetBatch(*train_dataset_);
   Fprop(true);
   ComputeDeriv();

@@ -24,12 +24,16 @@ _dev_prefix = '/dev/nvidia'
 # a quick and dirty way that works for now:
 def board_ids():
     """Returns integer board ids available on this machine."""
-    from glob import glob
-    board_devs = glob(_dev_prefix + '[0-9]*')
-    return range(len(board_devs))
-    #p = Popen(['/u/tang/bin/get_num_gpu_boards'], stdout=PIPE)    
-    #nBoards = int(p.stdout.read())
-    #return range(nBoards)
+    board_ids = None
+    try:
+        p = Popen(['/u/tang/bin/get_num_gpu_boards'], stdout=PIPE)    
+        nBoards = int(p.stdout.read())
+        board_ids = range(nBoards)
+    except ValueError as e:
+        from glob import glob
+        board_devs = glob(_dev_prefix + '[0-9]*')
+        board_ids = range(len(board_devs))
+    return board_ids
 
 def _lock_file(id):
     """lock file from integer id"""
@@ -72,7 +76,7 @@ def _launch_reaper(id, pid):
     Popen([reaper_cmd, str(pid), me, '--free', str(id)],
         stdout=open('/dev/null', 'w'))
 
-def obtain_lock_id(pid=None):
+def obtain_lock_id(pid=None, pref=0):
     """
     Finds a free id, locks it and returns integer id, or -1 if none free.
 
@@ -80,7 +84,7 @@ def obtain_lock_id(pid=None):
     process pid (by default the current python process) terminates.
     """
     id = -1
-    id = obtain_lock_id_to_hog()
+    id = obtain_lock_id_to_hog(pref=pref)
     try:
         if id >= 0:
             if pid is None:
@@ -91,12 +95,14 @@ def obtain_lock_id(pid=None):
         id = -1
     return id
 
-def obtain_lock_id_to_hog():
+def obtain_lock_id_to_hog(pref=0):
     """
     Finds a free id, locks it and returns integer id, or -1 if none free.
 
     * Lock must be freed manually *
     """
+    if _obtain_lock(pref):
+        return pref
     for id in board_ids():
         if _obtain_lock(id):
             return id
@@ -129,8 +135,12 @@ def nvidia_gpu_stats():
         for gpu in gpulist:        
             temp = gpu.getElementsByTagName('temperature')[0]            
             temp2 = temp.getElementsByTagName('gpu_temp')[0]
-            templist.append(str(temp2.firstChild.toxml()))            
-            mem = gpu.getElementsByTagName('memory_usage')[0]               
+            templist.append(str(temp2.firstChild.toxml()))
+            try:
+                mem = gpu.getElementsByTagName('memory_usage')[0]
+            except:
+                mem = gpu.getElementsByTagName('fb_memory_usage')[0]
+                                                                        
             memtot = mem.getElementsByTagName('total')[0]
             memused = mem.getElementsByTagName('used')[0]
             memfree = mem.getElementsByTagName('free')[0]            

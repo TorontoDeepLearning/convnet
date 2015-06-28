@@ -616,6 +616,28 @@ __global__ void kReciprocal(float* mat, float* target, unsigned int len) {
   for (unsigned int i = idx; i < len; i += numThreads) target[i] = 1. / mat[i];
 }
 
+__global__ void kBesselRatioActivation(float* mat, float* target, unsigned int len) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  for (unsigned int i = idx; i < len; i += numThreads) {
+    float r = mat[i];
+    target[i] = cyl_bessel_i1f(r) / cyl_bessel_i0f(r);
+  }
+}
+
+__global__ void kBesselRatioActivationContinuedFraction(float* mat, float* target, float order, int num_terms, unsigned int len) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  for (unsigned int i = idx; i < len; i += numThreads) {
+    float k = mat[i];
+    float result = 2 * (order + num_terms) / k;
+    for(int j = num_terms - 1; j > 0; j--) {
+      result = 2 * (order + j) / k + 1 / result;
+    }
+    target[i] = 1 / result;
+  }
+}
+
 __global__ void kAddColVector(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
@@ -715,6 +737,15 @@ __global__ void kMultByRowVector(float* mat, float* vec, float* tgtMat, unsigned
     tgtMat[i] = mat[i] * vec[i / height];
   }
 }
+
+__global__ void kMultByRowVectorScale(float* mat, float* vec, float* tgtMat, unsigned int width, unsigned int height, float scale_targets) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int numThreads = blockDim.x * gridDim.x;
+  for (unsigned int i = idx; i < width * height; i += numThreads) {
+    tgtMat[i] = scale_targets * tgtMat[i] + mat[i] * vec[i / height];
+  }
+}
+
 __global__ void kAddMultSign(float* a, float* b, unsigned int numEls, float mult) {
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
@@ -1241,13 +1272,14 @@ __global__ void kSoftMaxOverwrite(float* mat, unsigned int width, unsigned int h
   }
 }
 
-__global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int height) {
+__global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int height, float* target) {
   extern __shared__ float max_vals[] ;
   float cur_max = -FLT_MAX;
   float val = 0;
   const int row = gridDim.x * blockIdx.y + blockIdx.x;
   if (row < height) {
     float *cur_data = &mat[row] ; 
+    float *cur_target = &target[row] ; 
     max_vals[threadIdx.x]=-FLT_MAX;
     for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
       val = cur_data[i * height];
@@ -1262,15 +1294,15 @@ __global__ void kSoftMaxRowMajor(float* mat, unsigned int width, unsigned int he
     __syncthreads();
     val = 0;
     for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
-      cur_data[i * height] = __expf(cur_data[i * height]-cur_max);
-      val += cur_data[i * height];
+      cur_target[i * height] = __expf(cur_data[i * height]-cur_max);
+      val += cur_target[i * height];
     }
     max_vals[threadIdx.x] = val;
     reduceToSumLocal32(max_vals, threadIdx.x);
     __syncthreads();
     float norm = max_vals[0] ; 
     for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
-      cur_data[i * height] /= norm;
+      cur_target[i * height] /= norm;
     }
   }
 }
@@ -1536,6 +1568,36 @@ __global__ void kNormLimitRowwise(float* mat, float* target, float norm, unsigne
   }
 }
 
+__global__ void kNormalizeRowwiseBprop(float* deriv, float* input, float* target, unsigned int width, unsigned int height) {
+  extern __shared__ float sum_vals[];
+  const int row = gridDim.x * blockIdx.y + blockIdx.x;
+  if (row < height) {
+    float cur_sum = 0, cur_sum2 = 0;
+    float *cur_data = &input[row] ; 
+    float *cur_data2 = &deriv[row] ; 
+    float *target_data = &target[row] ; 
+    for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
+      float x = cur_data[i * height];
+      float d = cur_data2[i * height];
+      cur_sum += x * x;
+      cur_sum2 += x * d;
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    float sigma_sq = sum_vals[0];
+    float sigma = sqrt(sigma_sq);
+    sum_vals[threadIdx.x] = cur_sum2;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    float xd_stats = sum_vals[0] / (sigma_sq * sigma);
+    for (unsigned int i = threadIdx.x; i < width; i += blockDim.x) {
+      target_data[i * height] = cur_data2[i * height] / sigma - cur_data[i * height] * xd_stats;
+    }
+    __syncthreads();
+  }
+}
+
 __global__ void kExpand(float* source, float* indices, float* target, int height, int width, int target_width){
   const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
   const unsigned int numThreads = blockDim.x * gridDim.x;
@@ -1584,7 +1646,8 @@ __global__ void kExtractPatches(float* images, float* patches, float* indices, f
 
     source_row = int(height_offset[image_id]) + dest_row;
     source_col = int(width_offset[image_id]) + dest_col;
-    pos = img_width * img_height * num_colors * (int)indices[image_id] + img_width * img_height * color + img_width * source_row + source_col;
+    //pos = img_width * img_height * num_colors * (int)indices[image_id] + img_width * img_height * color + img_width * source_row + source_col;
+    pos = source_col + img_width * (source_row + img_height * (color + num_colors * (int)indices[image_id]));
     patches[i] = images[pos];
   }
 }
@@ -1605,6 +1668,43 @@ __global__ void kExtractPatches2(float* images, float* patches, float* width_off
   }
 }
 
+__global__ void kExtractPatches3(float* images, float* patches,
+    float* width_offset, float* height_offset, float* flip,
+    int num_images, int img_width, int img_height,
+    int patch_width, int patch_height, int num_colors) {
+  
+  int dest_col = blockIdx.x * blockDim.x + threadIdx.x;
+  int dest_row = blockIdx.y * blockDim.y + threadIdx.y;
+  if (dest_col < patch_width && dest_row < patch_height) {
+    for (unsigned int b = blockIdx.z; b < num_colors * num_images; b += gridDim.z) {
+      int color    = b % num_colors;
+      int image_id = b / num_colors;
+      int source_row = int(height_offset[image_id]) + dest_row;
+      int source_col = int(width_offset[image_id]) + dest_col;
+      source_col = (flip[image_id] > 0.5) ? (img_width - source_col - 1) : source_col;
+      unsigned long source_index = source_col + img_width   * (source_row + img_height   * (color + num_colors * image_id));
+      unsigned long dest_index   = dest_col   + patch_width * (dest_row   + patch_height * (color + num_colors * image_id));
+      __syncthreads();
+      patches[dest_index] = images[source_index];
+    }
+  }
+}
+
+__global__ void kCapsulify(float* images, float* output, int image_size, int crop_size, int num_images) {
+  unsigned int image_id = blockIdx.z;
+  unsigned int row = blockIdx.y * blockDim.y + threadIdx.y;
+  unsigned int col = blockIdx.x * blockDim.x + threadIdx.x;
+  if (row < image_size && col < image_size && image_id < num_images) {
+    images += image_id * image_size * image_size;
+    output += image_id * image_size * image_size;
+    
+    unsigned int source_index = row * image_size + col;
+    unsigned int capsule_id = (row / crop_size) * (image_size / crop_size) + (col / crop_size);
+    unsigned int within_capsule_index = (row % crop_size) * crop_size + (col % crop_size);
+    unsigned int dest_index = capsule_id * crop_size * crop_size + within_capsule_index;
+    output[dest_index] = images[source_index];
+  }
+}
 __global__ void kRectifyBoundingBox(
     float* boxes, float* width_offset, float* height_offset, float* flip,
     int num_images, int patch_width, int patch_height, int num_locs) {
@@ -2001,11 +2101,43 @@ __global__ void kBNBprop(float* d, float* x, float* gamma, float* mu, float* sig
     }
     sum_vals[threadIdx.x] = cur_sum2 / height;
     reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
     cur_sum = sum_vals[0];
     for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
       cur_target[i] -= cur_sum;
     }
     __syncthreads();
+  }
+}
+
+__global__ void kBNBpropInplace(float* d, float* y, float* dgamma, unsigned int width, unsigned int height) {
+  extern __shared__ float sum_vals[];
+  const int column = gridDim.x * blockIdx.y + blockIdx.x;
+  if (column < width) {
+    float cur_sum = 0;
+    float *cur_data1 = &d[column * height];
+    float *cur_data2 = &y[column * height];
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_sum += cur_data1[i] * cur_data2[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum / height;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    float stat = sum_vals[0];
+    if (threadIdx.x == 0) dgamma[column] = stat;
+    __syncthreads();
+    cur_sum = 0;
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_data1[i] -= stat * cur_data2[i];
+      cur_sum += cur_data1[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum / height;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    stat = sum_vals[0];
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_data1[i] -= stat;
+    }
   }
 }
 
@@ -2033,4 +2165,240 @@ __global__ void kBNGrad(float* d, float* x, float* mu, float* sigma,
     if (threadIdx.x == 0) dbeta[column] = sum_vals[0];
     __syncthreads();
   }
+}
+
+
+__global__ void kLSTMFprop2Init(float *gates, float* cell, float* output, float* w, int num_lstms, int num_cases) {
+  const unsigned int case_id = blockIdx.y;
+  const unsigned int lstm_id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (lstm_id < num_lstms && case_id < num_cases) {
+    gates    += case_id * num_lstms * 4;
+    cell     += case_id * num_lstms;
+    output   += case_id * num_lstms;
+    float w_co = w[lstm_id + 2 * num_lstms];
+    float i    = gates[lstm_id],
+          f    = gates[lstm_id + num_lstms],
+          a    = gates[lstm_id + num_lstms * 2],
+          o    = gates[lstm_id + num_lstms * 3];
+    i = sigmoid(i);
+    f = sigmoid(f);
+    a = tanh(a);
+    float c = i * a;
+    o = sigmoid(o + c * w_co);
+    float r = tanh(c) * o;
+    gates[lstm_id] = i;
+    gates[lstm_id + num_lstms] = f;
+    gates[lstm_id + 2 * num_lstms] = a;
+    gates[lstm_id + 3 * num_lstms] = o;
+    cell[lstm_id] = c;
+    output[lstm_id] = r;
+  }
+}
+
+__global__ void kLSTMFprop2(float *gates, float* cell_prev, float* cell, float* output, float* w, int num_lstms, int num_cases) {
+  const unsigned int case_id = blockIdx.y;
+  const unsigned int lstm_id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (lstm_id < num_lstms && case_id < num_cases) {
+    gates     += case_id * num_lstms * 4;
+    cell_prev += case_id * num_lstms;
+    cell      += case_id * num_lstms;
+    output    += case_id * num_lstms;
+    float w_ci = w[lstm_id],
+          w_cf = w[lstm_id + num_lstms],
+          w_co = w[lstm_id + 2 * num_lstms];
+
+    float i    = gates[lstm_id],
+          f    = gates[lstm_id + num_lstms],
+          a    = gates[lstm_id + num_lstms * 2],
+          o    = gates[lstm_id + num_lstms * 3],
+          c    = cell_prev[lstm_id];
+    i = sigmoid(i + c * w_ci);
+    f = sigmoid(f + c * w_cf);
+    a = tanh(a);
+    c = c * f + i * a;
+    o = sigmoid(o + c * w_co);
+    float r = tanh(c) * o;
+    gates[lstm_id] = i;
+    gates[lstm_id + num_lstms] = f;
+    gates[lstm_id + 2 * num_lstms] = a;
+    gates[lstm_id + 3 * num_lstms] = o;
+    cell[lstm_id] = c;
+    output[lstm_id] = r;
+  }
+}
+
+__global__ void kLSTMBprop2Init(float *gates, float* gates_deriv, float* cell, float* cell_deriv,
+    float* output_deriv, float* w, int num_lstms, int num_cases) {
+  const unsigned int case_id = blockIdx.y;
+  const unsigned int lstm_id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (lstm_id < num_lstms && case_id < num_cases) {
+    gates         += case_id * num_lstms * 4;
+    gates_deriv   += case_id * num_lstms * 4;
+    cell          += case_id * num_lstms;
+    cell_deriv    += case_id * num_lstms;
+    output_deriv  += case_id * num_lstms;
+
+    float w_co = w[lstm_id + 2 * num_lstms];
+
+    float i     = gates[lstm_id],
+          a     = gates[lstm_id + num_lstms * 2],
+          o     = gates[lstm_id + num_lstms * 3],
+          c     = cell[lstm_id],
+          c_d   = cell_deriv[lstm_id],
+          r_d   = output_deriv[lstm_id];
+
+    float tanhc = tanh(c);
+    float o_d = r_d * tanhc * deriv_of_sigmoid(o);
+    c_d += o * r_d * deriv_of_tanh(tanhc) + o_d * w_co;
+    float a_d = c_d * i * deriv_of_tanh(a);
+    float i_d = c_d * a * deriv_of_sigmoid(i);
+
+    gates_deriv[lstm_id] = i_d;
+    gates_deriv[lstm_id + num_lstms] = 0;
+    gates_deriv[lstm_id + 2 * num_lstms] = a_d;
+    gates_deriv[lstm_id + 3 * num_lstms] = o_d;
+    cell_deriv[lstm_id] = c_d;
+  }
+}
+__global__ void kLSTMBprop2(float *gates, float* gates_deriv, float* cell_prev, float* cell_prev_deriv,
+    float* cell, float* cell_deriv, float* output_deriv, float* w, int num_lstms, int num_cases) {
+  const unsigned int case_id = blockIdx.y;
+  const unsigned int lstm_id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (lstm_id < num_lstms && case_id < num_cases) {
+    gates           += case_id * num_lstms * 4;
+    gates_deriv     += case_id * num_lstms * 4;
+    cell            += case_id * num_lstms;
+    cell_deriv      += case_id * num_lstms;
+    cell_prev       += case_id * num_lstms;
+    cell_prev_deriv += case_id * num_lstms;
+    output_deriv    += case_id * num_lstms;
+
+    float w_ci = w[lstm_id],
+          w_cf = w[lstm_id + num_lstms],
+          w_co = w[lstm_id + 2 * num_lstms];
+
+    float i     = gates[lstm_id],
+          f     = gates[lstm_id + num_lstms],
+          a     = gates[lstm_id + num_lstms * 2],
+          o     = gates[lstm_id + num_lstms * 3],
+          c     = cell[lstm_id],
+          c_d   = cell_deriv[lstm_id],
+          c_p   = cell_prev[lstm_id],
+          r_d   = output_deriv[lstm_id];
+
+    float tanhc = tanh(c);
+    float o_d = r_d * tanhc * deriv_of_sigmoid(o);
+    c_d += o * r_d * deriv_of_tanh(tanhc) + o_d * w_co;
+    float a_d = c_d * i * deriv_of_tanh(a);
+    float i_d = c_d * a * deriv_of_sigmoid(i);
+    float f_d = c_d * c_p * deriv_of_sigmoid(f);
+    float c_p_d = c_d * f + i_d * w_ci + f_d * w_cf;
+
+    gates_deriv[lstm_id] = i_d;
+    gates_deriv[lstm_id + num_lstms] = f_d;
+    gates_deriv[lstm_id + 2 * num_lstms] = a_d;
+    gates_deriv[lstm_id + 3 * num_lstms] = o_d;
+    cell_deriv[lstm_id] = c_d;
+    cell_prev_deriv[lstm_id] = c_p_d;
+  }
+}
+
+__global__ void kCapsuleActivation(float* h, float* l, float* s, float* output, unsigned int width, unsigned int height) {
+  extern __shared__ float sum_vals[];
+  const int column = gridDim.x * blockIdx.y + blockIdx.x;
+  if (column < width) {
+    // Compute length.
+    float cur_sum = 0;
+    float *cur_data = &h[column * height];
+    float *cur_data_output = &output[column * height];
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_sum += cur_data[i] * cur_data[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    if (threadIdx.x == 0) {
+      cur_sum = sqrt(sum_vals[0]);  // length.
+      float f = cyl_bessel_i1f(cur_sum) / cyl_bessel_i0f(cur_sum);  // Apply activation.
+      l[column] = cur_sum;
+      s[column] = f;
+      sum_vals[0] = f / cur_sum;
+    }
+    __syncthreads();
+    cur_sum = sum_vals[0];
+    // Scale the data.
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_data_output[i] = cur_data[i] * cur_sum;
+    }
+  }
+}
+
+__global__ void kBpropCapsuleActivation(float* d, float* y, float* l, float* s, float* output_d,
+    float sparsity_cost, float sparsity_scale, unsigned int width, unsigned int height) {
+  extern __shared__ float sum_vals[];
+  const int column = gridDim.x * blockIdx.y + blockIdx.x;
+  if (column < width) {
+    float cur_sum = 0.0f;
+    float *cur_data_d = &d[column * height];
+    float *cur_data_d_output = &d[column * height];
+    float *cur_data_y = &y[column * height];
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_sum += cur_data_d[i] * cur_data_y[i];
+    }
+    sum_vals[threadIdx.x] = cur_sum;
+    reduceToSumLocal32(sum_vals, threadIdx.x);
+    __syncthreads();
+    if (threadIdx.x == 0) {
+      float f           = s[column];
+      float length      = l[column];
+      float d_f = 1.0f - f * f - f / length;
+      cur_sum = (sum_vals[0] / f) * (d_f / f  - 1.0f / length);
+      cur_sum += sparsity_cost * length / (f * (sparsity_scale * sparsity_scale + length * length));
+      sum_vals[0] = cur_sum;
+      sum_vals[1] = f / length;
+    }
+    __syncthreads();
+    cur_sum = sum_vals[0];
+    float scale = sum_vals[1];
+    for (unsigned int i = threadIdx.x; i < height; i += blockDim.x) {
+      cur_data_d_output[i] = cur_sum * cur_data_y[i] + scale * cur_data_d[i];
+    }
+  }
+}
+
+__global__ void kSampleVMF(unsigned int* rndMults, unsigned long long* rndWords, float* kappa, float* target, int n, unsigned int len, float tiny) {
+  const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned long long rndWord = rndWords[idx];
+  const unsigned int rndMult = rndMults[idx];
+  float rand;
+  for (unsigned int i = idx; i < len; i += NUM_RND_STREAMS) {
+    float k = kappa[i];
+    float m = (n - 1.0f) / 2.0f;
+    float b = (-k + sqrtf(k * k + m * m)) / m;
+    float x = (1 - b) / (1 + b);
+    float c = k * x + 2 * m * __logf(1 - x * x);
+    float w;
+    float accept_val = -1.0f;
+    int counter = 0;
+    while (accept_val < 0) {
+      rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord); rand = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;
+      float theta = rand * PI;
+      rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord); rand = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;
+      float s = rand;
+      rndWord = rndMult * LOW_BITS(rndWord) + HIGH_BITS(rndWord); rand = (__uint2float_rn(LOW_BITS(rndWord)) + 1.0f) / 4294967296.0f;
+      float r = sqrtf(s);
+      float u = r * __cosf(theta), v = r * __sinf(theta);
+      float z = 0.5 + ((u * v) / s) * ((n > 2) ? sqrtf(1 - powf(s, 1.0f / (m - 0.5))) : 1.0);
+      w = (1 - (1 + b) * z) / (1 - (1 - b) * z);
+      w = (w < -1) ? -1 : ((w > 1) ? 1 : w);
+      accept_val = k * w + 2 * m * __logf(1 - x * w + tiny) - c - __logf(rand + tiny);
+      if (++counter > 100) {
+        w = 1.0f;
+        break;
+      }
+    }
+    __syncthreads();
+    target[i] = w;
+  }
+  rndWords[idx] = rndWord;
 }
